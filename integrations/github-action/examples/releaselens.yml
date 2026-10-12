@@ -1,0 +1,53 @@
+# ReleaseLens CI-failure risk on every pull request and every push to main.
+#
+# Copy this file to .github/workflows/releaselens.yml.
+#
+# This repository dogfoods the action from its own path (uses: ./integrations/github-action).
+# Other repositories reference it by full commit SHA, like every action here (ADR-0014):
+#
+#   uses: ayushman46/releaselens/integrations/github-action@<full-40-char-commit-sha> # v0.1.0
+#
+# Setup (docs/integrations/GITHUB_ACTION.md):
+#   1. Create an API key with scope risk:write in ReleaseLens.
+#   2. Store it as the repository secret RELEASELENS_API_KEY.
+#   3. Optional: set the repository variable RELEASELENS_API_URL. Unset, the action uses its
+#      default. A local stack (http://localhost:28000) is reachable only from a self-hosted runner.
+name: releaselens
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  risk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history. With a shallow clone the action still runs, but sends history facts
+          # (built commits, file hotness, team size, repository age) as unknown.
+          fetch-depth: 0
+
+      - name: ReleaseLens CI risk
+        id: risk
+        uses: ./integrations/github-action
+        with:
+          api-url: ${{ vars.RELEASELENS_API_URL }}
+          api-key: ${{ secrets.RELEASELENS_API_KEY }}
+          language: java
+          # none: never fail the build. HIGH or CRITICAL: fail at or above that band, and also
+          # when no score can be obtained.
+          fail-on-band: none
+
+      - name: Use the outputs
+        if: steps.risk.outputs.status == 'ok'
+        env:
+          SCORE: ${{ steps.risk.outputs.risk-score }}
+          BAND: ${{ steps.risk.outputs.risk-band }}
+          DETAILS: ${{ steps.risk.outputs.details-url }}
+        run: echo "CI-failure risk ${SCORE}/100 (${BAND}) ${DETAILS}"

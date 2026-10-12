@@ -1,0 +1,4 @@
+# The action's scripts run on whatever python3 the CI runner has (3.9 or newer, standard library
+# only), so they are linted for 3.9: no datetime.UTC, no zip(strict=), no match statements.
+extend = "../../pyproject.toml"
+target-version = "py39"

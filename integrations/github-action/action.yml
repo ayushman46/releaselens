@@ -1,0 +1,173 @@
+name: ReleaseLens CI risk
+description: >-
+  Estimates how likely this change is to fail CI, from aggregate git facts computed inside the
+  runner. Only counts leave the runner: no source code, file contents or commit messages.
+author: ReleaseLens
+branding:
+  icon: activity
+  color: blue
+
+inputs:
+  api-url:
+    description: >-
+      ReleaseLens API base URL. The default is a placeholder for the hosted service; for a local
+      stack use http://localhost:28000.
+    required: false
+    default: https://api.releaselens.dev
+  api-key:
+    description: >-
+      ReleaseLens API key with scope risk:write. Always pass it from a secret
+      (api-key: secrets.RELEASELENS_API_KEY), never inline.
+    required: true
+  fail-on-band:
+    description: >-
+      none | HIGH | CRITICAL. When set, the step fails if the risk band is at or above this level,
+      and also when no score can be obtained (API down, no model, missing key): the gate fails
+      closed. With none (default), problems are annotations and never fail the build.
+    required: false
+    default: none
+  language:
+    description: Primary language of the repository. java is supported in v0.1.
+    required: false
+    default: java
+  src-globs:
+    description: >-
+      Optional comma- or newline-separated globs (** crosses directories) that replace the
+      built-in extension table for source files. Deviates from the definitions the model was
+      trained with; leave empty unless your layout needs it.
+    required: false
+    default: ""
+  test-globs:
+    description: >-
+      Optional comma- or newline-separated globs that replace the language's test-file rules
+      (Java: test/ or tests/ directories, *Test.java, *Tests.java, Test*.java).
+    required: false
+    default: ""
+  timeout-seconds:
+    description: Total time budget for the API call, retries included.
+    required: false
+    default: "60"
+  previous-sha:
+    description: >-
+      Optional previous built commit. Overrides the push event's "before" SHA or the PR base SHA.
+    required: false
+    default: ""
+  working-directory:
+    description: Path of the git checkout, if it is not the workspace root.
+    required: false
+    default: "."
+
+outputs:
+  risk-score:
+    description: 0-100 percentile risk score (empty when no score was obtained).
+    value: ${{ steps.report.outputs.risk-score }}
+  risk-band:
+    description: LOW | MEDIUM | HIGH | CRITICAL (empty when no score was obtained).
+    value: ${{ steps.report.outputs.risk-band }}
+  assessment-id:
+    description: ReleaseLens assessment id.
+    value: ${{ steps.report.outputs.assessment-id }}
+  details-url:
+    description: Link to the assessment in ReleaseLens.
+    value: ${{ steps.report.outputs.details-url }}
+  status:
+    description: ok | unavailable (API has no model, HTTP 503) | error | skipped (no API key).
+    value: ${{ steps.report.outputs.status }}
+
+runs:
+  using: composite
+  steps:
+    - name: ReleaseLens - check inputs, history depth and build context
+      id: prepare
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        RL_API_KEY: ${{ inputs.api-key }}
+        RL_API_URL: ${{ inputs.api-url }}
+        RL_FAIL_ON_BAND: ${{ inputs.fail-on-band }}
+        RL_TIMEOUT: ${{ inputs.timeout-seconds }}
+        RL_PREVIOUS_SHA: ${{ inputs.previous-sha }}
+        GH_EVENT_NAME: ${{ github.event_name }}
+        GH_SHA: ${{ github.sha }}
+        GH_BEFORE: ${{ github.event.before }}
+        GH_REF_NAME: ${{ github.ref_name }}
+        GH_HEAD_REF: ${{ github.head_ref }}
+        GH_PR_NUMBER: ${{ github.event.pull_request.number }}
+        GH_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        GH_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/prepare.sh"
+
+    - name: ReleaseLens - extract change facts (aggregate counts only)
+      id: extract
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        RL_STATE: ${{ steps.prepare.outputs.state-dir }}
+        RL_PYTHON: ${{ steps.prepare.outputs.python }}
+        RL_EVENT: ${{ steps.prepare.outputs.event }}
+        RL_HEAD: ${{ steps.prepare.outputs.head }}
+        RL_COMMIT_SHA: ${{ steps.prepare.outputs.commit-sha }}
+        RL_PREVIOUS: ${{ steps.prepare.outputs.previous }}
+        RL_PR: ${{ steps.prepare.outputs.pull-request }}
+        RL_BRANCH: ${{ steps.prepare.outputs.branch }}
+        RL_LANGUAGE: ${{ inputs.language }}
+        RL_SRC_GLOBS: ${{ inputs.src-globs }}
+        RL_TEST_GLOBS: ${{ inputs.test-globs }}
+      run: |
+        set -euo pipefail
+        if [ "$(cat "$RL_STATE/stage")" != ready ]; then exit 0; fi
+        args=(
+          --repo .
+          --head "$RL_HEAD"
+          --commit-sha "$RL_COMMIT_SHA"
+          --language "$RL_LANGUAGE"
+          --event "$RL_EVENT"
+          --repository "$GITHUB_REPOSITORY"
+          --triggered-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          --ci-run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          --src-globs "$RL_SRC_GLOBS"
+          --test-globs "$RL_TEST_GLOBS"
+          --output "$RL_STATE/request.json"
+          --diagnostics-out "$RL_STATE/diagnostics.json"
+        )
+        if [ -n "$RL_PREVIOUS" ]; then args+=(--previous "$RL_PREVIOUS"); fi
+        if [ -n "$RL_PR" ]; then args+=(--pull-request "$RL_PR"); fi
+        if [ -n "$RL_BRANCH" ]; then args+=(--branch "$RL_BRANCH"); fi
+        if "$RL_PYTHON" "$GITHUB_ACTION_PATH/extract_change_facts.py" "${args[@]}" 2>"$RL_STATE/extract.log"; then
+          cat "$RL_STATE/extract.log"
+        else
+          cat "$RL_STATE/extract.log"
+          printf extract_failed >"$RL_STATE/stage"
+          printf 'change-fact extraction failed: %s' "$(tail -n 1 "$RL_STATE/extract.log")" >"$RL_STATE/message"
+        fi
+
+    - name: ReleaseLens - request risk assessment
+      id: request
+      shell: bash
+      env:
+        RL_STATE: ${{ steps.prepare.outputs.state-dir }}
+        RL_API_URL: ${{ steps.prepare.outputs.api-url }}
+        RL_API_KEY: ${{ inputs.api-key }}
+        RL_TIMEOUT: ${{ steps.prepare.outputs.timeout }}
+        RL_VERSION: "0.1.0"
+      run: bash "$GITHUB_ACTION_PATH/scripts/request.sh"
+
+    - name: ReleaseLens - report
+      id: report
+      shell: bash
+      env:
+        RL_STATE: ${{ steps.prepare.outputs.state-dir }}
+        RL_PYTHON: ${{ steps.prepare.outputs.python }}
+        RL_FAIL_ON_BAND: ${{ steps.prepare.outputs.fail-on-band }}
+      run: |
+        set -euo pipefail
+        if [ -z "$RL_PYTHON" ]; then
+          echo "status=error" >>"$GITHUB_OUTPUT"
+          if [ "$RL_FAIL_ON_BAND" != none ]; then
+            echo "::error title=ReleaseLens::Python 3.9+ not found, no risk score; fail-on-band is set, failing closed."
+            exit 1
+          fi
+          echo "::warning title=ReleaseLens::Python 3.9+ not found on the runner; no risk score."
+          exit 0
+        fi
+        "$RL_PYTHON" "$GITHUB_ACTION_PATH/render_result.py" --state-dir "$RL_STATE" --fail-on-band "$RL_FAIL_ON_BAND"
