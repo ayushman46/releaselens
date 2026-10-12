@@ -114,19 +114,84 @@ def _headline(r: dict[str, Any]) -> list[str]:
     heur = r["test"]["reference_candidates"].get("heuristic_rule", {})
     lift = t.get("pr_auc_over_base_rate")
     lines = [
-        f"On the untouched chronological test set ({f(t['n'])} builds, failure base rate "
+        f"- On the untouched chronological test set ({f(t['n'])} builds, failure base rate "
         f"{f(t['base_rate'])}), the final model (**{r['selection']['display']}**, chosen by validation "
         f"PR-AUC) reaches **PR-AUC {f(t['pr_auc'])}** (95% project-bootstrap CI {f(ci.get('low'))}–"
-        f"{f(ci.get('high'))}) and ROC-AUC {f(t['roc_auc'])}.",
-        f"That is {f(lift, 2)}× the base rate — **{verdict(lift)}** discrimination. The heuristic rule "
-        f"(previous build failed OR churn > p90) scores PR-AUC {f(heur.get('pr_auc'))} on the same rows, "
-        f"the majority-class baseline {f(r['test']['reference_candidates'].get('majority_class', {}).get('pr_auc'))}.",
-        f"The top 10% highest-risk builds fail at {pct(t['precision_at_top_10pct'])} "
+        f"{f(ci.get('high'))}) and ROC-AUC {f(t['roc_auc'])}: {f(lift, 2)}× the base rate, "
+        f"**{verdict(lift)}** discrimination overall.",
+        f"- Baselines on the same rows: heuristic rule (previous build failed OR churn > p90) PR-AUC "
+        f"{f(heur.get('pr_auc'))}; majority class "
+        f"{f(r['test']['reference_candidates'].get('majority_class', {}).get('pr_auc'))}.",
+        f"- The top 10% highest-risk builds fail at {pct(t['precision_at_top_10pct'])} "
         f"(lift {f(t['lift_at_top_10pct'], 2)}× over the base rate).",
-        f"Calibrated probability exposed: **{'yes' if r['test']['probability_exposed'] else 'no'}** "
+    ]
+    sl = (r["test"].get("by_previous_outcome") or {}).get("previous_passed")
+    if sl and sl.get("pr_auc") is not None:
+        hp = (sl.get("reference_pr_auc") or {}).get("heuristic_rule")
+        lines.append(
+            f"- Most of the signal is **persistence** (a broken build tends to stay broken). After a "
+            f"passing build ({pct(sl['share_of_rows'])} of test builds, base rate {f(sl['base_rate'])}) "
+            f"the model's PR-AUC is {f(sl['pr_auc'])} ({f(sl['pr_auc_over_base_rate'], 2)}× base, "
+            f"**{verdict(sl['pr_auc_over_base_rate'])}**; heuristic {f(hp)}): predicting *new* "
+            "breakage is much harder."
+        )
+    cold = r["test"]["cold_start"]
+    lines += [
+        f"- Without build history (cold start) PR-AUC drops to {f(cold['pr_auc'])} "
+        f"({f(cold['pr_auc_over_base_rate'], 2)}× base, **{verdict(cold['pr_auc_over_base_rate'])}**).",
+        f"- Calibrated probability exposed: **{'yes' if r['test']['probability_exposed'] else 'no'}** "
         f"(ADR-0012 gate, {r['test']['calibration']['selected_method']} calibration).",
     ]
     return lines
+
+
+def _persistence_section(r: dict[str, Any]) -> list[str]:
+    sl = r["test"].get("by_previous_outcome")
+    if not sl:
+        return ["Not computed in this run."]
+    names = {
+        "previous_passed": "previous finished build passed",
+        "previous_failed": "previous finished build failed",
+        "no_finished_history": "no finished history yet",
+    }
+    rows = []
+    for k, label in names.items():
+        m = sl.get(k, {})
+        ref = m.get("reference_pr_auc", {})
+        rows.append(
+            [
+                label,
+                f(m.get("n")),
+                pct(m.get("share_of_rows")),
+                f(m.get("base_rate")),
+                f(m.get("pr_auc")),
+                f(m.get("roc_auc")),
+                f(m.get("pr_auc_over_base_rate"), 2),
+                f(ref.get("heuristic_rule")),
+                f(ref.get("logistic_regression")),
+            ]
+        )
+    return [
+        "Test rows split by the outcome of the previous *finished* build of the same project. The "
+        "failure rate after a failed build is far higher than after a passing one, so a large part of "
+        'the overall PR-AUC is "broken stays broken". The *previous passed* slice is the product-relevant '
+        "question of predicting new breakage from the change itself.",
+        "",
+        table(
+            [
+                "slice",
+                "builds",
+                "share",
+                "base rate",
+                "PR-AUC",
+                "ROC-AUC",
+                "PR-AUC / base",
+                "heuristic PR-AUC",
+                "logistic PR-AUC",
+            ],
+            rows,
+        ),
+    ]
 
 
 def _data_section(r: dict[str, Any]) -> list[str]:
@@ -544,8 +609,19 @@ def render_results(res: dict[str, dict[str, Any]]) -> str:
             [
                 f"Every row satisfies `max_history_input_finished_at < started_at` "
                 f"({f(r['leakage_audit']['rows_with_history'])} of {f(r['leakage_audit']['rows'])} rows have history; "
-                f"violations: {r['leakage_audit']['violations']}). Feature list ∩ FORBIDDEN_INPUTS = ∅. "
+                f"violations: {r['leakage_audit']['violations']}; smallest gap "
+                f"{f(r['leakage_audit'].get('min_gap_seconds'), 0)} s). Feature list ∩ FORBIDDEN_INPUTS = ∅. "
                 "Also covered by `ml/tests/test_leakage.py`.",
+                "",
+                "Features that are missing for every training row carry no signal in this mart: "
+                + (
+                    ", ".join(
+                        f"`{n}`"
+                        for n in r.get("feature_coverage", {}).get("always_missing_in_train", [])
+                    )
+                    or "none"
+                )
+                + ".",
             ],
         ),
         ("3. Candidates (validation)", _candidates_section(r)),
@@ -558,6 +634,7 @@ def render_results(res: dict[str, dict[str, Any]]) -> str:
         ("7. Per-project performance", _per_project_section(r)),
         ("8. Cross-project generalisation", _cross_section(r)),
         ("9. Cold start", _cold_section(r)),
+        ("9b. Persistence vs new breakage", _persistence_section(r)),
         ("10. Sensitivity: errored builds excluded (ADR-0005)", _sensitivity_section(res)),
         ("11. Explainability", [*_explain_section(r), "", _figures(r)[2]]),
         ("12. Run, timings, environment", [_registry(r), "", *_timings(r)]),
@@ -578,6 +655,20 @@ def render_results(res: dict[str, dict[str, Any]]) -> str:
 
 
 # ---------------------------------------------------------------- MODEL_CARD.md
+def _persistence_limitation(r: dict[str, Any]) -> str:
+    sl = (r["test"].get("by_previous_outcome") or {}).get("previous_passed") or {}
+    cold = r["test"]["cold_start"]
+    overall = r["test"]["final"].get("pr_auc_over_base_rate")
+    return (
+        "- **Persistence vs new breakage.** Overall PR-AUC is "
+        f"{f(overall, 2)}× the base rate, but after a passing build it is "
+        f"{f(sl.get('pr_auc_over_base_rate'), 2)}× ({verdict(sl.get('pr_auc_over_base_rate'))}) and with "
+        f"no history {f(cold.get('pr_auc_over_base_rate'), 2)}× ({verdict(cold.get('pr_auc_over_base_rate'))}). "
+        "Much of the score reflects the project's recent build outcomes (a broken build tends to stay "
+        "broken) rather than the risk of the change itself."
+    )
+
+
 def render_model_card(res: dict[str, dict[str, Any]]) -> str:
     out = ["# Model card — `release_risk_ci`", "", GENERATED, ""]
     if PRIMARY not in res:
@@ -657,6 +748,21 @@ def render_model_card(res: dict[str, dict[str, Any]]) -> str:
                 ],
                 ["cold start (no history) PR-AUC", f(cold["pr_auc"])],
                 [
+                    "after a passing build (new breakage) PR-AUC",
+                    "{} (base rate {})".format(
+                        f(
+                            (r["test"].get("by_previous_outcome") or {})
+                            .get("previous_passed", {})
+                            .get("pr_auc")
+                        ),
+                        f(
+                            (r["test"].get("by_previous_outcome") or {})
+                            .get("previous_passed", {})
+                            .get("base_rate")
+                        ),
+                    ),
+                ],
+                [
                     "per-project median PR-AUC",
                     f"{f(pp.get('pr_auc_median'))} over {f(pp['projects_eligible'])} projects",
                 ],
@@ -695,6 +801,7 @@ def render_model_card(res: dict[str, dict[str, Any]]) -> str:
         "deviations from TravisTorrent's definitions (`docs/data/FEATURE_DEFINITIONS.md`) are measured in M5, not assumed away.",
         "- **Label noise.** `errored` builds are often infrastructure failures that pre-build features cannot "
         "explain; see the errored-excluded sensitivity run.",
+        _persistence_limitation(r),
         "- **History dependence.** Much of the signal is project build history. Without history (cold start) and on "
         "unseen projects the numbers above are lower; per-project performance varies widely.",
         "- **Conservative history.** Finish times are upper bounds (`started_at + duration`), so some finished "

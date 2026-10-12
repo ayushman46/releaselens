@@ -197,6 +197,37 @@ def _candidate_row(c: Candidate, val: Mart) -> dict[str, Any]:
     }
 
 
+def previous_outcome_slices(
+    m: Mart, s: np.ndarray, refs: dict[str, np.ndarray] | None = None
+) -> dict[str, Any]:
+    """Metrics split by the previous *finished* build's outcome.
+
+    Build outcomes are strongly persistent ("broken stays broken"), so the slice after a passing
+    build shows whether the model predicts *new* breakage, not just continuing breakage.
+    """
+    prev = m.frame["prev_build_failed"].to_numpy(dtype=np.float64)
+    slices = {
+        "previous_passed": prev == 0,
+        "previous_failed": prev == 1,
+        "no_finished_history": np.isnan(prev),
+    }
+    out: dict[str, Any] = {}
+    for name, mask in slices.items():
+        y = m.y[mask]
+        n = int(mask.sum())
+        if n == 0 or y.min() == y.max():
+            out[name] = {"n": n, "share_of_rows": n / max(len(prev), 1), "note": "single class"}
+            continue
+        out[name] = summarize(y, s[mask]) | {"share_of_rows": n / len(prev)}
+        if refs:
+            out[name]["reference_pr_auc"] = {
+                k: summarize(y, v[mask])["pr_auc"]
+                for k, v in refs.items()
+                if k in ("heuristic_rule", "logistic_regression", "majority_class")
+            }
+    return out
+
+
 # ---------------------------------------------------------------- pipeline
 def run_training(mart: Mart, cfg: TrainConfig, on_trial: Any = None) -> TrainingRun:
     t_start = time.perf_counter()
@@ -243,6 +274,9 @@ def run_training(mart: Mart, cfg: TrainConfig, on_trial: Any = None) -> Training
         "calibrated_brier": {
             m: float(np.mean((c.predict(vs) - val.y) ** 2)) for m, c in calibrators.items()
         },
+        "by_previous_outcome": previous_outcome_slices(
+            val, vs, {c.name: c.val_scores for c in outcome.candidates}
+        ),
     }
     t = lap("validation_artifacts", t)
 
@@ -278,6 +312,7 @@ def run_training(mart: Mart, cfg: TrainConfig, on_trial: Any = None) -> Training
         out["reference_candidates"] = {
             name: summarize(test.y, sc, threshold=None) for name, sc in ref_scores.items()
         }
+        out["by_previous_outcome"] = previous_outcome_slices(test, s, ref_scores)
         out["reference_note"] = (
             "computed in the same single test pass, after the final model was locked on "
             "validation; never used for selection"
@@ -421,6 +456,14 @@ def run_training(mart: Mart, cfg: TrainConfig, on_trial: Any = None) -> Training
         "class_balance": balance,
         "splits": {"chronological": chrono},
         "leakage_audit": audit,
+        "feature_coverage": {
+            "null_rate_train": {
+                name: float(train.frame[name].isna().mean()) for name in ALL_FEATURE_NAMES
+            },
+            "always_missing_in_train": [
+                name for name in ALL_FEATURE_NAMES if bool(train.frame[name].isna().all())
+            ],
+        },
         "candidates": [_candidate_row(c, val) for c in outcome.candidates],
         "time_features": outcome.time_feature_decision,
         "selection": {
