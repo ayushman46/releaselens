@@ -8,7 +8,12 @@ Functions never commit. The caller owns the transaction, so a domain write and i
 row (:func:`add_outbox_event`) commit together or not at all.
 """
 
-from rl_db.repositories.api_keys import insert_api_key, list_api_keys, revoke_api_key
+from rl_db.repositories.api_keys import (
+    get_api_key,
+    insert_api_key,
+    list_api_keys,
+    revoke_api_key,
+)
 from rl_db.repositories.deployments import (
     DEFAULT_POST_WINDOW_END,
     DeploymentCursor,
@@ -27,6 +32,7 @@ __all__ = [
     "RecordedDeployment",
     "add_outbox_event",
     "analysis_schedule",
+    "get_api_key",
     "get_deployment",
     "insert_api_key",
     "list_analysis_jobs",
