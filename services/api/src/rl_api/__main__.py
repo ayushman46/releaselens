@@ -11,7 +11,7 @@ def main() -> None:
     uvicorn.run(
         "rl_api.app:create_app",
         factory=True,
-        host=os.environ.get("RL_API_HOST", "0.0.0.0"),  # noqa: S104 - container entrypoint
+        host=os.environ.get("RL_API_HOST", "0.0.0.0"),  # noqa: S104  # nosec B104 - container
         port=int(os.environ.get("RL_API_PORT", "8000")),
         log_config=None,  # our JSON logging owns the root logger
         proxy_headers=True,

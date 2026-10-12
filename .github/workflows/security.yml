@@ -1,0 +1,67 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1" # weekly, Monday 03:17 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: gitleaks (full history)
+        run: docker run --rm -v "$PWD:/repo:ro" zricethezav/gitleaks:v8.30.1 git /repo --redact -v
+
+  trivy-fs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Pinned by digest: never use a floating Trivy tag (CVE-2026-33634, ADR-0014).
+      - name: Trivy filesystem scan (vulns + misconfig + secrets)
+        run: |
+          docker run --rm -v "$PWD:/src:ro" \
+            aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 \
+            fs --scanners vuln,misconfig,secret --severity HIGH,CRITICAL --exit-code 1 \
+            --skip-dirs /src/data/lake --skip-dirs /src/apps/web/node_modules /src
+
+  python-deps:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.12"
+      - name: pip-audit (locked dependencies)
+        run: |
+          uv export --all-packages --frozen --no-hashes --no-emit-workspace -o /tmp/requirements.txt
+          uvx --python 3.12 pip-audit==2.10.1 -r /tmp/requirements.txt --strict
+      - name: bandit (static analysis of our Python code)
+        run: uvx --python 3.12 bandit==1.9.4 -q -r packages services data -x '*/tests/*' -ll
+
+  web-deps:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: apps/web/package.json
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - name: pnpm audit (production deps)
+        run: pnpm audit --prod --audit-level high

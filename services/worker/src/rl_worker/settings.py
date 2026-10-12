@@ -19,5 +19,5 @@ class WorkerSettings(BaseSettings):
     database_url: str = "postgresql+asyncpg://rlens:rlens@localhost:25432/rlens"
     kafka_bootstrap: str = "localhost:29092"
 
-    health_host: str = "0.0.0.0"  # noqa: S104 - container health endpoint
+    health_host: str = "0.0.0.0"  # noqa: S104  # nosec B104 - container health port
     health_port: int = Field(default=8001, ge=1, le=65535)

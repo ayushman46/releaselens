@@ -1,0 +1,7 @@
+# apps/web is its own pnpm project (own lockfile). This file holds pnpm 11 settings.
+#
+# Dependency build scripts are denied unless listed as true here.
+# unrs-resolver (used by eslint-import-resolver-typescript) ships prebuilt
+# platform binaries as optional dependencies; its postinstall is only a check.
+allowBuilds:
+  unrs-resolver: false
