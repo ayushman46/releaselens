@@ -75,6 +75,8 @@ class EventProducer:
             "enable.idempotence": True,
             "message.timeout.ms": int(delivery_timeout_s * 1000),
             "linger.ms": 5,
+            # Span batches are JSON and compress several-fold; deployment events barely notice.
+            "compression.type": "lz4",
             "logger": logging.getLogger("rl_api.kafka.librdkafka"),
             "error_cb": self._on_error,
         }

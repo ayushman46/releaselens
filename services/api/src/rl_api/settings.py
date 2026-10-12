@@ -23,6 +23,16 @@ class Settings(BaseSettings):
     readiness_timeout_s: float = Field(default=2.0, gt=0, le=10)
     # Upper bound on waiting for the broker's ack before answering 503 (see rl_api.kafka).
     kafka_delivery_timeout_s: float = Field(default=5.0, gt=0, le=60)
+    # OTLP ingest (POST /v1/traces). The compressed cap bounds what is read from the socket;
+    # the decompressed cap bounds what a gzip body may inflate to (gzip bombs).
+    otlp_max_body_bytes: int = Field(default=8 * 1024 * 1024, ge=1024, le=64 * 1024 * 1024)
+    otlp_max_decompressed_bytes: int = Field(
+        default=16 * 1024 * 1024, ge=1024, le=256 * 1024 * 1024
+    )
+    # Accepted span start times: at most this far ahead of the server clock, and no older than
+    # the span retention (older spans would land in partitions retention is about to drop).
+    otlp_max_future_skew_s: float = Field(default=86_400.0, gt=0, le=7 * 86_400)
+    otlp_max_span_age_s: float = Field(default=7 * 86_400.0, gt=0, le=90 * 86_400)
     # API keys: write last_used_at at most this often per key (0 = on every request).
     api_key_touch_interval_s: float = Field(default=60.0, ge=0, le=86_400)
 
