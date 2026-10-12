@@ -1,0 +1,156 @@
+# ReleaseLens local stack. Project name "rlens" (never "releaselens": that name belongs to the
+# old prototype's containers on this machine, which we must not touch — docs/MIGRATION.md §1.3).
+#
+#   make up-core    → postgres, kafka (+topics), migrate, api, worker, web
+#   make up-data    → + minio, mlflow, airflow          (added in M2)
+#   make up-demo    → + otel-collector, demo services   (added in M7)
+#
+# Memory limits are sized for a 4 GiB Colima VM (docs/PLAN.md § Environment constraints).
+name: rlens
+
+x-python-service: &python-service
+  image: rlens/python:dev
+  build:
+    context: ../..
+    dockerfile: infra/docker/python.Dockerfile
+  restart: unless-stopped
+  environment: &python-env
+    RL_ENV: ${RL_ENV:-dev}
+    RL_LOG_LEVEL: ${RL_LOG_LEVEL:-INFO}
+    RL_LOG_FORMAT: ${RL_LOG_FORMAT:-json}
+    RL_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-rlens}:${POSTGRES_PASSWORD:-rlens-dev-password}@postgres:5432/${POSTGRES_DB:-rlens}
+    RL_KAFKA_BOOTSTRAP: kafka:9092
+
+services:
+  # ------------------------------------------------------------------ core
+  postgres:
+    image: postgres:16.15-alpine
+    profiles: [core, data, demo]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rlens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rlens-dev-password}
+      POSTGRES_DB: ${POSTGRES_DB:-rlens}
+    command: >
+      postgres -c shared_buffers=128MB -c max_connections=100
+      -c log_min_duration_statement=500 -c timezone=UTC
+    ports: ["${RL_PG_HOST_PORT:-25432}:5432"]
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 384m
+
+  kafka:
+    # GraalVM-native broker (dev/test only, ~55 MB image, far less RAM than the JVM broker) — ADR-0007.
+    image: apache/kafka-native:4.3.1
+    profiles: [core, data, demo]
+    restart: unless-stopped
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk  # any valid base64 16-byte id; dev-only
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:9092,EXTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:${RL_KAFKA_HOST_PORT:-29092}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_RETENTION_HOURS: 24
+    ports: ["${RL_KAFKA_HOST_PORT:-29092}:29092"]
+    # No volume: the native image's data dir is not writable on a fresh named volume (non-root
+    # appuser). Data survives restarts (container layer), not re-creation; topics are
+    # re-bootstrapped by kafka-init. Fine for dev; production uses the JVM image + volumes.
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    mem_limit: 512m
+
+  kafka-init:
+    <<: *python-service
+    profiles: [core, data, demo]
+    restart: "no"
+    command: ["python", "-m", "rl_worker.kafka_admin", "bootstrap", "--bootstrap-servers", "kafka:9092"]
+    depends_on:
+      kafka: { condition: service_healthy }
+    mem_limit: 256m
+
+  migrate:
+    <<: *python-service
+    profiles: [core, data, demo]
+    restart: "no"
+    command: ["python", "-m", "rl_db.migrate", "upgrade", "head"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    mem_limit: 256m
+
+  api:
+    <<: *python-service
+    profiles: [core, data, demo]
+    command: ["python", "-m", "rl_api"]
+    environment:
+      <<: *python-env
+      RL_CORS_ORIGINS: ${RL_CORS_ORIGINS:-http://localhost:23000}
+      RL_FORWARDED_ALLOW_IPS: "*"
+    ports: ["${RL_API_HOST_PORT:-28000}:8000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      kafka-init: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    mem_limit: 384m
+
+  worker:
+    <<: *python-service
+    profiles: [core, data, demo]
+    command: ["python", "-m", "rl_worker"]
+    ports: ["${RL_WORKER_HOST_PORT:-28001}:8001"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      kafka-init: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/readyz', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    mem_limit: 256m
+
+  web:
+    image: rlens/web:dev
+    profiles: [core, data, demo]
+    build:
+      context: ../../apps/web
+      args:
+        NEXT_PUBLIC_RL_API_URL: http://localhost:${RL_API_HOST_PORT:-28000}
+    restart: unless-stopped
+    ports: ["${RL_WEB_HOST_PORT:-23000}:3000"]
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    mem_limit: 256m
+
+volumes:
+  pg-data:

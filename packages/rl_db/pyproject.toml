@@ -1,0 +1,15 @@
+[project]
+name = "rl-db"
+version = "0.1.0"
+description = "ReleaseLens persistence: SQLAlchemy 2 async models, tenant-scoped repositories, Alembic migrations"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "rl-core",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+]
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"

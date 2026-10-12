@@ -1,0 +1,12 @@
+[project]
+name = "rl-core"
+version = "0.1.0"
+description = "ReleaseLens core domain logic: events, features, regression engine, graph, triage (pure, no I/O)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pydantic>=2.9",
+]
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"

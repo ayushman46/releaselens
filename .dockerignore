@@ -1,0 +1,23 @@
+# Keep the build context small: only Python sources + manifests are needed by python.Dockerfile.
+**/.DS_Store
+.git
+.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.hypothesis
+**/node_modules
+**/.next
+apps
+data/raw
+data/processed
+data/lake
+docs
+demo/k6/out
+mlruns
+mlartifacts
+**/*.parquet
+**/*.duckdb
+.env
+**/.env
