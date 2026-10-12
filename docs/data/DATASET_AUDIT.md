@@ -14,7 +14,7 @@
 | `repo-data-travis.csv` / `.json` | 1 row per **build** | `build_id, commit, pull_req, branch, status, duration, started_at, jobs, event_type` |
 | `buildlog-data-travis.csv` / `.json` | 1 row per **job** | `tr_build_id, tr_job_id, tr_build_number, tr_original_commit, tr_log_lan, tr_log_status, tr_log_setup_time, tr_log_analyzer, tr_log_frameworks, tr_log_bool_tests_ran, tr_log_bool_tests_failed, tr_log_num_tests_ok, tr_log_num_tests_failed, tr_log_num_tests_run, tr_log_num_tests_skipped, tr_log_num_test_suites_run, tr_log_num_test_suites_ok, tr_log_num_test_suites_failed, tr_log_tests_failed, tr_log_testduration, tr_log_buildduration` |
 | `{build_number}_{build_id}_{sha}_{job_id}.log.bz2` | 1 per job | raw Travis log |
-| `errors` (10 projects) | — | Travis API retry messages (HTTP 429, one 503) |
+| `errors` (9 projects) | — | Travis API retry messages (HTTP 429, one 503) |
 
 The JSON variants have exactly the same keys and values as the CSVs (0 mismatches across 37
 comparable files); only their types differ.
@@ -121,3 +121,23 @@ The brief's "~519K builds" does **not** describe this archive: 64,736 is about 1
 | `description_complexity` | ❌ needs the PR API, so it is dropped (ADR-0004) |
 | History (`prev_build_failed`, fail rates, …) | ✅ with the conservative finished-before rule |
 | Time (hour-of-week) | ✅ (UTC only) |
+
+## 7. The training source: Figshare TravisTorrent (ADR-0004)
+
+`final-2017-01-25.csv.gz` (DOI 10.6084/m9.figshare.19314170, CC BY 4.0), 264,607,174 bytes,
+md5 `5d359345fecf0bf47be6edb10b5aae58` (verified locally). Streamed with DuckDB 1.5.6, never
+decompressed to disk:
+
+| Measure | Value |
+|---|---|
+| Columns | 66 (2017 names: `git_diff_src_churn`, `gh_diff_files_added`, … plus `gh_repo_age`, `gh_repo_num_commits`) |
+| Job rows | 3,881,992 |
+| Builds (distinct `tr_build_id`) | 925,897 |
+| Projects | 948 |
+| Java | 401,767 jobs · **200,561 builds** · 241 projects |
+| Ruby | 1,703,900 jobs · 273,220 builds · 248 projects |
+| Python | 1,520,967 jobs · 338,176 builds · 261 projects |
+| Go | 255,358 jobs · 113,940 builds · 198 projects |
+
+The full per-column profile (null rates, pre/post-build tags) is `docs/data/DATA_DICTIONARY.md`,
+generated in M2 by `rl_pipeline`.

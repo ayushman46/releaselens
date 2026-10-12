@@ -1,0 +1,17 @@
+# Questions for the owner (morning review)
+
+Decisions I took autonomously overnight (spec §19.1). Each links to its ADR. Nothing here blocks
+progress. Reply to change any of them, and I'll write a superseding ADR.
+
+| # | Decision taken | Why | Your options |
+|---|---|---|---|
+| Q1 | **Training data = Figshare TravisTorrent `final-2017-01-25.csv.gz` (CC BY 4.0), Java subset.** I downloaded it (264,607,174 bytes, md5 `5d359345…` verified) into `data/lake/downloads/` (git-ignored). Measured: 925,897 builds, 948 projects. **Java subset: 200,561 builds across 241 projects.** | The official `8_2_2017` dump is unobtainable: the testroots domain now redirects to an unrelated APK site. The on-disk monperrus archive has no change features and no license. The "~519K builds" in the brief is that archive's GitHub description and could not be reproduced (it has 64,736 labelled builds). ADR-0004. | Keep it, or point me at another copy of `8_2_2017` if you have one. |
+| Q2 | **Object storage = `pgsty/silo` (community MinIO fork), not MinIO.** | MinIO's images can no longer be pulled (repo archived, source-only). ADR-0009. | Keep it, or switch to SeaweedFS (Apache-2.0) / real AWS S3. |
+| Q3 | **Kafka 4.3.1 native image** instead of the JVM image; **Airflow 3.3.2** in its own venv. | 4 GiB Colima VM. Airflow 2 is EOL. ADR-0007, ADR-0013. | — |
+| Q4 | **Old prototype containers left running** (`releaselens-backend` :8000, `releaselens-postgres` :5432, compose project `releaselens`). The new stack is project `rlens` on 2xxxx ports. | I must not touch things outside this repo. | When you're happy, run `docker --context colima compose -p releaselens down`. Add `-v` to also delete its volumes, including `releaselens_clickhouse-data` from the Go prototype. |
+| Q5 | **Colima is 2 CPU / 4 GiB.** I did not resize it, because that restarts your other containers (bosch-*). | ADR-0015. | `colima stop && colima start --cpu 6 --memory 10` lets the data and demo profiles run alongside core. |
+| Q6 | **Disk.** The dataset exists 3 times (zip 5.0 GB, extracted 5.3 GB, in-repo partial 2.1 GB). I recovered about 2.1 GB **losslessly**: the in-repo files are now APFS clones of the identical extracted files. | Disk was 97% full. | Deleting the extracted copy (`~/Downloads/travistorrent-java-ci-build-dataset-master/`) would free ~5 GB more. Keep the zip. Your call. |
+| Q7 | **Pushing to GitHub** (`ayushman46/releaselens`, **public**) after every substantial change, per your message. gitleaks runs before each push. | You asked for it, which overrides the brief's "never push". | Make the repo private if you prefer: `gh repo edit ayushman46/releaselens --visibility private`. |
+| Q8 | **Label = failed ∪ errored, canceled excluded** (spec), **plus** a sensitivity run with `errored` excluded. | `errored` is mostly infrastructure noise. ADR-0005. | — |
+| Q9 | The surviving Python prototype (`/api/v1/overview`) returns **hard-coded service health**, and its reads are unauthenticated via an `X-Tenant-ID` header. None of it was carried forward. | Violates the no-fabrication and tenancy rules. `MIGRATION.md`. | — |
+| Q10 | Your original `.venv` (duckdb/polars/pandas/pyarrow) was **moved** to the session scratchpad and replaced by the uv workspace venv at the same path. | `uv sync` owns `.venv`. Your old env had no lockfile. | Nothing to do: `uv sync --all-packages` recreates everything, and duckdb/polars come back as pipeline dependencies in M2. |
