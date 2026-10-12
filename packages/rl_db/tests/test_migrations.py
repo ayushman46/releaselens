@@ -18,6 +18,25 @@ from rl_db.migrate import make_config
 pytestmark = pytest.mark.integration
 
 
+M10_TABLES = {
+    "auth_sessions",
+    "auth_refresh_tokens",
+    "user_tokens",
+    "oauth_states",
+    "invitations",
+    "projects",
+    "services",
+    "environments",
+    "audit_log",
+    "alert_rules",
+    "notification_log",
+    "subscriptions",
+    "stripe_events",
+    "usage_counters",
+    "rate_limit_buckets",
+}
+
+
 def _diff(conn: Connection) -> list[object]:
     ctx = MigrationContext.configure(conn, opts={"compare_type": True})
     return list(compare_metadata(ctx, Base.metadata))
@@ -49,6 +68,7 @@ def test_upgrade_matches_models_and_downgrade_reverses(pg_url: str) -> None:
         "deployments",
         "analysis_jobs",
         "outbox",
+        *M10_TABLES,
     } <= tables
 
     diff = asyncio.run(_run(pg_url, _diff))
@@ -118,5 +138,57 @@ def test_0002_steps_down_to_0001_with_data_present_and_back_up(pg_url: str) -> N
     command.upgrade(cfg, "head")
     assert m6_tables <= asyncio.run(_run(pg_url, _tables))
     assert m6_enums <= asyncio.run(_run(pg_url, _enum_types))
+    diff = asyncio.run(_run(pg_url, _diff))
+    assert diff == [], f"models and migrations disagree after a step down/up: {diff}"
+
+
+def _functions(conn: Connection) -> set[str]:
+    rows = conn.exec_driver_sql(
+        "SELECT proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
+        "WHERE n.nspname = 'public'"
+    ).all()
+    return {r[0] for r in rows}
+
+
+def _seed_m10_rows(conn: Connection) -> None:
+    """Rows in the 0001 tables plus 0003 tables (an audit entry, a project)."""
+    conn.exec_driver_sql(
+        "INSERT INTO organizations (id, name, slug) "
+        "VALUES ('00000000-0000-7000-8000-000000000011', 'Beta', 'beta')"
+    )
+    conn.exec_driver_sql(
+        "INSERT INTO projects (id, tenant_id, name, slug) VALUES ("
+        "'00000000-0000-7000-8000-000000000012', '00000000-0000-7000-8000-000000000011', "
+        "'Web', 'web')"
+    )
+    conn.exec_driver_sql(
+        "INSERT INTO audit_log (id, tenant_id, actor_type, action) VALUES ("
+        "'00000000-0000-7000-8000-000000000013', '00000000-0000-7000-8000-000000000011', "
+        "'system', 'org.created')"
+    )
+    conn.commit()
+
+
+def test_0003_steps_down_to_0002_with_data_present_and_back_up(pg_url: str) -> None:
+    """Downgrading only the M10 revision drops its tables and the audit trigger function,
+    keeps the 0001/0002 schema and data, and leaves the shared enum types alone."""
+    cfg = make_config(pg_url)
+    command.upgrade(cfg, "head")
+    asyncio.run(_run(pg_url, _seed_m10_rows))
+    command.downgrade(cfg, "0002_deployments_jobs_outbox")
+
+    tables = asyncio.run(_run(pg_url, _tables))
+    assert not tables & M10_TABLES
+    assert {"organizations", "users", "memberships", "api_keys", "deployments"} <= tables
+    assert "audit_log_immutable" not in asyncio.run(_run(pg_url, _functions))
+    assert {"role", "plan"} <= asyncio.run(_run(pg_url, _enum_types))  # 0001's types survive
+
+    def org_count(conn: Connection) -> int:
+        return int(conn.exec_driver_sql("SELECT count(*) FROM organizations").scalar_one())
+
+    assert asyncio.run(_run(pg_url, org_count)) == 1
+
+    command.upgrade(cfg, "head")
+    assert asyncio.run(_run(pg_url, _tables)) >= M10_TABLES
     diff = asyncio.run(_run(pg_url, _diff))
     assert diff == [], f"models and migrations disagree after a step down/up: {diff}"

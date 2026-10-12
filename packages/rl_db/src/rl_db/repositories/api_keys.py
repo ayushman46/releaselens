@@ -50,6 +50,16 @@ async def list_api_keys(session: AsyncSession, ctx: TenantContext) -> list[ApiKe
     return list((await session.execute(stmt)).scalars())
 
 
+async def get_api_key(
+    session: AsyncSession, ctx: TenantContext, key_id: uuid.UUID, *, for_update: bool = False
+) -> ApiKey | None:
+    """One of the tenant's keys, or None (another tenant's id looks the same as no key)."""
+    stmt = select(ApiKey).where(ApiKey.tenant_id == ctx.tenant_id, ApiKey.id == key_id)
+    if for_update:
+        stmt = stmt.with_for_update()
+    return (await session.execute(stmt)).scalar_one_or_none()
+
+
 async def revoke_api_key(
     session: AsyncSession, ctx: TenantContext, key_id: uuid.UUID, *, at: datetime | None = None
 ) -> bool:
