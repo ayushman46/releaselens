@@ -23,6 +23,7 @@ and mark the old one superseded.
 | 0015 | Local container engine (Colima) and resource budget | Accepted |
 | 0016 | API keys: prefix + SHA-256 of a high-entropy secret (passwords use Argon2id) | Accepted |
 | 0017 | Training data = TravisTorrent **5_3_2016** release (Java); 2017 re-publication's change columns are broken | Accepted (supersedes part of 0004) |
+| 0018 | Regression engine: definitions and conservative refinements beyond spec §12 | Accepted (see QUESTIONS_FOR_OWNER) |
 
 ---
 
@@ -408,3 +409,44 @@ and mark the old one superseded.
   - The data window ends 2015-08, which the model card states.
   - Placeholder values in this release (`-1` for missing `tr_prev_build` / `tr_ci_latency`,
     `NA` strings) become nulls in staging.
+
+## ADR-0018 — Regression engine: definitions and conservative refinements beyond spec §12
+
+- **Context.** Implementing spec §12 exactly surfaced ambiguities. Adversarial review also found
+  failure modes, each reproduced by a test that failed before its fix. Every change below makes
+  the engine **more conservative** (fewer false alarms, less misattribution) and was measured on
+  the deterministic trace generator (`packages/rl_core/tests/tracegen.py`).
+- **Decisions.**
+  1. **Service self-time** for gates and triage is the server span's duration minus the union of
+     time spent waiting on outbound calls: CLIENT/PRODUCER children, and other services' spans
+     directly underneath. The service's own INTERNAL spans stay as its own time. The spec's
+     literal per-span self-time is also implemented (`selftime.py`), but it would hide a
+     regression inside `payment.own_work`.
+  2. **Error gate** = spec gates (one-sided two-proportion z-test p < 0.01, ≥ 0.5 pp absolute,
+     ≥ 50% relative, compared as exact fractions) **plus a one-sided Fisher exact test
+     p < 0.01**. With few errors the z-test is anti-conservative (2/1837 → 5/751 gives z-test
+     p = 0.0066 but exact p = 0.025). Measured control (no-change) false-alarm rate: 6/200 seeds
+     before, 2/200 after.
+  3. **"Originates errors" (+2)** requires the service's error gate to pass *and* the same gates
+     on its own errors (failed requests whose callees did not fail).
+  4. **"All downstream healthy" (+2)** requires every downstream service to have been assessed.
+     INSUFFICIENT_DATA is reported as "could not be assessed", never as healthy. When the
+     deployed service crashes, this stops the caller from being blamed.
+  5. **Ties at the top score** give LOW confidence and no single probable origin, never an
+     alphabetical winner.
+  6. **Onset** is computed only for services whose p95 latency gate passed. With no change, the
+     spec's onset rule fires in 18–27% of one-minute buckets (measured), so onset is a hint, never
+     a gate.
+  7. Blast radius adds **UNKNOWN_UPSTREAM / UNKNOWN_DOWNSTREAM** for neighbours without enough
+     data, so missing data never shows as healthy. The relaxed neighbour detector halves only the
+     effect-size thresholds.
+  8. `analyse_deployment(as_of=…)` supports the early checks at T+5 and T+10 without inventing
+     a traffic drop.
+- **Measured outcomes (seeds 0–29):** payment regression → payment, HIGH, 30/30. Fraud regression
+  → fraud, HIGH, 30/30 (payment is AFFECTED_UPSTREAM, never blamed). Payment deployed unchanged
+  while fraud is slowed → fraud, MEDIUM, 30/30. Control false alarms: 2/200 (1%), both genuine
+  chance results at the 1% level.
+- **Consequences.** Slightly lower sensitivity on very sparse error spikes. Every deviation is
+  recorded in each result's evidence (gate names, `exact_p_value`). Lowering false alarms further
+  would need a correction for testing several services at once, which is a spec change: see
+  QUESTIONS_FOR_OWNER.

@@ -189,7 +189,7 @@ Permanent errors → DLQ with reason, stack, original topic/partition/offset.
 
 ```mermaid
 flowchart LR
-  W["windows<br/>baseline [T−30m,T)<br/>post [T+2m,T+15m]"] --> G["per-service gates<br/>sample ≥ min_requests<br/>latency: rel ≥25% ∧ abs ≥20ms ∧ bootstrap CI ∌ 0<br/>errors: z-test p<0.01 ∧ +0.5pp ∧ +50%"]
+  W["windows<br/>baseline [T−30m,T)<br/>post [T+2m,T+15m]"] --> G["per-service gates<br/>sample ≥ min_requests<br/>latency: rel ≥25% ∧ abs ≥20ms ∧ bootstrap CI ∌ 0<br/>errors: z-test p<0.01 ∧ Fisher exact p<0.01 ∧ +0.5pp ∧ +50%<br/>(ADR-0018)"]
   G --> ST["self-time per span<br/>(union of child intervals)"]
   ST --> GR["service graph from traces<br/>(cycles, diamonds, multi-root)"]
   GR --> OR["probable-origin scoring<br/>(weighted evidence table)"]
