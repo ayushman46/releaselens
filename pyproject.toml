@@ -63,6 +63,10 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S", "PT011", "N802"]
+# scikit-learn convention: feature matrices are `X`, `Xtr`, `Xva`
+"ml/**" = ["N803", "N806"]
+# Markdown generator: typographic characters (×, –, ≥) and long template lines
+"ml/src/rl_ml/card.py" = ["RUF001", "E501"]
 "**/alembic/versions/*.py" = ["N999"]
 
 [tool.ruff.lint.isort]
