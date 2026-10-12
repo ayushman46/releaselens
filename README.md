@@ -60,11 +60,13 @@ Full diagrams, component responsibilities and data flows are in
 
 ## Data and methodology (honest version)
 
-- **Training data:** TravisTorrent, the build-level table re-published by its authors on Figshare
-  (`final-2017-01-25.csv.gz`, CC BY 4.0). Measured after an md5-verified download: 925,897
-  builds across 948 projects. The **Java subset is 200,561 builds across 241 projects.** The
-  data ends in August 2016. See [`docs/data/DATASET_AUDIT.md`](docs/data/DATASET_AUDIT.md) and
-  ADR-0004.
+- **Training data:** TravisTorrent build data re-published by its authors on Figshare
+  (CC BY 4.0). We train on the `travistorrent_5_3_2016` release, **Java subset: 128,819 builds
+  across 402 projects (2011-06 → 2015-08)**, measured after an md5-verified download. A later
+  re-publication (`final-2017-01-25`, 200,561 Java builds) was profiled and rejected for training
+  because its change-size columns are effectively empty: source churn is 0 on 99.08% of builds and
+  test churn on 100%. See [`docs/data/DATASET_AUDIT.md`](docs/data/DATASET_AUDIT.md), ADR-0004 and
+  ADR-0017.
 - **What the model predicts:** the risk that a **CI build fails** (failed or errored), using only
   information available *before* the build starts. It does **not** predict production outages.
   The current build's CI result and duration are shown *next to* the score, never inside it.

@@ -9,7 +9,7 @@ and mark the old one superseded.
 | 0001 | Record decisions as ADRs in this file | Accepted |
 | 0002 | Monorepo tooling: uv workspace + pnpm + Makefile, Python 3.12 | Accepted |
 | 0003 | Greenfield Python implementation (no Go prototype to migrate) | Accepted |
-| 0004 | Historical data source: Figshare TravisTorrent (CC BY 4.0), Java subset | Accepted (overnight; see QUESTIONS_FOR_OWNER) |
+| 0004 | Historical data source: Figshare TravisTorrent (CC BY 4.0), Java subset | Accepted; file choice superseded by ADR-0017 |
 | 0005 | Prediction target and label definition | Accepted |
 | 0006 | Feature logic lives only in `rl_core`; dbt calls it through a Python model | Accepted |
 | 0007 | Kafka in KRaft mode, topic layout and delivery semantics | Accepted |
@@ -21,6 +21,8 @@ and mark the old one superseded.
 | 0013 | Airflow 3.3.2 in its own venv; tasks via external_python | Accepted |
 | 0014 | Version pinning policy and initial pins | Accepted |
 | 0015 | Local container engine (Colima) and resource budget | Accepted |
+| 0016 | API keys: prefix + SHA-256 of a high-entropy secret (passwords use Argon2id) | Accepted |
+| 0017 | Training data = TravisTorrent **5_3_2016** release (Java); 2017 re-publication's change columns are broken | Accepted (supersedes part of 0004) |
 
 ---
 
@@ -349,3 +351,60 @@ and mark the old one superseded.
     `demo` profiles can run alongside `core`.
 - **Consequences.** The core profile fits comfortably in 4 GiB. The data and demo profiles are
   started selectively on this machine.
+
+## ADR-0016 — API keys: prefix + SHA-256 of a high-entropy secret
+
+- **Context.** Every ingest, deployment and risk call authenticates with an API key, so lookup must
+  be fast and safe.
+- **Decision.**
+  - Key format: `rlk_<prefix12>_<secret>`, where `prefix` (12 URL-safe chars) is stored in clear
+    with a unique index and shown in the UI, and `secret` is 32 random bytes, URL-safe base64.
+  - We store `sha256(full key)` and compare with `hmac.compare_digest`. The key is high-entropy
+    machine-generated material, so a fast hash is the industry norm (it is not a password). Human
+    passwords use Argon2id (M10).
+  - Keys carry scopes (`deployments:write`, `telemetry:write`, `risk:write`, `read`), plus
+    `expires_at`, `revoked_at` and a throttled `last_used_at`. Missing or invalid keys get 401 and
+    never reveal which check failed. A valid key without the scope gets 403.
+- **Consequences.** One indexed lookup plus one hash per request. Leaked database rows don't reveal
+  usable keys.
+
+## ADR-0017 — Training data = TravisTorrent 5_3_2016 release (Java subset)
+
+- **Context.** ADR-0004 chose the authors' Figshare re-publication `final-2017-01-25.csv.gz`.
+  Profiling its Java builds (200,561, deduplicated to one row per build) **measured** that the
+  change-size columns are effectively empty:
+  - `git_diff_src_churn` = 0 on **99.08%** of builds, and `git_diff_test_churn` = 0 on **100%**.
+  - `gh_diff_src_files` = 0 on 99.06%, and `gh_diff_doc_files` = 0 on 100%.
+  - `gh_diff_other_files` is non-zero on 99.55%, so files were classified as "other" and
+    line churn (counted only for "programming" files) was lost. File counts, sloc, test density,
+    team size and commit counts are populated.
+
+  Change size is the core of "how risky does this change look", so training on all-zero churn
+  would silently drop the spec's main feature family. The same Figshare record (CC BY 4.0) also
+  contains the authors' **`travistorrent_5_3_2016.csv.gz`** (81,902,127 bytes,
+  md5 `4713d8b73b667a2c375b89c20f531fc0`). It uses exactly the spec's column names
+  (`gh_src_churn`, `gh_test_churn`, `gh_files_added`, `gh_tests_added`, `gh_src_files`,
+  `gh_commits_on_files_touched`, `tr_started_at`, `tr_prev_build`, …), 56 columns in total.
+  Measured on its Java subset:
+  - **128,819 builds** across **402 projects**, `tr_started_at` from 2011-06-20 to 2015-08-19.
+  - Status per build: passed 91,282, failed 22,068, errored 15,267, canceled 199, started 3.
+  - `gh_src_churn` = 0 on 32.21% (p50 9, p90 320, p99 3,669 lines), and `gh_test_churn` = 0
+    on 70.69%.
+  - Change columns never vary within a build (0 inconsistent builds).
+  - 256,055 job rows but only 234,391 distinct `tr_job_id`, so duplicate job rows exist and are
+    removed in staging.
+- **Decision.**
+  - **Primary training and analytics source: `travistorrent_5_3_2016.csv.gz`, Java subset**
+    (`gh_lang = 'java'`), deduplicated to one row per `tr_build_id`. Builds with status `started`
+    (no outcome) are excluded, like `canceled`.
+  - `final-2017-01-25` stays as a **secondary** dataset, used to cross-check `tr_status` on the
+    51,666 Java builds present in both releases (87 projects) and documented in the data audit.
+    Its broken change columns are never used.
+  - The pipeline supports several dataset specs, each with its own schema, md5 and casts. The
+    dataset version is the md5 of the source file.
+- **Consequences.**
+  - Fewer rows (128,819 vs 200,561 Java builds), but the features the product exists for are
+    valid. The README and UI say "~129K real CI builds", not "200K".
+  - The data window ends 2015-08, which the model card states.
+  - Placeholder values in this release (`-1` for missing `tr_prev_build` / `tr_ci_latency`,
+    `NA` strings) become nulls in staging.

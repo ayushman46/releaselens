@@ -278,7 +278,7 @@ function Integrations() {
 
 const PREDICTS = [
   "Whether a change is likely to fail CI (the build fails or errors), as a score from 0 to 100 with a band.",
-  "It learns from about 200,000 historical CI builds of open-source Java projects (TravisTorrent, 2012–2016).",
+  "It learns from 128,819 historical CI builds of 402 open-source Java projects (TravisTorrent, 2011–2015).",
   "Every score comes with SHAP explanations: the factors that raised it and the ones that lowered it.",
   "CI pass/fail and duration appear next to the score, never as inputs, because they would leak the answer.",
 ];
@@ -286,7 +286,7 @@ const PREDICTS = [
 const DOES_NOT = [
   "It is not an outage or incident probability. Failing CI is a different outcome from breaking production.",
   "A score is not presented as a probability unless calibration testing justifies it.",
-  "Transfer from 2012–2016 Travis-era projects to today's pipelines is unproven. Cross-project and cold-start evaluations measure it instead of assuming it.",
+  "Transfer from 2011–2015 Travis-era projects to today's pipelines is unproven. Cross-project and cold-start evaluations measure it instead of assuming it.",
   "After deploy it names a probable origin from trace evidence, never a proven root cause. Too little traffic gives “Insufficient data”, not a verdict.",
 ];
 

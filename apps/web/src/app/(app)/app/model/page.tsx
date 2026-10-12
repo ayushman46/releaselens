@@ -56,7 +56,7 @@ export default function ModelPage() {
                 },
                 {
                   label: "Training data",
-                  value: "TravisTorrent, Java subset: about 200,000 CI builds from open-source projects, 2012–2016.",
+                  value: "TravisTorrent (2016 release), Java subset: 128,819 CI builds from 402 open-source projects, 2011–2015. Exact training/validation/test counts appear here after M4.",
                   hint: "Beller, Gousios & Zaidman, MSR 2017. CC BY 4.0.",
                 },
                 {

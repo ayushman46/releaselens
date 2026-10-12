@@ -141,3 +141,28 @@ decompressed to disk:
 
 The full per-column profile (null rates, pre/post-build tags) is `docs/data/DATA_DICTIONARY.md`,
 generated in M2 by `rl_pipeline`.
+
+## 8. Change-column quality check → training source switched (ADR-0017)
+
+Profiled on Java builds (one row per build):
+
+| Column (2017 name / 2016 name) | `final-2017-01-25` zero % (200,561 builds) | `5_3_2016` zero % (128,819 builds) |
+|---|---|---|
+| `git_diff_src_churn` / `gh_src_churn` | **99.08** | 32.21 |
+| `git_diff_test_churn` / `gh_test_churn` | **100.00** | 70.69 |
+| `gh_diff_src_files` / `gh_src_files` | **99.06** | 26.56 |
+| `gh_diff_doc_files` / `gh_doc_files` | 100.00 | 94.43 |
+| `gh_diff_other_files` / `gh_other_files` | 0.45 | 60.58 |
+| `gh_diff_files_modified` / `gh_files_modified` | 2.53 | 2.79 |
+| `gh_diff_tests_added` / `gh_tests_added` | 98.50 | 97.95 |
+
+The 2017 re-publication classified almost every file as "other", so line churn was never counted.
+The 2016 release (`travistorrent_5_3_2016.csv.gz`, 81,902,127 bytes,
+md5 `4713d8b73b667a2c375b89c20f531fc0`, 56 columns with the spec's names) is used for training
+and analytics:
+
+- 128,819 Java builds and 402 projects; `tr_started_at` 2011-06-20 → 2015-08-19.
+- Statuses: passed 91,282 · failed 22,068 · errored 15,267 · canceled 199 · started 3.
+- Duplicates: 256,055 job rows but 234,391 distinct job ids, deduplicated in staging.
+- `gh_src_churn` quantiles: p50 9, p90 320, p99 3,669 lines.
+- 51,666 Java builds (87 projects) appear in both releases, which enables a status cross-check.
