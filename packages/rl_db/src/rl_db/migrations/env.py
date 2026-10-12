@@ -10,6 +10,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 import rl_db.models  # noqa: F401  (registers tables)
+from rl_db.admin.partitions import autogenerate_include_object
 from rl_db.base import Base
 
 config = context.config
@@ -30,13 +31,20 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=autogenerate_include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def _do_run(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        # spans' daily partitions are runtime objects; see rl_db.admin.partitions.
+        include_object=autogenerate_include_object,
+    )
     with context.begin_transaction():
         context.run_migrations()
 
