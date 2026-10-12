@@ -21,3 +21,4 @@ mlartifacts
 **/*.duckdb
 .env
 **/.env
+.claude
