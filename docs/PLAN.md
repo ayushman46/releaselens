@@ -9,17 +9,17 @@
 | # | Milestone | Status | Acceptance evidence |
 |---|---|---|---|
 | M0 | Repo audit & plan | ✅ done (auto-approved per §19.1) | `docs/MIGRATION.md`, this file, `ARCHITECTURE.md`, ADR-0001…0015, `docs/data/DATASET_AUDIT.md` |
-| M1 | Foundation | ⏳ next | — |
-| M2 | Historical ingestion | ⬜ | — |
-| M3 | dbt + analytics | ⬜ | — |
+| M1 | Foundation | ✅ done (clean-clone check re-run at M12) | CI backend/frontend green; core stack healthy (~445 MiB measured) |
+| M2 | Historical ingestion | ✅ done for `final-2017`; ⏳ extending to primary `5_3_2016` (ADR-0017) | deterministic Parquet, idempotent S3 load (identical listings), 88 pipeline + 20 DAG tests |
+| M3 | dbt + analytics | ⏳ in progress (workflow) | — |
 | M4 | ML | ⬜ | — |
 | M5 | Live risk | ⬜ | — |
-| M6 | Deployment events | ⬜ | — |
-| M7 | Telemetry + demo | ⬜ | — |
-| M8 | Regression engine | ⬜ | — |
-| M9 | Graph + triage | ⬜ | — |
+| M6 | Deployment events | ⏳ in progress (workflow) | — |
+| M7 | Telemetry + demo | ⏳ demo services + collector + k6 done; ingest pending M6 | 5 demo tests (real cross-service traces) |
+| M8 | Regression engine | ⏳ core logic in progress (workflow) | — |
+| M9 | Graph + triage | ⏳ core logic in progress (workflow) | — |
 | M10 | SaaS layer | ⬜ | — |
-| M11 | Frontend | ⬜ | — |
+| M11 | Frontend | ⏳ M11a design system + shell + marketing done | 272 vitest tests, WCAG contrast test |
 | M12 | Hardening & launch | ⬜ | — |
 
 Legend: ⬜ not started · ⏳ in progress · ✅ done (acceptance demonstrated by commands in `PROGRESS.md`) · ⛔ blocked (see `BLOCKERS.md`)

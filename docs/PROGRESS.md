@@ -6,26 +6,29 @@
 
 ## Current state
 
-- **Current milestone:** M1 → closing (clean-clone `make up-core` check pending); M2, M6 and M8/M9
-  core logic are being built in parallel (independent code paths).
-- **Last completed step:** web skeleton + CI pushed (`3408e75`). GitHub Actions: backend ✅
-  (lint, mypy, unit, testcontainers integration, image build), frontend ✅, security ✅
-  (gitleaks, Trivy fs, pip-audit, bandit, pnpm audit), data ❌ only because `data/` had no tests
-  yet (pytest exit 4, "collected 0 items").
-- **Uncommitted, green locally:** `rl_core.stats` (Wilson, z-test, bootstrap, Mann–Whitney/Cliff's
-  delta, chi-square/Cramér's V) + `rl_core.features` (schema, finished-before history,
-  change/time features, offline Polars batch, online per-request) → 49 tests incl. Hypothesis
-  oracle + offline/online parity. Waiting for the M2 lockfile changes to commit together.
-- **In flight (background workflows):** M2 pipeline + Airflow orchestration (`data/pipeline`,
-  `data/airflow`, `infra/docker/airflow.Dockerfile`); M6 deployment events (API keys, envelope,
-  consumer, DLQ, jobs, outbox); M8/M9 rl_core regression engine/self-time/graph/triage.
-  If a restart finds these half-done: run their tests, keep what is green, finish the rest.
-- **Next step:** integrate + commit each workflow's output (tests green first), then M3 (dbt +
-  analytics) → M4 (ML) → M5 → M7 → M10 → M11 → M12.
-- **Environment notes:** Docker engine = Colima (`DOCKER_CONTEXT=colima`, 2 CPU / 4 GiB). Host disk
-  ≈ 9–10 GiB free. The old prototype containers (`releaselens-backend` :8000,
-  `releaselens-postgres` :5432) are still running and must not be touched; our stack is compose
-  project `rlens` on ports 25432/29092/28000/28001/23000.
+- **Milestones:** M0 ✅ · M1 ✅ · M2 ✅ (`final-2017`) / extending to the primary `5_3_2016`
+  dataset (ADR-0017) · M3 ⏳ · M6/M8/M9-core ⏳ · M7 demo services ✅ (ingest pending) ·
+  M11a ✅.
+- **Last commits:** `c680c8c` (M2 + rl_core features/stats + demo), `ceb9a81` (ADR-0017),
+  `168445c` (M11a web). GitHub CI on `c680c8c`: backend ✅, data ✅, frontend ✅,
+  security ❌ = bandit B608 (f-string SQL) ×12 in `data/pipeline` (DuckDB queries built from
+  internal schema constants). **Next fix:** use DuckDB parameter binding for values and an
+  allowlist + justified `# nosec B608` for identifiers. Deferred until the M2b agent releases
+  `data/pipeline`.
+- **In flight (background workflows):**
+  1. M2b + M3 (`wc25a2zj9`): 5_3_2016 dataset spec → dbt project → analytics + Postgres export
+     → reviews.
+  2. M6 + M8/M9 core (`waq3y476j`): API keys, deployment envelope/consumer/DLQ/jobs/outbox;
+     rl_core regression engine, self-time, graph, triage, blast radius.
+
+  Uncommitted files under `packages/rl_db`, `services/*`, `packages/rl_core/{events,telemetry,
+  regression,…}` and `data/` belong to these. If a restart finds them half-done: run their
+  tests, keep what is green, finish the rest.
+- **Disk:** host ≈ 2.1 GiB free, Colima VM ≈ 4 GiB free (VM disk file is at its 20 GiB cap).
+  Prune only `rlens`-labelled dangling images and our own build cache. See Q11.
+- **Next steps after the workflows:** commit M6, M8/M9 and M3 → fix bandit → M7 OTLP ingest + span
+  consumer + demo compose profile + scenario script → M4 ML → M5 risk API + GitHub Action → M10
+  SaaS layer → M11 wiring → M12.
 
 ## Verification commands (current)
 
