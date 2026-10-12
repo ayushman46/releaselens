@@ -15,7 +15,7 @@ dependencies = [
     "pyarrow>=17",
     "rl-core",
     "scikit-learn==1.9.1",
-    "shap==0.52.0",
+    "shap==0.53.0",
     "xgboost==3.4.1 ; sys_platform == 'darwin'",
     "xgboost-cpu==3.4.1 ; sys_platform != 'darwin'",
 ]
