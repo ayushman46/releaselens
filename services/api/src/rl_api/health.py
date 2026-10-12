@@ -54,7 +54,7 @@ def postgres_check(app_state: Any) -> Check:
     return check
 
 
-def kafka_check(bootstrap: str, timeout_s: float) -> Check:
+def kafka_check(bootstrap: str, timeout_s: float, producer: Any = None) -> Check:
     from confluent_kafka.admin import AdminClient
 
     admin = AdminClient(
@@ -62,6 +62,9 @@ def kafka_check(bootstrap: str, timeout_s: float) -> Check:
     )
 
     async def check() -> None:
+        # A producer hit by a fatal error can never send again, even with the broker up.
+        if producer is not None and not producer.healthy:
+            raise RuntimeError("kafka producer is in a fatal state")
         # list_topics is blocking; run it off the event loop.
         await asyncio.to_thread(admin.list_topics, timeout=timeout_s)
 

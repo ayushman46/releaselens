@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     db_pool_size: int = Field(default=5, ge=1, le=50)
     kafka_bootstrap: str = "localhost:29092"
     readiness_timeout_s: float = Field(default=2.0, gt=0, le=10)
+    # Upper bound on waiting for the broker's ack before answering 503 (see rl_api.kafka).
+    kafka_delivery_timeout_s: float = Field(default=5.0, gt=0, le=60)
+    # API keys: write last_used_at at most this often per key (0 = on every request).
+    api_key_touch_interval_s: float = Field(default=60.0, ge=0, le=86_400)
 
     # NoDecode: accept a plain comma-separated env value instead of requiring JSON.
     cors_origins: Annotated[list[str], NoDecode] = Field(

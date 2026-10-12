@@ -4,17 +4,23 @@ from collections.abc import Iterator
 
 import pytest
 
-POSTGRES_IMAGE = "postgres:16-alpine"
+from rl_db.testing import create_database, create_migrated_database, postgres_container
 
 
-@pytest.fixture(scope="session")
-def pg_url() -> Iterator[str]:
-    """A throwaway Postgres 16 (testcontainers). Yields an asyncpg SQLAlchemy URL."""
-    from testcontainers.community.postgres import PostgresContainer
+@pytest.fixture(scope="package")
+def pg_server_url() -> Iterator[str]:
+    """One throwaway Postgres 16 container (testcontainers) for this test package."""
+    with postgres_container() as url:
+        yield url
 
-    with PostgresContainer(
-        POSTGRES_IMAGE, username="rl", password="rl", dbname="rl", driver=None
-    ) as pg:
-        host = pg.get_container_host_ip()
-        port = pg.get_exposed_port(5432)
-        yield f"postgresql+asyncpg://rl:rl@{host}:{port}/rl"
+
+@pytest.fixture
+def pg_url(pg_server_url: str) -> str:
+    """An empty database of its own (for the migration round-trip test)."""
+    return create_database(pg_server_url)
+
+
+@pytest.fixture(scope="module")
+def migrated_url(pg_server_url: str) -> str:
+    """A database at Alembic ``head``, shared by the tests of one module."""
+    return create_migrated_database(pg_server_url)

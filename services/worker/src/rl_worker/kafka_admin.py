@@ -1,4 +1,7 @@
-"""Kafka topic bootstrap (ADR-0007). Single source of truth for topic names and settings.
+"""Kafka topic bootstrap (ADR-0007). Single source of truth for topic *settings*.
+
+Topic *names* live in :mod:`rl_core.events.topics` so the API can produce to them without
+importing worker code; they are re-exported here for existing callers.
 
 ``python -m rl_worker.kafka_admin bootstrap [--bootstrap-servers kafka:9092]``
 
@@ -25,6 +28,19 @@ from confluent_kafka.admin import (
     NewTopic,
 )
 
+from rl_core.events.topics import ANALYSIS_RESULTS, DEPLOYMENT_EVENTS, TELEMETRY_SPANS, dlq
+
+__all__ = [
+    "ANALYSIS_RESULTS",
+    "DEPLOYMENT_EVENTS",
+    "TELEMETRY_SPANS",
+    "TOPICS",
+    "TopicSpec",
+    "bootstrap",
+    "dlq",
+    "wait_for_broker",
+]
+
 log = logging.getLogger("rl_worker.kafka_admin")
 
 _DAY_MS = 24 * 60 * 60 * 1000
@@ -42,15 +58,6 @@ class TopicSpec:
             "cleanup.policy": "delete",
             "min.insync.replicas": "1",
         }
-
-
-DEPLOYMENT_EVENTS = "deployment.events"
-TELEMETRY_SPANS = "telemetry.spans"
-ANALYSIS_RESULTS = "analysis.results"
-
-
-def dlq(topic: str) -> str:
-    return f"{topic}.dlq"
 
 
 TOPICS: tuple[TopicSpec, ...] = (

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -13,7 +14,9 @@ from rl_api import __version__
 from rl_api.errors import install_error_handlers
 from rl_api.health import kafka_check, postgres_check
 from rl_api.health import router as health_router
+from rl_api.kafka import EventProducer
 from rl_api.middleware import RequestContextMiddleware
+from rl_api.routers.deployments import router as deployments_router
 from rl_api.settings import Settings, get_settings
 from rl_api.telemetry import setup_tracing, shutdown_tracing
 from rl_core.obs import configure_logging
@@ -31,14 +34,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         engine = create_engine(settings.database_url, pool_size=settings.db_pool_size)
         app.state.db_engine = engine
         app.state.db_sessions = create_session_factory(engine)
+        producer = EventProducer(
+            settings.kafka_bootstrap,
+            client_id=settings.service_name,
+            delivery_timeout_s=settings.kafka_delivery_timeout_s,
+        )
+        producer.start()
+        app.state.event_producer = producer
         app.state.readiness_checks = {
             "postgres": postgres_check(app.state),
-            "kafka": kafka_check(settings.kafka_bootstrap, settings.readiness_timeout_s),
+            "kafka": kafka_check(settings.kafka_bootstrap, settings.readiness_timeout_s, producer),
         }
         log.info("api started", extra={"version": __version__, "env": settings.env})
         try:
             yield
         finally:
+            # Flush acknowledged-pending events before the process exits; requests still
+            # waiting on them get their answer during the flush.
+            await asyncio.to_thread(producer.close, settings.kafka_delivery_timeout_s)
             await engine.dispose()
             shutdown_tracing()
             log.info("api stopped")
@@ -63,6 +76,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     install_error_handlers(app)
     app.include_router(health_router)
+    app.include_router(deployments_router)
 
     if settings.otel_enabled:
         setup_tracing(app, settings.service_name, settings.env)
