@@ -134,6 +134,25 @@ class SpanBatchEnvelope(BaseModel):
         return [to_span(str(self.tenant_id), self.service, w) for w in self.spans]
 
 
+def span_to_wire(span: Span) -> dict[str, Any]:
+    """The wire form of an rl_core span (its tenant and service travel in the envelope)."""
+    return {
+        "trace_id": span.trace_id,
+        "span_id": span.span_id,
+        "parent_span_id": span.parent_span_id,
+        "service_version": span.service_version,
+        "environment": span.environment,
+        "name": span.name,
+        "kind": span.kind.value,
+        "start_ns": span.start_ns,
+        "end_ns": span.end_ns,
+        "status_code": span.status_code.value,
+        "http_route": span.http_route,
+        "http_status": span.http_status,
+        "attributes": dict(span.attributes),
+    }
+
+
 def to_span(tenant_id: str, service: str, wire: WireSpan) -> Span:
     return Span(
         tenant_id=tenant_id,

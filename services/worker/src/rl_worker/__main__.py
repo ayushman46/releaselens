@@ -3,8 +3,10 @@
 Runs side by side in one asyncio loop:
 
 * the ``deployment.events`` consumer (always);
+* the ``telemetry.spans`` consumer (always);
+* the analysis job runner with the regression-analysis handlers (early_5m, early_10m, final);
 * the outbox relay (unless ``RL_OUTBOX_ENABLED=false``);
-* the analysis job runner, only when job handlers are registered (M8 registers them);
+* the telemetry maintenance loop (span partitions ahead of time, retention);
 * a database probe and the health server (``/healthz``, ``/readyz``).
 
 SIGTERM/SIGINT set a stop event. Each component finishes its in-flight unit of work (the
@@ -29,11 +31,15 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from rl_core.obs import configure_logging
 from rl_db import create_engine, create_session_factory
+from rl_db.repositories import analysis_schedule
 from rl_worker import __version__
+from rl_worker.analysis import AnalysisJobHandler, AnalysisSettings
 from rl_worker.consumers.deployments import DeploymentConsumer
+from rl_worker.consumers.spans import SpanConsumer
 from rl_worker.health import HealthServer
 from rl_worker.jobs import JobRunner, default_registry
 from rl_worker.kafka import AsyncProducer
+from rl_worker.maintenance import TelemetryMaintenance
 from rl_worker.outbox import OutboxRelay
 from rl_worker.retry import Backoff
 from rl_worker.settings import WorkerSettings
@@ -80,31 +86,52 @@ async def run(settings: WorkerSettings, stop: asyncio.Event) -> int:
         delivery_timeout_s=settings.kafka_delivery_timeout_s,
     )
     producer.start()
+    backoff = Backoff(
+        base_s=settings.retry_base_s,
+        cap_s=max(settings.retry_cap_s, settings.retry_base_s),
+        max_attempts=settings.retry_max_attempts,
+    )
     consumer = DeploymentConsumer(
         bootstrap_servers=settings.kafka_bootstrap,
         sessions=sessions,
         producer=producer,
         client_id=f"{settings.service_name}-{settings.worker_id}",
         group_id=settings.deployments_group_id,
-        backoff=Backoff(
-            base_s=settings.retry_base_s,
-            cap_s=max(settings.retry_cap_s, settings.retry_base_s),
-            max_attempts=settings.retry_max_attempts,
-        ),
+        backoff=backoff,
         post_window_end=timedelta(seconds=settings.analysis_post_window_end_s),
         poll_timeout_s=settings.consumer_poll_timeout_s,
+    )
+    span_consumer = SpanConsumer(
+        bootstrap_servers=settings.kafka_bootstrap,
+        sessions=sessions,
+        producer=producer,
+        client_id=f"{settings.service_name}-{settings.worker_id}-spans",
+        group_id=settings.spans_group_id,
+        backoff=backoff,
+        batch_messages=settings.spans_batch_messages,
+        poll_timeout_s=settings.consumer_poll_timeout_s,
+    )
+    maintenance = TelemetryMaintenance(
+        sessions,
+        interval_s=settings.maintenance_interval_s,
+        days_ahead=settings.partition_days_ahead,
+        span_retention_days=settings.span_retention_days,
+        rollup_retention_days=settings.rollup_retention_days,
     )
     probe = _DatabaseProbe(engine)
 
     health = HealthServer(settings.health_host, settings.health_port)
     health.register("postgres", lambda: probe.ok)
     health.register("deployments_consumer", lambda: consumer.ready)
+    health.register("spans_consumer", lambda: span_consumer.ready)
     health.register("kafka_producer", lambda: producer.healthy)
     await health.start()
 
     components: dict[str, Coroutine[Any, Any, None]] = {
         "database-probe": probe.run(stop),
         "deployments-consumer": consumer.run(stop),
+        "spans-consumer": span_consumer.run(stop),
+        "telemetry-maintenance": maintenance.run(stop),
     }
     if settings.outbox_enabled:
         relay = OutboxRelay(
@@ -114,7 +141,15 @@ async def run(settings: WorkerSettings, stop: asyncio.Event) -> int:
             poll_interval_s=settings.outbox_poll_interval_s,
         )
         components["outbox-relay"] = relay.run(stop)
-    registry = default_registry()
+    handler = AnalysisJobHandler(
+        sessions,
+        AnalysisSettings(
+            per_environment=settings.window_profiles(),
+            max_spans=settings.analysis_max_spans,
+            schedule=analysis_schedule(timedelta(seconds=settings.analysis_post_window_end_s)),
+        ),
+    )
+    registry = default_registry(handler)
     if len(registry):
         runner = JobRunner(
             sessions,

@@ -221,8 +221,8 @@ async def test_sigterm_on_the_real_process_finishes_in_flight_work_and_exits_0(
     assert {"msg": "worker stopped", "exit_code": 0}.items() <= next(
         e for e in logs if e["msg"] == "worker stopped"
     ).items()
-    assert any(
-        e["msg"] == "job runner not started: no analysis job handlers are registered" for e in logs
-    )
+    started = next(e for e in logs if e["msg"] == "worker started")
+    assert {"job-runner", "spans-consumer", "telemetry-maintenance"} <= set(started["components"])
+    assert any(e["msg"] == "span consumer stopped" for e in logs)
     offsets = committed_vs_end(kafka_bootstrap, group, DEPLOYMENT_EVENTS)
     assert all(committed == end for committed, end in offsets.values() if end)

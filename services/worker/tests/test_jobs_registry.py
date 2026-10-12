@@ -15,10 +15,10 @@ async def _noop(_job: ClaimedJob) -> None:
     return None
 
 
-def test_default_registry_is_empty_until_m8() -> None:
-    # The worker starts the runner only when handlers exist, so jobs stay pending.
-    assert len(default_registry()) == 0
-    assert default_registry().kinds == frozenset()
+def test_default_registry_runs_the_analysis_for_every_kind() -> None:
+    registry = default_registry(_noop)
+    assert registry.kinds == frozenset(JobKind)
+    assert all(registry.get(kind) is _noop for kind in JobKind)
 
 
 def test_registry_rejects_double_registration() -> None:

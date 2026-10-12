@@ -16,9 +16,10 @@ The lease of each job is restarted when its handler starts (``renew_lease``), be
 later in a batch wait for the earlier ones. A job whose claim was lost meanwhile (its lease
 expired and another runner took it) is skipped, so it never runs twice concurrently.
 
-Only kinds with a registered handler are ever claimed. Until the M8 analysis handlers
-register, jobs stay ``pending`` instead of being marked done by a runner that cannot do
-them. The worker starts the runner only when the registry is non-empty.
+Only kinds with a registered handler are ever claimed; a kind without one stays ``pending``
+instead of being marked done by a runner that cannot do it. The worker registers the
+regression analysis (:mod:`rl_worker.analysis`) for every kind, and starts the runner only
+when the registry is non-empty.
 """
 
 from __future__ import annotations
@@ -72,10 +73,13 @@ class HandlerRegistry:
         return len(self._handlers)
 
 
-def default_registry() -> HandlerRegistry:
-    """The handlers the worker process runs. Empty until the M8 regression analysis
-    registers ``early_5m``, ``early_10m`` and ``final`` here."""
-    return HandlerRegistry()
+def default_registry(analysis_handler: JobHandler) -> HandlerRegistry:
+    """The handlers the worker process runs: the regression analysis for ``early_5m``,
+    ``early_10m`` and ``final``."""
+    registry = HandlerRegistry()
+    for kind in JobKind:
+        registry.register(kind, analysis_handler)
+    return registry
 
 
 @dataclass
