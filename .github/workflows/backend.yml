@@ -61,3 +61,8 @@ jobs:
         run: |
           docker run --rm rlens/python:ci python -c "import rl_api, rl_worker, rl_db, rl_core; print('ok')"
           docker run --rm rlens/python:ci python -m rl_db.migrate --help
+      - name: Airflow DAG integrity (mypy + pytest in the Airflow image, ADR-0013)
+        run: |
+          docker build -f infra/docker/airflow.Dockerfile --target dag-test \
+            --build-arg BASE_IMAGE=rlens/python:ci -t rlens/airflow:dag-test .
+          docker run --rm rlens/airflow:dag-test

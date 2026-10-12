@@ -6,12 +6,22 @@
 
 ## Current state
 
-- **Current milestone:** M1 — Foundation (in progress)
-- **Last completed step:** Python workspace + API/worker skeletons + Alembic baseline + compose
-  `core` backend services verified healthy.
-- **Next step:** finish M1: web app skeleton (`apps/web`) → `web` service in compose →
-  GitHub Actions workflows → ADR-0004/0009/0013/0014/0015 completed from the M0 research →
-  `make up-core` from a clean state → mark M1 done.
+- **Current milestone:** M1 → closing (clean-clone `make up-core` check pending); M2, M6 and M8/M9
+  core logic are being built in parallel (independent code paths).
+- **Last completed step:** web skeleton + CI pushed (`3408e75`). GitHub Actions: backend ✅
+  (lint, mypy, unit, testcontainers integration, image build), frontend ✅, security ✅
+  (gitleaks, Trivy fs, pip-audit, bandit, pnpm audit), data ❌ only because `data/` had no tests
+  yet (pytest exit 4, "collected 0 items").
+- **Uncommitted, green locally:** `rl_core.stats` (Wilson, z-test, bootstrap, Mann–Whitney/Cliff's
+  delta, chi-square/Cramér's V) + `rl_core.features` (schema, finished-before history,
+  change/time features, offline Polars batch, online per-request) → 49 tests incl. Hypothesis
+  oracle + offline/online parity. Waiting for the M2 lockfile changes to commit together.
+- **In flight (background workflows):** M2 pipeline + Airflow orchestration (`data/pipeline`,
+  `data/airflow`, `infra/docker/airflow.Dockerfile`); M6 deployment events (API keys, envelope,
+  consumer, DLQ, jobs, outbox); M8/M9 rl_core regression engine/self-time/graph/triage.
+  If a restart finds these half-done: run their tests, keep what is green, finish the rest.
+- **Next step:** integrate + commit each workflow's output (tests green first), then M3 (dbt +
+  analytics) → M4 (ML) → M5 → M7 → M10 → M11 → M12.
 - **Environment notes:** Docker engine = Colima (`DOCKER_CONTEXT=colima`, 2 CPU / 4 GiB). Host disk
   ≈ 9–10 GiB free. The old prototype containers (`releaselens-backend` :8000,
   `releaselens-postgres` :5432) are still running and must not be touched; our stack is compose

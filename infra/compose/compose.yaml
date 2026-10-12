@@ -1,9 +1,11 @@
 # ReleaseLens local stack. Project name "rlens" (never "releaselens": that name belongs to the
 # old prototype's containers on this machine, which we must not touch — docs/MIGRATION.md §1.3).
 #
-#   make up-core    → postgres, kafka (+topics), migrate, api, worker, web
-#   make up-data    → + minio, mlflow, airflow          (added in M2)
-#   make up-demo    → + otel-collector, demo services   (added in M7)
+#   make up-core      → postgres, kafka (+topics), migrate, api, worker, web
+#   make up-data      → postgres, minio (+buckets)                      (M2; mlflow lands in M4)
+#   make pipeline     → one-shot `airflow dags test historical_pipeline` (profile data, ADR-0013)
+#   make up-airflow   → full Airflow 3 deployment (profile airflow-full; needs ≥ 8 GiB for Docker)
+#   make up-demo      → + otel-collector, demo services                 (added in M7)
 #
 # Memory limits are sized for a 4 GiB Colima VM (docs/PLAN.md § Environment constraints).
 name: rlens
@@ -20,6 +22,58 @@ x-python-service: &python-service
     RL_LOG_FORMAT: ${RL_LOG_FORMAT:-json}
     RL_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-rlens}:${POSTGRES_PASSWORD:-rlens-dev-password}@postgres:5432/${POSTGRES_DB:-rlens}
     RL_KAFKA_BOOTSTRAP: kafka:9092
+
+# S3 client settings for everything that talks to the local object store (rl_pipeline, ml).
+x-s3-env: &s3-env
+  RL_S3_ENDPOINT: http://minio:9000
+  RL_S3_ACCESS_KEY: ${RL_S3_ACCESS_KEY:-rlens}
+  RL_S3_SECRET_KEY: ${RL_S3_SECRET_KEY:-rlens-dev-secret}
+  RL_S3_REGION: ${RL_S3_REGION:-us-east-1}
+  RL_S3_BUCKET_DATA: ${RL_S3_BUCKET_DATA:-releaselens-data}
+  RL_S3_BUCKET_MLFLOW: ${RL_S3_BUCKET_MLFLOW:-releaselens-mlflow}
+
+# Airflow 3.3.2 in its own venv on top of rlens/python (ADR-0013). Tasks run rl_pipeline in the
+# workspace venv via @task.external_python. The four long-running processes are in profile
+# "airflow-full" only, so `--profile data` alone never starts them on the 4 GiB Colima VM.
+x-airflow: &airflow
+  image: rlens/airflow:dev
+  build:
+    context: ../..
+    dockerfile: infra/docker/airflow.Dockerfile
+    target: runtime
+  profiles: [airflow-full]
+  restart: unless-stopped
+  environment: &airflow-env
+    <<: *s3-env
+    RL_ENV: ${RL_ENV:-dev}
+    RL_LOG_LEVEL: ${RL_LOG_LEVEL:-INFO}
+    RL_LOG_FORMAT: ${RL_LOG_FORMAT:-json}
+    RL_DATASET_DIR: /datasets/travistorrent
+    RL_LAKE_DIR: /lake
+    # DuckDB runs inside the task's container: keep it well under that container's mem_limit
+    # (it spills sorts to RL_LAKE_DIR when it hits the limit).
+    RL_DUCKDB_MEMORY_LIMIT: ${RL_DUCKDB_MEMORY_LIMIT:-1GB}
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER:-rlens}:${POSTGRES_PASSWORD:-rlens-dev-password}@postgres:5432/${AIRFLOW_DB:-airflow}
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__PARALLELISM: ${AIRFLOW_PARALLELISM:-4}
+    AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "True"
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api-server:8080/execution/
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "True"  # dev only: UI without a login
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET:-rlens-dev-jwt-secret}
+    AIRFLOW__API__SECRET_KEY: ${AIRFLOW_API_SECRET_KEY:-rlens-dev-api-secret}
+    AIRFLOW__API__WORKERS: "1"
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "True"
+    AIRFLOW__LOGGING__LOGGING_LEVEL: ${RL_LOG_LEVEL:-INFO}
+  volumes:
+    - ${RL_DATASET_HOST_DIR:-../../data/lake/downloads/travistorrent-figshare-19314170}:/datasets/travistorrent:ro
+    - ../../data/airflow/dags:/opt/airflow/dags:ro  # dev loop: DAG edits need no rebuild
+    - lake:/lake
+    - airflow-logs:/opt/airflow/logs
+  depends_on:
+    postgres: { condition: service_healthy }
+    minio-init: { condition: service_completed_successfully }
+    airflow-init: { condition: service_completed_successfully }
 
 services:
   # ------------------------------------------------------------------ core
@@ -152,5 +206,116 @@ services:
       start_period: 15s
     mem_limit: 256m
 
+  # ------------------------------------------------------------------ data
+  minio:
+    # S3-compatible server: pgsty/silo, a maintained MinIO fork (same env vars, API and console);
+    # upstream MinIO images can no longer be pulled (ADR-0009). Healthcheck uses the image's curl.
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
+    profiles: [data]
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${RL_S3_ACCESS_KEY:-rlens}
+      MINIO_ROOT_PASSWORD: ${RL_S3_SECRET_KEY:-rlens-dev-secret}
+    # Loopback only: the root credentials are the public dev defaults from .env.example.
+    ports:
+      - "127.0.0.1:${RL_MINIO_HOST_PORT:-29000}:9000"
+      - "127.0.0.1:${RL_MINIO_CONSOLE_HOST_PORT:-29001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    mem_limit: ${RL_MINIO_MEM_LIMIT:-256m}
+
+  minio-init:
+    # Creates the buckets (idempotent) with boto3 from our own image: no `mc` image needed.
+    <<: *python-service
+    profiles: [data]
+    restart: "no"
+    command: ["python", "-m", "rl_pipeline.s3", "ensure-buckets"]
+    environment:
+      <<: *s3-env
+      RL_ENV: ${RL_ENV:-dev}
+      RL_LOG_LEVEL: ${RL_LOG_LEVEL:-INFO}
+      RL_LOG_FORMAT: ${RL_LOG_FORMAT:-json}
+    depends_on:
+      minio: { condition: service_healthy }
+    mem_limit: 256m
+
+  airflow-init:
+    # Creates the `airflow` database if missing (the postgres init script only runs on a fresh
+    # volume), then `airflow db migrate`. Idempotent; creates no users, connections or DAG runs.
+    <<: *airflow
+    profiles: [data]
+    restart: "no"
+    command: ["bash", "-ec", "python /opt/airflow/bin/ensure_metadata_db.py && exec airflow db migrate"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    mem_limit: 512m
+
+  airflow-cli:
+    # One-shot Airflow CLI (ADR-0013 verification path on a 4 GiB machine):
+    #   make pipeline  ==  compose run --rm airflow-cli airflow dags test historical_pipeline
+    # Tasks run inside this container (rl_pipeline in /app/.venv), so it gets the larger limit.
+    <<: *airflow
+    profiles: [data]
+    restart: "no"
+    command: ["airflow", "dags", "list"]
+    mem_limit: ${AIRFLOW_CLI_MEM_LIMIT:-2g}
+
+  airflow-api-server:
+    <<: *airflow
+    command: ["airflow", "api-server", "--port", "8080"]
+    # Loopback only: SIMPLE_AUTH_MANAGER_ALL_ADMINS makes every visitor an admin (no login).
+    ports: ["127.0.0.1:${RL_AIRFLOW_HOST_PORT:-28080}:8080"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/v2/monitor/health', timeout=5).status == 200 else 1)"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    mem_limit: ${AIRFLOW_API_MEM_LIMIT:-768m}
+
+  airflow-scheduler:
+    # LocalExecutor: task processes (and their rl_pipeline subprocesses) run in this container.
+    <<: *airflow
+    command: ["airflow", "scheduler"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8974/health', timeout=5).status == 200 else 1)"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    mem_limit: ${AIRFLOW_SCHEDULER_MEM_LIMIT:-2g}
+
+  airflow-dag-processor:
+    <<: *airflow
+    command: ["airflow", "dag-processor"]
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type DagProcessorJob --hostname \"$${HOSTNAME}\""]
+      interval: 30s
+      timeout: 20s
+      retries: 10
+      start_period: 60s
+    mem_limit: ${AIRFLOW_DAG_PROCESSOR_MEM_LIMIT:-512m}
+
+  airflow-triggerer:
+    <<: *airflow
+    command: ["airflow", "triggerer"]
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type TriggererJob --hostname \"$${HOSTNAME}\""]
+      interval: 30s
+      timeout: 20s
+      retries: 10
+      start_period: 60s
+    mem_limit: ${AIRFLOW_TRIGGERER_MEM_LIMIT:-512m}
+
 volumes:
   pg-data:
+  minio-data:
+  lake:          # local Parquet staging (RL_LAKE_DIR=/lake) shared by Airflow containers
+  airflow-logs:

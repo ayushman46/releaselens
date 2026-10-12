@@ -1,0 +1,3 @@
+# The repo ignores *.csv.gz (real datasets must never be committed). This tiny synthetic
+# fixture (see README.md) is the one exception.
+!travistorrent_synthetic_fixture.csv.gz

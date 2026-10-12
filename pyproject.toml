@@ -14,6 +14,8 @@ members = [
     "packages/rl_db",
     "services/api",
     "services/worker",
+    "data/pipeline",
+    "demo/services",
 ]
 
 [tool.uv.sources]
@@ -21,6 +23,8 @@ rl-core = { workspace = true }
 rl-db = { workspace = true }
 rl-api = { workspace = true }
 rl-worker = { workspace = true }
+rl-pipeline = { workspace = true }
+rl-demo = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -37,6 +41,8 @@ dev = [
     "rl-db",
     "rl-api",
     "rl-worker",
+    "rl-pipeline",
+    "rl-demo",
 ]
 
 # ---------------------------------------------------------------- ruff
@@ -70,7 +76,14 @@ no_implicit_optional = true
 check_untyped_defs = true
 ignore_missing_imports = true
 explicit_package_bases = true
-mypy_path = ["packages/rl_core/src", "packages/rl_db/src", "services/api/src", "services/worker/src"]
+mypy_path = [
+    "packages/rl_core/src",
+    "packages/rl_db/src",
+    "services/api/src",
+    "services/worker/src",
+    "data/pipeline/src",
+    "demo/services/src",
+]
 
 [[tool.mypy.overrides]]
 module = ["rl_core.*", "rl_db.*"]
@@ -89,7 +102,7 @@ filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
 
 [tool.coverage.run]
 branch = true
-source = ["rl_core", "rl_db", "rl_api", "rl_worker"]
+source = ["rl_core", "rl_db", "rl_api", "rl_worker", "rl_pipeline", "rl_demo"]
 
 [[tool.mypy.overrides]]
 # confluent-kafka ships py.typed but re-exports admin classes without __all__.

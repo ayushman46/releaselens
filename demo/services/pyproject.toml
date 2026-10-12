@@ -1,0 +1,22 @@
+[project]
+name = "rl-demo"
+version = "0.1.0"
+description = "ReleaseLens demo system: five OpenTelemetry-instrumented FastAPI microservices with a configurable, deterministic regression"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "httpx>=0.27",
+    "opentelemetry-api>=1.28",
+    "opentelemetry-sdk>=1.28",
+    "opentelemetry-exporter-otlp-proto-http>=1.28",
+    "opentelemetry-instrumentation-fastapi>=0.49b0",
+    "opentelemetry-instrumentation-httpx>=0.49b0",
+]
+
+[project.scripts]
+rl-demo = "rl_demo.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"

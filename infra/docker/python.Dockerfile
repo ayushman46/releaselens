@@ -25,11 +25,21 @@ COPY packages/rl_core/pyproject.toml packages/rl_core/pyproject.toml
 COPY packages/rl_db/pyproject.toml packages/rl_db/pyproject.toml
 COPY services/api/pyproject.toml services/api/pyproject.toml
 COPY services/worker/pyproject.toml services/worker/pyproject.toml
+COPY data/pipeline/pyproject.toml data/pipeline/pyproject.toml
+COPY demo/services/pyproject.toml demo/services/pyproject.toml
 RUN uv sync --frozen --no-dev --all-packages --no-install-workspace && rm -rf /root/.cache
+
+# DuckDB's httpfs extension (s3:// reads/writes), fetched once per dependency set rather than on
+# every code change, and copied into the runtime image so containers never download extension
+# code at run time. DuckDB looks in $HOME/.duckdb/extensions; the app user's HOME is /home/app.
+RUN mkdir -p /opt/duckdb-home && HOME=/opt/duckdb-home /app/.venv/bin/python -c \
+    "import duckdb; duckdb.sql('INSTALL httpfs'); print(duckdb.sql(\"SELECT extension_name, installed FROM duckdb_extensions() WHERE extension_name = 'httpfs'\").fetchall())"
 
 # 2) Workspace members (non-editable, so the runtime image needs no source tree).
 COPY packages packages
 COPY services services
+COPY data/pipeline data/pipeline
+COPY demo/services demo/services
 RUN uv sync --frozen --no-dev --all-packages --no-editable && rm -rf /root/.cache
 
 # ---------------------------------------------------------------- runtime
@@ -41,6 +51,7 @@ ENV PATH=/app/.venv/bin:$PATH \
 
 RUN groupadd --system --gid 10001 app && useradd --system --uid 10001 --gid app --no-create-home app
 
+COPY --from=builder --chown=app:app /opt/duckdb-home /home/app
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 
 WORKDIR /app

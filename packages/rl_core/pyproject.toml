@@ -5,6 +5,9 @@ description = "ReleaseLens core domain logic: events, features, regression engin
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "pydantic>=2.9",
+    "numpy>=2.0",
+    "scipy>=1.14",
+    "polars>=1.44,<2.0",
 ]
 
 [build-system]

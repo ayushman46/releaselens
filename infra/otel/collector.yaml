@@ -1,0 +1,62 @@
+# OpenTelemetry Collector (contrib) for the demo system — spec §11.2.
+# Demo services → this collector (OTLP) → ReleaseLens ingest (OTLP/HTTP, protobuf, gzip),
+# authenticated with a tenant API key that has the `telemetry:write` scope.
+#
+# Required env: RL_INGEST_ENDPOINT (e.g. http://api:8000; the exporter appends /v1/traces)
+#               RL_INGEST_KEY      (a ReleaseLens API key; never commit real keys)
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      # Since v0.104 receivers default to localhost; bind explicitly for other containers.
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 160
+    spike_limit_mib: 40
+  resource:
+    attributes:
+      # Only fills the attribute when a service forgot to set it.
+      - key: deployment.environment
+        value: demo
+        action: insert
+  batch:
+    send_batch_size: 512
+    send_batch_max_size: 1024
+    timeout: 1s
+
+exporters:
+  otlphttp/releaselens:
+    endpoint: ${env:RL_INGEST_ENDPOINT}
+    encoding: proto
+    compression: gzip
+    headers:
+      x-releaselens-key: ${env:RL_INGEST_KEY}
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 120s
+    sending_queue:
+      enabled: true
+      num_consumers: 2
+      queue_size: 2000
+
+service:
+  extensions: [health_check]
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/releaselens]

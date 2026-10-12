@@ -16,7 +16,15 @@ UV           ?= uv
 # testcontainers talks to the Docker API directly and ignores `docker context`.
 TC_ENV := DOCKER_HOST=$(DOCKER_HOST_SOCK) TESTCONTAINERS_RYUK_DISABLED=true
 
-PY_SRC := packages/rl_core/src packages/rl_db/src services/api/src services/worker/src
+# Every profile, so ps/logs/down also see the data stack and the optional full Airflow deployment.
+ALL_PROFILES := --profile core --profile data --profile airflow-full --profile demo
+# Data-profile containers that `make stop-data` stops (core services are left running).
+DATA_SERVICES := minio airflow-api-server airflow-scheduler airflow-dag-processor airflow-triggerer
+# Extra arguments for `airflow dags test`, e.g. make pipeline CONF='{"skip_training": true}'
+CONF ?=
+
+PY_SRC := packages/rl_core/src packages/rl_db/src services/api/src services/worker/src \
+	data/pipeline/src demo/services/src
 
 .PHONY: help
 help: ## Show this help
@@ -57,12 +65,12 @@ typecheck: ## mypy (strict for rl_core / rl_db)
 	$(UV) run mypy $(PY_SRC)
 
 .PHONY: test
-test: ## Unit tests (no Docker needed)
-	$(UV) run pytest -m "not integration" packages services
+test: ## Unit tests (no Docker needed; the Airflow DAG tests run via pipeline-test-dag)
+	$(UV) run pytest -m "not integration" packages services data demo
 
 .PHONY: test-integration
-test-integration: doctor ## Integration tests (testcontainers: Postgres, Kafka)
-	$(TC_ENV) $(UV) run pytest -m integration packages services
+test-integration: doctor ## Integration tests (testcontainers: Postgres, Kafka, S3)
+	$(TC_ENV) $(UV) run pytest -m integration packages services data demo
 
 .PHONY: check
 check: lint typecheck test ## Lint + typecheck + unit tests
@@ -84,19 +92,19 @@ up-core: $(COMPOSE_DIR)/.env doctor ## Start the core stack (postgres, kafka, ap
 
 .PHONY: ps
 ps: ## Show stack status
-	$(COMPOSE) --profile core --profile data --profile demo ps --format 'table {{.Service}}\t{{.State}}\t{{.Status}}\t{{.Ports}}'
+	$(COMPOSE) $(ALL_PROFILES) ps --format 'table {{.Service}}\t{{.State}}\t{{.Status}}\t{{.Ports}}'
 
 .PHONY: logs
 logs: ## Tail logs (SERVICE=api to filter)
-	$(COMPOSE) --profile core --profile data --profile demo logs -f --tail=100 $(SERVICE)
+	$(COMPOSE) $(ALL_PROFILES) logs -f --tail=100 $(SERVICE)
 
 .PHONY: down
 down: ## Stop the stack (keeps volumes)
-	$(COMPOSE) --profile core --profile data --profile demo down
+	$(COMPOSE) $(ALL_PROFILES) down
 
 .PHONY: clean-stack
 clean-stack: ## Stop the stack AND delete its volumes (rlens project only)
-	$(COMPOSE) --profile core --profile data --profile demo down -v
+	$(COMPOSE) $(ALL_PROFILES) down -v
 
 .PHONY: smoke
 smoke: ## Probe the running core stack's health endpoints
@@ -104,6 +112,38 @@ smoke: ## Probe the running core stack's health endpoints
 	@curl -fsS http://localhost:$${RL_API_HOST_PORT:-28000}/readyz && echo
 	@curl -fsS http://localhost:$${RL_WORKER_HOST_PORT:-28001}/readyz && echo
 	@curl -fsS http://localhost:$${RL_WEB_HOST_PORT:-23000}/api/health && echo
+
+# ------------------------------------------------------------------ data (M2, ADR-0013)
+.PHONY: build-data
+build-data: $(COMPOSE_DIR)/.env doctor ## Build rlens/python, then rlens/airflow (FROM rlens/python, so in order)
+	$(COMPOSE) --profile data build minio-init
+	$(COMPOSE) --profile data build airflow-init
+
+.PHONY: up-data
+up-data: build-data ## Start postgres + object store (minio/silo) and create the buckets
+	$(COMPOSE) --profile data up -d --wait --wait-timeout 180 postgres minio
+	$(COMPOSE) --profile data run --rm minio-init
+
+.PHONY: pipeline
+pipeline: up-data ## Run historical_pipeline once via `airflow dags test` in a one-shot container (CONF='{...}')
+	$(COMPOSE) --profile data run --rm airflow-cli \
+		airflow dags test historical_pipeline $(if $(CONF),--conf '$(CONF)')
+
+.PHONY: pipeline-test-dag
+pipeline-test-dag: $(COMPOSE_DIR)/.env doctor ## DAG integrity checks (mypy + pytest) inside the Airflow image; no DB/S3 needed
+	$(COMPOSE) --profile data build minio-init
+	docker build -f infra/docker/airflow.Dockerfile --target dag-test -t rlens/airflow:dag-test .
+	docker run --rm rlens/airflow:dag-test
+
+.PHONY: up-airflow
+up-airflow: up-data ## Full Airflow 3 deployment (UI :28080). Needs >= 8 GiB for Docker (ADR-0013/0015)
+	$(COMPOSE) --profile data --profile airflow-full up -d --wait --wait-timeout 300 \
+		airflow-api-server airflow-scheduler airflow-dag-processor airflow-triggerer
+	@echo "Airflow UI: http://localhost:$${RL_AIRFLOW_HOST_PORT:-28080}"
+
+.PHONY: stop-data
+stop-data: $(COMPOSE_DIR)/.env ## Stop the data-profile containers (object store, Airflow); core services keep running
+	$(COMPOSE) --profile data --profile airflow-full stop $(DATA_SERVICES)
 
 # ------------------------------------------------------------------ security
 .PHONY: secrets-scan

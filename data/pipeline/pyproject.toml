@@ -1,0 +1,20 @@
+[project]
+name = "rl-pipeline"
+version = "0.1.0"
+description = "ReleaseLens historical pipeline task callables (Airflow-agnostic): locate, validate, convert, load, dictionary"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "rl-core",
+    # Exact pin (ADR-0014): DuckDB 2.0 is due ~2026-10-21 and dbt-duckdb has no upper bound.
+    "duckdb==1.5.6",
+    "polars>=1.44,<2.0",
+    "boto3>=1.35",
+    "pydantic-settings>=2.6",
+]
+
+[project.scripts]
+rl-pipeline = "rl_pipeline.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
