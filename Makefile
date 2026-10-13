@@ -178,5 +178,9 @@ stop-data: $(COMPOSE_DIR)/.env ## Stop the data-profile containers (object store
 
 # ------------------------------------------------------------------ security
 .PHONY: secrets-scan
-secrets-scan: ## Scan the git history for secrets (gitleaks via docker)
-	docker run --rm -v "$(CURDIR):/repo:ro" zricethezav/gitleaks:v8.30.1 git /repo --redact -v
+secrets-scan: ## Scan the main branch history for secrets (gitleaks; fails on any finding)
+	docker run --rm -v "$(CURDIR):/repo:ro" zricethezav/gitleaks:v8.30.1 git /repo --redact --log-opts="main" -v
+
+.PHONY: push
+push: secrets-scan ## Push main to origin ONLY if the secrets scan passes (the repo is public)
+	git push origin main
