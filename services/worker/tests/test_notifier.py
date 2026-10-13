@@ -434,3 +434,21 @@ async def test_maintenance_purges_by_plan_retention(sessions: Sessions) -> None:
     async with sessions() as s:
         org = await s.get(Organization, t.ctx.tenant_id)
     assert org is not None
+
+
+async def test_maintenance_purges_old_webhook_delivery_ids_only(sessions: Sessions) -> None:
+    from rl_db.models import WebhookDelivery
+
+    old, fresh = f"old-{uuid.uuid4()}", f"fresh-{uuid.uuid4()}"
+    async with sessions.begin() as s:
+        s.add(
+            WebhookDelivery(
+                delivery_id=old, event="ping", received_at=datetime.now(UTC) - timedelta(days=8)
+            )
+        )
+        s.add(WebhookDelivery(delivery_id=fresh, event="ping"))
+    result = await Maintenance(sessions, interval_s=3600).run_once()
+    assert result.webhook_deliveries_purged >= 1
+    async with sessions() as s:
+        assert await s.get(WebhookDelivery, old) is None
+        assert await s.get(WebhookDelivery, fresh) is not None
