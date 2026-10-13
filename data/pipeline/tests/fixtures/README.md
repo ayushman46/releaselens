@@ -1,21 +1,34 @@
 # Test fixtures — SYNTHETIC DATA
 
-`travistorrent_synthetic_fixture.csv.gz` is **synthetic**. It is used only by the
-`rl_pipeline` unit tests and contains **no real TravisTorrent, GitHub or Travis CI data**.
+Both `.csv.gz` files here are **synthetic**. They are used only by the `rl_pipeline` unit tests
+and contain **no real TravisTorrent, GitHub or Travis CI data**.
 
-- Header: the real 66-column header of the TravisTorrent Figshare dump
-  (`final-2017-01-25.csv.gz`, DOI 10.6084/m9.figshare.19314170), so schema validation and the
-  conversion path are exercised exactly as on real data.
-- Rows: 30 job rows (13 builds; java, ruby, python), made up by a seeded PRNG in
-  `rl_pipeline.testing.build_rows()`. Project names (`synthetic-org/*`), ids, SHAs, counts and
-  timestamps are fabricated. It includes `NA` null tokens, empty fields, quoted free text with
-  commas, PR and non-PR builds, multi-job builds and ids of different digit lengths.
-- Regenerate (byte-stable: fixed seed, gzip mtime 0):
+| File | Header | Rows |
+|---|---|---|
+| `travistorrent_synthetic_fixture.csv.gz` | the real 66-column header of `final-2017-01-25.csv.gz` (secondary dataset) | 30 job rows, 13 builds (java, ruby, python) |
+| `travistorrent_5_3_2016_synthetic_fixture.csv.gz` | the real 56-column header of `travistorrent_5_3_2016.csv.gz` (primary dataset, ADR-0017) | 26 job rows, 12 builds (java, ruby) |
 
-  ```sh
-  uv run python -m rl_pipeline.testing data/pipeline/tests/fixtures/travistorrent_synthetic_fixture.csv.gz
-  ```
+Both come from the TravisTorrent Figshare record (DOI 10.6084/m9.figshare.19314170), so schema
+validation and the conversion path are exercised exactly as on real data. The rows are made up by
+seeded PRNGs in `rl_pipeline.testing.build_rows()` / `build_rows_2016()`. Project names
+(`synthetic-org/*`), ids, SHAs, counts and timestamps are fabricated. They include `NA` null
+tokens, empty fields, quoted free text with commas (and quotes, 2016), PR and non-PR builds,
+multi-job builds and ids of different digit lengths. The 2016 fixture also mimics that release's
+quirks: `"true"`/`"false"` booleans, `[id, id]` job lists, `-1` / `-1.0` placeholders,
+`tr_prev_build` written as `123.0`, and a job row attached to a second (foreign) build, so
+`tr_job_id` is not unique there while `row` is.
 
-  `test_fixture_matches_generator` fails if the committed file drifts from the generator.
+Regenerate (byte-stable: fixed seeds, gzip mtime 0):
 
-Never use this file for analysis, training or any reported number.
+```sh
+uv run python -m rl_pipeline.testing data/pipeline/tests/fixtures
+```
+
+`test_fixture_matches_generator` / `test_fixture_2016_matches_generator` fail if a committed file
+drifts from its generator.
+
+The 2016 generator also feeds the dbt project's `fixture` target (`make dbt-fixture`,
+`rl_pipeline.dbt_runner.prepare_fixture`, CI `data.yml`): it regenerates the same bytes, converts
+them with the real converter and runs every dbt model and test on the result (8 Java builds).
+
+Never use these files for analysis, training or any reported number.

@@ -1,30 +1,44 @@
-"""Expected raw schema of ``final-2017-01-25.csv.gz`` and the typed cast plan.
+"""Raw schemas of the registered TravisTorrent releases, strict cast patterns, header helpers.
 
-The 66 column names (in file order) were read from the real header with DuckDB 1.5.6
-(``read_csv(header=false, all_varchar=true) LIMIT 1``) on 2026-10-13 and are hard-coded here.
-
-Raw format facts measured on the full file (3,881,992 rows) the same day:
-
-* The null token is the literal ``NA`` (R-style); empty unquoted fields also occur. No VARCHAR
-  column other than the all-``NA`` ``gh_commits_in_push`` contained the value ``NA``, so ``NA`` is
-  treated as NULL in every column. (Re-checked in review: the only other null-like literal in a
-  VARCHAR column is ``nil`` in ``git_branch``, 4 rows; it is kept as a string.)
-* All four timestamp columns use exactly ``YYYY-MM-DD HH:MM:SS`` (no zone; UTC per the
-  TravisTorrent data-format documentation). They are parsed with ``strptime`` into
-  ``TIMESTAMP`` (UTC by convention, not ``TIMESTAMPTZ``).
-* Booleans are the literals ``TRUE`` / ``FALSE``.
-* With the types below, 0 values failed to cast in any column.
+Each release's column list (names in file order + DuckDB target type) was read from the real
+header with DuckDB 1.5.6 (``read_csv(header=false, all_varchar=true) LIMIT 1``) and is hard-coded
+here; :mod:`rl_pipeline.datasets` combines it with the source, catalog and conversion settings.
 
 Casts are **strict** (:data:`STRICT_PATTERNS`): DuckDB's ``TRY_CAST`` alone silently rounds
 ``'1.5'`` to ``2`` for integer types and accepts ``'0x10'``, ``'1_000'``, ``'1e3'``, ``'nan'`` and
-``'inf'``; ``strptime`` accepts unpadded ``'2014-1-1 1:2:3'``. A value must first match the
-pattern for its type, otherwise it becomes NULL and counts as a cast failure in the quality gate.
-Measured on the full file in review (2026-10-13): 0 non-missing values in any typed column fail
-these patterns, so strict and lenient casts produce byte-identical Parquet for dataset version
-``5d359345fecf0bf47be6edb10b5aae58``. That is why the patterns are not part of
-:func:`schema_fingerprint` (adding them would only invalidate an identical cached conversion).
-Bump ``convert.CONVERTER_VERSION`` whenever a rule change can alter the output of an existing
-version.
+``'inf'``; ``strptime`` accepts unpadded ``'2014-1-1 1:2:3'``. A value must first fully match the
+pattern for its type (or the column's override in the dataset spec), otherwise it becomes NULL
+and counts as a cast failure in the conversion's quality gate. Bump
+``convert.CONVERTER_VERSION`` whenever a rule change can alter the output of an existing version.
+
+``final-2017-01-25.csv.gz`` (66 columns), measured on the full file (3,881,992 rows, 2026-10-13):
+
+* The null token is the literal ``NA`` (R-style); empty unquoted fields also occur (DuckDB reads
+  them as NULL). No VARCHAR column other than the all-``NA`` ``gh_commits_in_push`` contained the
+  value ``NA``, so ``NA`` is treated as NULL in every column. (The only other null-like literal in
+  a VARCHAR column is ``nil`` in ``git_branch``, 4 rows; it is kept as a string.)
+* All four timestamp columns use exactly ``YYYY-MM-DD HH:MM:SS`` (no zone; UTC per the
+  TravisTorrent data-format documentation). They are parsed with ``strptime`` into ``TIMESTAMP``.
+* Booleans are the literals ``TRUE`` / ``FALSE``.
+* 0 non-missing values in any typed column fail the strict patterns, so strict and lenient casts
+  produce byte-identical Parquet for dataset version ``5d359345fecf0bf47be6edb10b5aae58``. That is
+  why the default patterns are not part of :func:`schema_fingerprint` (adding them would only
+  invalidate an identical cached conversion); per-dataset pattern *overrides* are.
+
+``travistorrent_5_3_2016.csv.gz`` (56 columns), measured on the full file (2,640,825 job rows,
+2026-10-13; see :data:`TT_5_3_2016_COLUMNS` for per-column notes):
+
+* Same null token ``NA`` plus empty fields (``""``); every string is quoted, booleans are the quoted
+  literals ``"true"`` / ``"false"``.
+* ``tr_prev_build`` is written as ``"12345"`` on 1,739,408 rows and with a zero fraction
+  (``"12345.0"``, ``"-1.0"``) on 901,405 rows, hence its pattern override. ``-1`` (and ``-1.0``) is
+  the release's placeholder for "no previous build"; the raw layer keeps it as ``-1`` (staging
+  decides). ``tr_ci_latency`` uses ``-1`` the same way.
+* ``row`` is unique (1 … 2,640,825) while ``tr_job_id`` is not (1,800,390 distinct), so ``row`` is
+  the conversion's unique key and the last sort column.
+* 12 rows (2 Java) have shifted trailing fields: a ``tr_failed_tests`` value with unescaped quotes
+  and commas spills into the following columns. Their non-parsable values become NULL and are
+  counted as cast failures (well below the 0.1% gate); the rows are kept (raw stays faithful).
 """
 
 # ruff: noqa: S608 - SQL is assembled from schema constants; every value goes through sql_literal()
@@ -34,7 +48,7 @@ from __future__ import annotations
 import difflib
 import hashlib
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import duckdb
@@ -51,9 +65,16 @@ STRICT_PATTERNS: dict[str, str] = {
     "DOUBLE": r"[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?",
     "TIMESTAMP": r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}",
 }
+# An integer optionally written with an all-zero fraction ("123.0"): the value is exact, so the
+# cast cannot round. Used as a per-column override where a release wrote integers as floats.
+INT_WITH_ZERO_FRACTION = r"[+-]?[0-9]+(\.0+)?"
+SUPPORTED_TYPES: frozenset[str] = frozenset({*STRICT_PATTERNS, "BOOLEAN", "VARCHAR"})
 
+Columns = tuple[tuple[str, str], ...]
+
+# ---------------------------------------------------------------- final-2017-01-25 (66 columns)
 # (name, DuckDB target type) in exact file order.
-EXPECTED_COLUMNS: tuple[tuple[str, str], ...] = (
+FINAL_2017_COLUMNS: Columns = (
     ("tr_build_id", "BIGINT"),
     ("gh_project_name", "VARCHAR"),
     ("gh_is_pr", "BOOLEAN"),
@@ -121,27 +142,103 @@ EXPECTED_COLUMNS: tuple[tuple[str, str], ...] = (
     ("tr_status", "VARCHAR"),
     ("tr_jobs", "VARCHAR"),
 )
+FINAL_2017_NAMES: tuple[str, ...] = tuple(name for name, _ in FINAL_2017_COLUMNS)
 
-EXPECTED_NAMES: tuple[str, ...] = tuple(name for name, _ in EXPECTED_COLUMNS)
-COLUMN_TYPES: dict[str, str] = dict(EXPECTED_COLUMNS)
-SORT_KEY: tuple[str, ...] = ("tr_build_id", "tr_job_id")
-PARTITION_COLUMN = "gh_lang"
+# ---------------------------------------------------------------- 5_3_2016 (56 columns)
+# Types follow the 2017 schema for shared concepts (churn and sloc BIGINT, counts INTEGER, test
+# densities and log-derived durations DOUBLE). Measured value shapes (full file): every integer
+# column below fully matches the integer pattern on all non-missing values except the 12 shifted
+# rows; ``tr_testduration`` / ``tr_purebuildduration`` mix "12", "12.0" and "12.34".
+TT_5_3_2016_COLUMNS: Columns = (
+    ("row", "INTEGER"),
+    ("git_commit", "VARCHAR"),
+    ("gh_project_name", "VARCHAR"),
+    ("gh_is_pr", "BOOLEAN"),
+    ("git_merged_with", "VARCHAR"),
+    ("gh_lang", "VARCHAR"),
+    ("git_branch", "VARCHAR"),
+    ("gh_first_commit_created_at", "TIMESTAMP"),
+    ("gh_team_size", "INTEGER"),
+    ("git_commits", "VARCHAR"),
+    ("git_num_commits", "INTEGER"),
+    ("gh_num_issue_comments", "INTEGER"),
+    ("gh_num_commit_comments", "INTEGER"),
+    ("gh_num_pr_comments", "INTEGER"),
+    ("gh_src_churn", "BIGINT"),
+    ("gh_test_churn", "BIGINT"),
+    ("gh_files_added", "INTEGER"),
+    ("gh_files_deleted", "INTEGER"),
+    ("gh_files_modified", "INTEGER"),
+    ("gh_tests_added", "INTEGER"),
+    ("gh_tests_deleted", "INTEGER"),
+    ("gh_src_files", "INTEGER"),
+    ("gh_doc_files", "INTEGER"),
+    ("gh_other_files", "INTEGER"),
+    ("gh_commits_on_files_touched", "INTEGER"),
+    ("gh_sloc", "BIGINT"),
+    ("gh_test_lines_per_kloc", "DOUBLE"),
+    ("gh_test_cases_per_kloc", "DOUBLE"),
+    ("gh_asserts_cases_per_kloc", "DOUBLE"),
+    ("gh_by_core_team_member", "BOOLEAN"),
+    ("gh_description_complexity", "INTEGER"),
+    ("tr_build_id", "BIGINT"),
+    ("gh_pull_req_num", "BIGINT"),
+    ("tr_status", "VARCHAR"),
+    ("tr_duration", "INTEGER"),
+    ("tr_started_at", "TIMESTAMP"),
+    ("tr_jobs", "VARCHAR"),
+    ("tr_build_number", "BIGINT"),
+    ("tr_job_id", "BIGINT"),
+    ("tr_lan", "VARCHAR"),
+    ("tr_setup_time", "DOUBLE"),
+    ("tr_analyzer", "VARCHAR"),
+    ("tr_frameworks", "VARCHAR"),
+    ("tr_tests_ok", "INTEGER"),
+    ("tr_tests_fail", "INTEGER"),
+    ("tr_tests_run", "INTEGER"),
+    ("tr_tests_skipped", "INTEGER"),
+    ("tr_failed_tests", "VARCHAR"),
+    ("tr_testduration", "DOUBLE"),
+    ("tr_purebuildduration", "DOUBLE"),
+    ("tr_tests_ran", "BOOLEAN"),
+    ("tr_tests_failed", "BOOLEAN"),
+    ("git_num_committers", "INTEGER"),
+    ("tr_num_jobs", "INTEGER"),
+    ("tr_prev_build", "BIGINT"),
+    ("tr_ci_latency", "BIGINT"),
+)
+TT_5_3_2016_NAMES: tuple[str, ...] = tuple(name for name, _ in TT_5_3_2016_COLUMNS)
+# Per-column pattern overrides (see the module docstring).
+TT_5_3_2016_PATTERNS: dict[str, str] = {"tr_prev_build": INT_WITH_ZERO_FRACTION}
 
-assert len(EXPECTED_NAMES) == 66
-assert len(set(EXPECTED_NAMES)) == 66
+for _cols, _n in ((FINAL_2017_COLUMNS, 66), (TT_5_3_2016_COLUMNS, 56)):
+    assert len(_cols) == _n
+    assert len({c for c, _ in _cols}) == _n
+    assert {t for _, t in _cols} <= SUPPORTED_TYPES
 
 
 class SchemaMismatchError(ValueError):
-    """Raised when the raw header differs from :data:`EXPECTED_NAMES` (names or order)."""
+    """Raised when the raw header differs from the expected names (names or order)."""
 
 
-def schema_fingerprint() -> str:
-    """sha256 of the expected schema + parsing rules; part of the conversion cache key."""
-    payload = {
-        "columns": [list(c) for c in EXPECTED_COLUMNS],
-        "null_tokens": list(NULL_TOKENS),
-        "timestamp_format": TIMESTAMP_FORMAT,
+def schema_fingerprint(
+    columns: Columns,
+    null_tokens: Sequence[str] = NULL_TOKENS,
+    timestamp_format: str = TIMESTAMP_FORMAT,
+    patterns: Mapping[str, str] | None = None,
+) -> str:
+    """sha256 of the expected schema + parsing rules; part of the conversion cache key.
+
+    Pattern *overrides* are included only when present, so a dataset without overrides keeps the
+    fingerprint it had before overrides existed (and its cached conversion stays valid).
+    """
+    payload: dict[str, object] = {
+        "columns": [list(c) for c in columns],
+        "null_tokens": list(null_tokens),
+        "timestamp_format": timestamp_format,
     }
+    if patterns:
+        payload["patterns"] = dict(sorted(patterns.items()))
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(blob).hexdigest()
 
@@ -162,7 +259,7 @@ def read_header(con: duckdb.DuckDBPyConnection, csv_path: Path) -> list[str]:
     return ["" if v is None else str(v) for v in row]
 
 
-def diff_header(actual: Sequence[str], expected: Sequence[str] = EXPECTED_NAMES) -> list[str]:
+def diff_header(actual: Sequence[str], expected: Sequence[str]) -> list[str]:
     """Human-readable differences; empty when ``actual`` equals ``expected`` exactly."""
     if list(actual) == list(expected):
         return []
@@ -187,7 +284,7 @@ def diff_header(actual: Sequence[str], expected: Sequence[str] = EXPECTED_NAMES)
     return problems
 
 
-def validate_header(actual: Sequence[str]) -> None:
-    problems = diff_header(actual)
+def validate_header(actual: Sequence[str], expected: Sequence[str]) -> None:
+    problems = diff_header(actual, expected)
     if problems:
         raise SchemaMismatchError("raw header mismatch: " + "; ".join(problems))

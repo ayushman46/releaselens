@@ -1,6 +1,10 @@
 """Hand-curated column knowledge: meaning, grain, role and availability (pre/post build).
 
-Meanings are short paraphrases of the official TravisTorrent data-format page
+Shared types live here, together with the catalog of the **secondary** release
+``final-2017-01-25`` (:data:`FINAL_2017_COLUMN_DOCS`). The primary release's catalog is
+:mod:`rl_pipeline.catalog_2016`.
+
+2017 meanings are short paraphrases of the official TravisTorrent data-format page
 (``TestRoots/travistorrent-site`` ``page_dataformat.md``, last changed in commit
 ``d3f5ece6d73dcc440c13a3668d5038fbdca2f703`` on 2017-02-09; file sha256
 ``cd7cc220d67b0df3f1ef08d847195335e48157bd78d0cb8bccdc0280de1a8801`` when read on 2026-10-13).
@@ -15,7 +19,7 @@ Availability tags (ADR-0005/0006 leakage rules):
 * ``pre_build`` — known when the build is triggered.
 
 Roles: ``identifier`` / ``context`` (never a model feature), ``feature_candidate``, ``label``,
-``outcome`` (post-build; usable only lagged, for builds that had already finished).
+``outcome`` (post-build; usable only lagged, for builds that had already finished), ``excluded``.
 """
 
 from __future__ import annotations
@@ -23,17 +27,28 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from rl_pipeline.schema import EXPECTED_NAMES
+from rl_pipeline.schema import FINAL_2017_NAMES
 
 Availability = Literal["pre_build", "post_build", "uncertain"]
 Role = Literal["identifier", "context", "feature_candidate", "label", "outcome", "excluded"]
 Grain = Literal["build", "job"]
 
-DATAFORMAT_URL = (
-    "https://raw.githubusercontent.com/TestRoots/travistorrent-site/master/page_dataformat.md"
+
+@dataclass(frozen=True, slots=True)
+class DataformatDoc:
+    """The documentation page a catalog paraphrases (pinned by commit and content hash)."""
+
+    url: str
+    commit: str
+    sha256: str
+    note: str = ""
+
+
+FINAL_2017_DATAFORMAT = DataformatDoc(
+    url="https://raw.githubusercontent.com/TestRoots/travistorrent-site/master/page_dataformat.md",
+    commit="d3f5ece6d73dcc440c13a3668d5038fbdca2f703",
+    sha256="cd7cc220d67b0df3f1ef08d847195335e48157bd78d0cb8bccdc0280de1a8801",
 )
-DATAFORMAT_COMMIT = "d3f5ece6d73dcc440c13a3668d5038fbdca2f703"
-DATAFORMAT_SHA256 = "cd7cc220d67b0df3f1ef08d847195335e48157bd78d0cb8bccdc0280de1a8801"
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,7 +81,7 @@ def _c(
     return ColumnDoc(name, meaning, documented, grain, role, availability, justification)
 
 
-COLUMN_DOCS: dict[str, ColumnDoc] = {
+FINAL_2017_COLUMN_DOCS: dict[str, ColumnDoc] = {
     d.name: d
     for d in (
         _c(
@@ -586,11 +601,11 @@ COLUMN_DOCS: dict[str, ColumnDoc] = {
     )
 }
 
-assert tuple(COLUMN_DOCS) == EXPECTED_NAMES, "COLUMN_DOCS must follow file order exactly"
+assert tuple(FINAL_2017_COLUMN_DOCS) == FINAL_2017_NAMES, "docs must follow file order exactly"
 
 # Spec (2016-style) names -> real 2017 column names. Each target is checked against the real
 # header by the dictionary builder; renamed ones moved to the git_diff_* / gh_diff_* families.
-SPEC_NAME_MAP: dict[str, str] = {
+FINAL_2017_SPEC_NAME_MAP: dict[str, str] = {
     "gh_src_churn": "git_diff_src_churn",
     "gh_test_churn": "git_diff_test_churn",
     "gh_files_added": "gh_diff_files_added",
@@ -611,3 +626,40 @@ SPEC_NAME_MAP: dict[str, str] = {
     "gh_num_commits_in_push": "gh_num_commits_in_push",
     "gh_description_complexity": "gh_description_complexity",
 }
+
+
+@dataclass(frozen=True, slots=True)
+class BuildInputMapping:
+    """How one ``rl_core.features.change.BUILD_INPUT_FIELDS`` input maps onto a raw column."""
+
+    field: str
+    column: str | None  # None: no column of this release provides it
+    status: Literal["direct", "approximate", "none"]
+    note: str = ""
+
+
+# rl_core build inputs -> 2017 columns (secondary dataset; never a training source, ADR-0017).
+FINAL_2017_BUILD_INPUT_MAP: tuple[BuildInputMapping, ...] = (
+    BuildInputMapping("src_churn", "git_diff_src_churn", "direct", "broken in this release"),
+    BuildInputMapping("test_churn", "git_diff_test_churn", "direct", "broken in this release"),
+    BuildInputMapping("files_added", "gh_diff_files_added", "direct"),
+    BuildInputMapping("files_deleted", "gh_diff_files_deleted", "direct"),
+    BuildInputMapping("files_modified", "gh_diff_files_modified", "direct"),
+    BuildInputMapping("tests_added", "gh_diff_tests_added", "direct"),
+    BuildInputMapping("tests_deleted", "gh_diff_tests_deleted", "direct"),
+    BuildInputMapping("src_files", "gh_diff_src_files", "direct", "broken in this release"),
+    BuildInputMapping("doc_files", "gh_diff_doc_files", "direct", "broken in this release"),
+    BuildInputMapping("other_files", "gh_diff_other_files", "direct"),
+    BuildInputMapping("sloc", "gh_sloc", "direct"),
+    BuildInputMapping("test_lines_per_kloc", "gh_test_lines_per_kloc", "direct"),
+    BuildInputMapping("test_cases_per_kloc", "gh_test_cases_per_kloc", "direct"),
+    BuildInputMapping("asserts_per_kloc", "gh_asserts_cases_per_kloc", "direct"),
+    BuildInputMapping("num_commits_in_push", "gh_num_commits_in_push", "direct", "all NULL"),
+    BuildInputMapping("num_all_built_commits", "git_num_all_built_commits", "direct"),
+    BuildInputMapping("team_size", "gh_team_size", "direct"),
+    BuildInputMapping("by_core_team_member", "gh_by_core_team_member", "direct"),
+    BuildInputMapping("is_pr", "gh_is_pr", "direct"),
+    BuildInputMapping("description_complexity", "gh_description_complexity", "direct"),
+    BuildInputMapping("commits_on_files_touched", "gh_num_commits_on_files_touched", "direct"),
+    BuildInputMapping("repo_age_days", "gh_repo_age", "direct"),
+)

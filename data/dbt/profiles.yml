@@ -1,0 +1,47 @@
+# dbt profiles for ReleaseLens. In-repo and secret-free: every credential and path comes from the
+# RL_* environment (docs/dev/CONVENTIONS.md §2), which rl_pipeline.dbt sets from PipelineSettings.
+#
+#   dev      raw Parquet + marts/features on S3 (local: pgsty/silo, ADR-0009) via DuckDB httpfs
+#   fixture  the same models on local Parquet converted from the SYNTHETIC test fixture; no S3,
+#            no extension download (CI: .github/workflows/data.yml)
+#
+# RL_S3_ENDPOINT is a URL (http://localhost:29000 on the host, http://minio:9000 in compose):
+# DuckDB wants host:port, and use_ssl follows the scheme.
+releaselens:
+  target: "{{ env_var('RL_DBT_TARGET', 'dev') }}"
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('RL_LAKE_DIR', '../lake') }}/dbt/releaselens.duckdb"
+      threads: 2
+      extensions:
+        - httpfs
+      settings:
+        memory_limit: "{{ env_var('RL_DBT_MEMORY_LIMIT', '1GB') }}"
+        threads: 2
+        TimeZone: UTC
+        preserve_insertion_order: true
+        enable_progress_bar: false
+        temp_directory: "{{ env_var('RL_LAKE_DIR', '../lake') }}/dbt/.duckdb_tmp"
+        max_temp_directory_size: "{{ env_var('RL_DBT_MAX_TEMP_SIZE', '512MiB') }}"
+      secrets:
+        - type: s3
+          name: rl_s3
+          key_id: "{{ env_var('RL_S3_ACCESS_KEY') }}"
+          secret: "{{ env_var('RL_S3_SECRET_KEY') }}"
+          region: "{{ env_var('RL_S3_REGION', 'us-east-1') }}"
+          endpoint: "{{ env_var('RL_S3_ENDPOINT') | replace('https://', '') | replace('http://', '') }}"
+          url_style: path
+          use_ssl: "{{ 'true' if env_var('RL_S3_ENDPOINT').startswith('https://') else 'false' }}"
+    fixture:
+      type: duckdb
+      path: "{{ env_var('RL_LAKE_DIR', '../lake') }}/dbt/releaselens_fixture.duckdb"
+      threads: 2
+      settings:
+        memory_limit: "{{ env_var('RL_DBT_MEMORY_LIMIT', '1GB') }}"
+        threads: 2
+        TimeZone: UTC
+        preserve_insertion_order: true
+        enable_progress_bar: false
+        temp_directory: "{{ env_var('RL_LAKE_DIR', '../lake') }}/dbt/.duckdb_tmp"
+        max_temp_directory_size: "{{ env_var('RL_DBT_MAX_TEMP_SIZE', '512MiB') }}"

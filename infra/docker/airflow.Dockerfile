@@ -49,17 +49,21 @@ ENV AIRFLOW_HOME=/opt/airflow \
     AIRFLOW__CORE__LOAD_EXAMPLES=False \
     AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags \
     RL_LAKE_DIR=/lake \
-    RL_DATASET_DIR=/datasets/travistorrent
+    RL_DATASETS_DIR=/datasets \
+    RL_DBT_PROJECT_DIR=/opt/airflow/dbt
 
 # /lake (parquet staging) and /opt/airflow/logs are volume mount points: creating them owned by
 # uid 10001 makes Docker initialise fresh named volumes with that owner.
-RUN mkdir -p /opt/airflow/logs /opt/airflow/bin /lake /datasets/travistorrent \
+RUN mkdir -p /opt/airflow/logs /opt/airflow/bin /lake /datasets \
  && chown -R app:app /opt/airflow /lake \
  && /opt/airflow-venv/bin/python -c "import sys; assert sys.version_info[:2] == (3, 12), sys.version" \
  && /app/.venv/bin/python -c "import sys; assert sys.version_info[:2] == (3, 12), sys.version"
 
 COPY --chown=root:root data/airflow/bin /opt/airflow/bin
 COPY --chown=root:root data/airflow/dags /opt/airflow/dags
+# dbt-duckdb project (M3a), read-only: rl_pipeline.dbt_runner writes dbt's target/, logs/ and the
+# DuckDB file under /lake/dbt. dbt-core/dbt-duckdb themselves come with /app/.venv (uv.lock).
+COPY --chown=root:root data/dbt /opt/airflow/dbt
 
 WORKDIR /opt/airflow
 USER app
