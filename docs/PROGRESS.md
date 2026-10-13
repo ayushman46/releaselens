@@ -4,31 +4,41 @@
 > `DECISIONS.md`, `BLOCKERS.md`, `git log --oneline -20`; run `make check` to confirm the real
 > state; continue from **Next step**. Tests beat this file if they disagree.
 
-## Current state
+## Current state (2026-10-13 09:55 IST)
 
-- **Milestones:** M0 ✅ · M1 ✅ · M2 ✅ (`final-2017`) / extending to the primary `5_3_2016`
-  dataset (ADR-0017) · M3 ⏳ · M6/M8/M9-core ⏳ · M7 demo services ✅ (ingest pending) ·
-  M11a ✅.
-- **Last commits:** `c680c8c` (M2 + rl_core features/stats + demo), `ceb9a81` (ADR-0017),
-  `168445c` (M11a web). GitHub CI on `c680c8c`: backend ✅, data ✅, frontend ✅,
-  security ❌ = bandit B608 (f-string SQL) ×12 in `data/pipeline` (DuckDB queries built from
-  internal schema constants). **Next fix:** use DuckDB parameter binding for values and an
-  allowlist + justified `# nosec B608` for identifiers. Deferred until the M2b agent releases
-  `data/pipeline`.
-- **In flight (background workflows):**
-  1. M2b + M3 (`wc25a2zj9`): 5_3_2016 dataset spec → dbt project → analytics + Postgres export
-     → reviews.
-  2. M6 + M8/M9 core (`waq3y476j`): API keys, deployment envelope/consumer/DLQ/jobs/outbox;
-     rl_core regression engine, self-time, graph, triage, blast radius.
-
-  Uncommitted files under `packages/rl_db`, `services/*`, `packages/rl_core/{events,telemetry,
-  regression,…}` and `data/` belong to these. If a restart finds them half-done: run their
-  tests, keep what is green, finish the rest.
-- **Disk:** host ≈ 2.1 GiB free, Colima VM ≈ 4 GiB free (VM disk file is at its 20 GiB cap).
-  Prune only `rlens`-labelled dangling images and our own build cache. See Q11.
-- **Next steps after the workflows:** commit M6, M8/M9 and M3 → fix bandit → M7 OTLP ingest + span
-  consumer + demo compose profile + scenario script → M4 ML → M5 risk API + GitHub Action → M10
-  SaaS layer → M11 wiring → M12.
+- **Done and pushed:**
+  - M0 and M1.
+  - M2: both datasets, primary 5_3_2016.
+  - M3a: dbt project and feature mart, run `m3-run1`.
+  - M6: deployment events.
+  - M8/M9 core logic.
+  - M5 GitHub Action.
+  - M11a: web design system, shell and marketing site.
+  - Contracts: FEATURE_DEFINITIONS, RISK_ASSESSMENTS, ANALYSIS_RESULTS.
+- **Real feature mart:**
+  - Location: `s3://releaselens-data/features/release_features/schema=1.0.0/run_id=m3-run1/part-00000.parquet`, 128,617 rows, sha256 `384f66b6…`.
+  - Splits: train 90,031 / validation 19,293 / test 19,293.
+  - Cut points: validation from 2015-01-10T08:05:34Z, test from 2015-04-17T18:41:22Z.
+- **In flight.** A 06:30 IST session-limit stop interrupted these agents, and they were then resumed:
+  1. M7 + M8 wiring, worktree branch `worktree-agent-a5ea34aa43cf5ac41`, migration `0003_telemetry`.
+  2. M10 SaaS layer, worktree branch `worktree-agent-a37fc8e4e8d135faf`, migration `0003_saas`.
+     **Renumber to `0004_saas` (down_revision `0003_telemetry`) when merging.**
+  3. M4 ML, worktree branch `worktree-agent-ac96dff39debc0085`.
+  4. Main tree workflow `wg1l9c7xw`: dbt adversarial review plus the bandit B608 fixes in
+     `data/pipeline`, and M3b analytics (`data/analysis`, no migration yet).
+- **Recovery if a session dies:** each worktree branch holds committed work. For each one, run
+  `git log main..<branch>`, then run its tests inside the worktree, then
+  `git merge <branch>` into main and resolve migration numbering. The analytics Postgres export
+  becomes migration `0005_analytics` after M7 and M10 merge.
+- **Security CI:** bandit B608 ×12 in `data/pipeline` (being fixed by the dbt reviewer). Pushes go
+  through `make push` (gitleaks-gated, with the `.gitleaks.toml` allowlist).
+- **Disk:** host ≈ 2.0 GiB free, Colima VM ≈ 2 GiB free.
+- **Next steps after the merges:**
+  - Compose services: mlflow, demo profile (collector, 5 services, k6), mailpit.
+  - `demo/scenarios/run_demo.sh` end to end.
+  - M5 risk endpoint serving the champion model.
+  - M11 wiring of the web pages to the real APIs.
+  - M12 benchmarks, security scans, README and DONE.md.
 
 ## Verification commands (current)
 
