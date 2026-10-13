@@ -1,0 +1,4 @@
+# Verified false positives in history (fingerprint = commit:file:rule:line). Each entry must be a
+# dummy value; the current tree marks the same lines with an inline gitleaks:allow comment.
+# Dummy password in an M10 auth test (commit before the inline allow comment was added):
+483a6832eee0d836e271ba091cb8087a05333d1f:services/api/tests/test_auth_flow.py:generic-api-key:304
