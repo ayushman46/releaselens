@@ -72,14 +72,19 @@ def load_results(docs_dir: Path) -> dict[str, dict[str, Any]]:
     return out
 
 
-def verdict(lift: float | None) -> str:
-    if lift is None:
+def verdict(roc_auc: float | None) -> str:
+    """Plain-language discrimination level from ROC-AUC (independent of the base rate).
+
+    Lift over the base rate is shown next to it, but lift grows as the base rate shrinks, so it is
+    not used for the wording.
+    """
+    if roc_auc is None:
         return "unknown"
-    if lift < 1.3:
-        return "barely better than the base rate"
-    if lift < 1.6:
+    if roc_auc < 0.6:
+        return "weak (close to chance)"
+    if roc_auc < 0.7:
         return "modest"
-    if lift < 2.2:
+    if roc_auc < 0.8:
         return "moderate"
     return "strong"
 
@@ -112,13 +117,12 @@ def _headline(r: dict[str, Any]) -> list[str]:
     t = r["test"]["final"]
     ci = t.get("pr_auc_ci95_project_bootstrap") or {}
     heur = r["test"]["reference_candidates"].get("heuristic_rule", {})
-    lift = t.get("pr_auc_over_base_rate")
     lines = [
         f"- On the untouched chronological test set ({f(t['n'])} builds, failure base rate "
         f"{f(t['base_rate'])}), the final model (**{r['selection']['display']}**, chosen by validation "
         f"PR-AUC) reaches **PR-AUC {f(t['pr_auc'])}** (95% project-bootstrap CI {f(ci.get('low'))}–"
-        f"{f(ci.get('high'))}) and ROC-AUC {f(t['roc_auc'])}: {f(lift, 2)}× the base rate, "
-        f"**{verdict(lift)}** discrimination overall.",
+        f"{f(ci.get('high'))}; {f(t['pr_auc_over_base_rate'], 2)}× the base rate) and ROC-AUC "
+        f"{f(t['roc_auc'])}: **{verdict(t['roc_auc'])}** discrimination overall.",
         f"- Baselines on the same rows: heuristic rule (previous build failed OR churn > p90) PR-AUC "
         f"{f(heur.get('pr_auc'))}; majority class "
         f"{f(r['test']['reference_candidates'].get('majority_class', {}).get('pr_auc'))}.",
@@ -128,17 +132,25 @@ def _headline(r: dict[str, Any]) -> list[str]:
     sl = (r["test"].get("by_previous_outcome") or {}).get("previous_passed")
     if sl and sl.get("pr_auc") is not None:
         hp = (sl.get("reference_pr_auc") or {}).get("heuristic_rule")
+        persistence = sl["roc_auc"] < t["roc_auc"] - 0.05
+        lead = (
+            "- Much of the overall signal is **persistence** (a broken build tends to stay broken). "
+            if persistence
+            else "- Discrimination holds up without the persistence effect. "
+        )
         lines.append(
-            f"- Most of the signal is **persistence** (a broken build tends to stay broken). After a "
-            f"passing build ({pct(sl['share_of_rows'])} of test builds, base rate {f(sl['base_rate'])}) "
-            f"the model's PR-AUC is {f(sl['pr_auc'])} ({f(sl['pr_auc_over_base_rate'], 2)}× base, "
-            f"**{verdict(sl['pr_auc_over_base_rate'])}**; heuristic {f(hp)}): predicting *new* "
-            "breakage is much harder."
+            lead + f"After a passing build ({pct(sl['share_of_rows'])} of test builds, base rate "
+            f"{f(sl['base_rate'])}) the model reaches PR-AUC {f(sl['pr_auc'])} "
+            f"({f(sl['pr_auc_over_base_rate'], 2)}× base; heuristic {f(hp)}) and ROC-AUC "
+            f"{f(sl['roc_auc'])} (**{verdict(sl['roc_auc'])}**); its top 10% of those builds fail at "
+            f"{pct(sl['precision_at_top_10pct'])}"
+            + (": predicting *new* breakage is much harder." if persistence else ".")
         )
     cold = r["test"]["cold_start"]
     lines += [
-        f"- Without build history (cold start) PR-AUC drops to {f(cold['pr_auc'])} "
-        f"({f(cold['pr_auc_over_base_rate'], 2)}× base, **{verdict(cold['pr_auc_over_base_rate'])}**).",
+        f"- Without build history (cold start) PR-AUC is {f(cold['pr_auc'])} "
+        f"({f(cold['pr_auc_over_base_rate'], 2)}× base) and ROC-AUC {f(cold['roc_auc'])}: "
+        f"**{verdict(cold['roc_auc'])}**.",
         f"- Calibrated probability exposed: **{'yes' if r['test']['probability_exposed'] else 'no'}** "
         f"(ADR-0012 gate, {r['test']['calibration']['selected_method']} calibration).",
     ]
@@ -263,6 +275,26 @@ def _candidates_section(r: dict[str, Any]) -> list[str]:
         f"{', '.join(_display(r, n) for n in r['selection']['eligible'])}; selection locked at "
         f"{r['selection']['locked_at']} before the test set was opened."
     )
+    others = sorted(
+        (
+            c
+            for c in r["candidates"]
+            if c["name"] in r["selection"]["eligible"]
+            and c["name"] != r["selection"]["final_model"]
+        ),
+        key=lambda c: -c["val_pr_auc"],
+    )
+    if others:
+        margin = r["selection"]["val_pr_auc"] - others[0]["val_pr_auc"]
+        lines.append(
+            f"Runner-up: {others[0]['display']} (val PR-AUC {f(others[0]['val_pr_auc'], 4)}, margin "
+            f"{margin:.4f})"
+            + (
+                " — effectively a tie; the tree models are interchangeable here."
+                if margin < 0.01
+                else "."
+            )
+        )
     return lines
 
 
@@ -662,10 +694,39 @@ def _persistence_limitation(r: dict[str, Any]) -> str:
     return (
         "- **Persistence vs new breakage.** Overall PR-AUC is "
         f"{f(overall, 2)}× the base rate, but after a passing build it is "
-        f"{f(sl.get('pr_auc_over_base_rate'), 2)}× ({verdict(sl.get('pr_auc_over_base_rate'))}) and with "
-        f"no history {f(cold.get('pr_auc_over_base_rate'), 2)}× ({verdict(cold.get('pr_auc_over_base_rate'))}). "
+        f"{f(sl.get('pr_auc_over_base_rate'), 2)}× (ROC-AUC {f(sl.get('roc_auc'))}, {verdict(sl.get('roc_auc'))}) "
+        f"and with no history {f(cold.get('pr_auc_over_base_rate'), 2)}× (ROC-AUC {f(cold.get('roc_auc'))}, "
+        f"{verdict(cold.get('roc_auc'))}). "
         "Much of the score reflects the project's recent build outcomes (a broken build tends to stay "
         "broken) rather than the risk of the change itself."
+    )
+
+
+def _history_limitation(r: dict[str, Any]) -> str:
+    cp = r["cross_project"]["results"]
+    seen = cp.get("seen_projects_test_window", {})
+    unseen = cp.get("unseen_projects_test_window", {})
+    pp = r["test"]["per_project"]["summary"]
+    diff = None
+    if seen.get("roc_auc") is not None and unseen.get("roc_auc") is not None:
+        diff = unseen["roc_auc"] - seen["roc_auc"]
+    if diff is None:
+        xp = "cross-project generalisation was not measurable"
+    elif abs(diff) < 0.02:
+        xp = (
+            f"on projects never seen in training ROC-AUC is {f(unseen['roc_auc'])} vs {f(seen['roc_auc'])} "
+            "on seen projects (no material drop: the history features are project-agnostic)"
+        )
+    else:
+        xp = (
+            f"on projects never seen in training ROC-AUC is {f(unseen['roc_auc'])} vs {f(seen['roc_auc'])} "
+            f"on seen projects ({'drop' if diff < 0 else 'gain'} of {abs(diff):.3f})"
+        )
+    return (
+        "- **History dependence and variance.** The model needs the tenant's own build history in "
+        f"ReleaseLens (cold start ROC-AUC {f(r['test']['cold_start']['roc_auc'])}); {xp}. Per-project "
+        f"PR-AUC varies widely (IQR {f(pp.get('pr_auc_p25'))}–{f(pp.get('pr_auc_p75'))} over "
+        f"{f(pp.get('projects_eligible'))} projects)."
     )
 
 
@@ -788,7 +849,7 @@ def render_model_card(res: dict[str, dict[str, Any]]) -> str:
             ),
         ),
         "",
-        f"Overall discrimination is **{verdict(t.get('pr_auc_over_base_rate'))}**. Full details: `docs/ml/RESULTS.md`.",
+        f"Overall discrimination is **{verdict(t.get('roc_auc'))}** (ROC-AUC {f(t.get('roc_auc'))}). Full details: `docs/ml/RESULTS.md`.",
         "",
         "## Limitations",
         "",
@@ -802,8 +863,7 @@ def render_model_card(res: dict[str, dict[str, Any]]) -> str:
         "- **Label noise.** `errored` builds are often infrastructure failures that pre-build features cannot "
         "explain; see the errored-excluded sensitivity run.",
         _persistence_limitation(r),
-        "- **History dependence.** Much of the signal is project build history. Without history (cold start) and on "
-        "unseen projects the numbers above are lower; per-project performance varies widely.",
+        _history_limitation(r),
         "- **Conservative history.** Finish times are upper bounds (`started_at + duration`), so some finished "
         "builds are ignored by the history features (leakage-safe by design).",
         "- **Explanations** are SHAP attributions of the model's score, not causes of failure.",
