@@ -133,6 +133,9 @@ class Settings(BaseSettings):
     mlflow_tracking_uri: str | None = None
     model_cache_dir: str = "~/.cache/releaselens/models"
     model_retry_interval_s: float = Field(default=60.0, ge=0, le=86_400)
+    # A load attempt that runs longer is reported and retried once it returns (a stalled
+    # registry or artifact download must not silently end the retries).
+    model_attempt_timeout_s: float = Field(default=180.0, gt=0, le=3_600)
     # How long startup waits for the first load attempt before serving (503 until loaded).
     model_startup_wait_s: float = Field(default=30.0, ge=0, le=600)
     # Finished runs loaded per assessment (the history features need the last 20; totals are

@@ -4,6 +4,7 @@ Bundles are SYNTHETIC (``rl_api.testing.make_test_bundle``)."""
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import shutil
@@ -153,6 +154,49 @@ async def test_store_start_records_errors_and_never_blocks(bundles: dict[str, Pa
     empty = ms.ModelStore(uris={"main": None, "cold": None}, tracking_uri=None, cache_dir=Path())
     await empty.start()
     assert empty.status()["loaded"] == {}
+
+
+async def test_a_stalled_attempt_is_reported_and_retried_after_it_returns(
+    bundles: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import threading
+
+    release = threading.Event()
+    calls: list[str] = []
+    real = ms.load_model
+
+    def flaky(role: ms.Role, uri: str, **kw: Any) -> ms.LoadedModel:
+        calls.append(role)
+        if len(calls) == 1:
+            release.wait(5)  # the first attempt stalls (e.g. a hung artifact download)
+            raise ms.ModelLoadError("stalled download gave up")
+        if len(calls) == 2:
+            raise RuntimeError("an unexpected error must not end the retries")
+        return real(role, uri, **kw)
+
+    monkeypatch.setattr(ms, "load_model", flaky)
+    store = ms.ModelStore(
+        uris={"main": str(bundles["main"]), "cold": None},
+        tracking_uri=None,
+        cache_dir=Path("/tmp/unused"),
+        retry_interval_s=0.05,
+        attempt_timeout_s=0.1,
+    )
+    await store.start(wait_s=1)
+    assert store.main is None
+    assert "still running" in store.errors["main"]
+    assert store.attempts == 1
+    await asyncio.sleep(0.3)
+    assert store.attempts == 1  # no second attempt piles up behind the stalled one
+    release.set()
+    for _ in range(100):
+        if store.main is not None:
+            break
+        await asyncio.sleep(0.05)
+    assert store.main is not None
+    assert calls == ["main", "main", "main"]
+    assert store.status()["attempts"] == 3
+    await store.stop()
 
 
 # ----------------------------------------------------------------------------- GitHub App

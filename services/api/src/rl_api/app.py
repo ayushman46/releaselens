@@ -148,6 +148,7 @@ def create_app(
         tracking_uri=settings.mlflow_tracking_uri,
         cache_dir=Path(settings.model_cache_dir),
         retry_interval_s=settings.model_retry_interval_s,
+        attempt_timeout_s=settings.model_attempt_timeout_s,
     )
     # Read once at startup: a missing or unreadable key file stops the process (fail fast)
     # rather than failing every Check Run later.

@@ -246,9 +246,16 @@ class ModelStore:
     tracking_uri: str | None
     cache_dir: Path
     retry_interval_s: float = 60.0
+    # A registry or artifact store that accepts the connection and then stalls must not stall
+    # the loader: an attempt that runs longer than this is reported, and the next attempt
+    # starts once the stalled one has returned (a thread cannot be cancelled).
+    attempt_timeout_s: float = 180.0
     models: dict[Role, LoadedModel] = field(default_factory=dict)
     errors: dict[Role, str] = field(default_factory=dict)
+    attempts: int = 0
+    last_attempt_at: datetime | None = None
     _task: asyncio.Task[None] | None = field(default=None, repr=False)
+    _inflight: asyncio.Future[None] | None = field(default=None, repr=False)
     _first_attempt: asyncio.Future[None] | None = field(default=None, repr=False)
 
     @property
@@ -297,16 +304,34 @@ class ModelStore:
             self._first_attempt = asyncio.get_running_loop().create_future()
         return self._first_attempt
 
+    async def _attempt(self) -> None:
+        """One bounded load attempt. Never raises: the retry loop must outlive any failure."""
+        if self._inflight is None or self._inflight.done():
+            self.attempts += 1
+            self.last_attempt_at = datetime.now(UTC)
+            self._inflight = asyncio.ensure_future(asyncio.to_thread(self.load_pending))
+        try:
+            await asyncio.wait_for(asyncio.shield(self._inflight), timeout=self.attempt_timeout_s)
+        except TimeoutError:
+            for role in self.pending():
+                self.errors[role] = f"load attempt still running after {self.attempt_timeout_s:g}s"
+            log.warning(
+                "risk model load attempt is taking too long; will retry when it returns",
+                extra={"timeout_s": self.attempt_timeout_s, "pending": self.pending()},
+            )
+        except Exception:  # load_pending catches per role; this is the belt and braces
+            log.exception("risk model load attempt failed")
+
     async def _run(self) -> None:
         first = self._first
         try:
-            await asyncio.to_thread(self.load_pending)
+            await self._attempt()
         finally:
             if not first.done():
                 first.set_result(None)
         while self.pending() and self.retry_interval_s > 0:
             await asyncio.sleep(self.retry_interval_s)
-            await asyncio.to_thread(self.load_pending)
+            await self._attempt()
 
     async def stop(self) -> None:
         if self._task is not None:
@@ -320,4 +345,6 @@ class ModelStore:
             "loaded": {role: m.summary() for role, m in self.models.items()},
             "errors": dict(self.errors),
             "configured": {role: bool(uri) for role, uri in self.uris.items()},
+            "attempts": self.attempts,
+            "last_attempt_at": self.last_attempt_at.isoformat() if self.last_attempt_at else None,
         }

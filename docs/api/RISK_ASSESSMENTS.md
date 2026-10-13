@@ -132,7 +132,10 @@ Loading: a `models:/name@alias` (or `/version`) URI is resolved in the registry 
 start (a mismatch re-downloads). If the registry is down at startup the last cached version of
 that alias is served. A plain directory path loads a bundle directly. Startup waits at most
 `RL_MODEL_STARTUP_WAIT_S` (30 s) for the first attempt; failed loads retry every
-`RL_MODEL_RETRY_INTERVAL_S` (60 s). A new champion is picked up on restart.
+`RL_MODEL_RETRY_INTERVAL_S` (60 s). An attempt that runs longer than
+`RL_MODEL_ATTEMPT_TIMEOUT_S` (180 s), such as a stalled artifact download, is reported in the
+model status. The next attempt starts as soon as that one returns, so retries never stop on
+their own. A new champion is picked up on restart.
 `GET /api/v1/risk/model` (read) lists what is loaded (version, checksum, probability exposed).
 
 ## Reads
