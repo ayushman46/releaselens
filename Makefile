@@ -22,9 +22,19 @@ ALL_PROFILES := --profile core --profile data --profile airflow-full --profile d
 DATA_SERVICES := minio airflow-api-server airflow-scheduler airflow-dag-processor airflow-triggerer
 # Extra arguments for `airflow dags test`, e.g. make pipeline CONF='{"skip_training": true}'
 CONF ?=
+# Dataset key for `make pipeline` (rl_pipeline.datasets; empty = the DAG default, the primary
+# travistorrent-5-3-2016): make pipeline DATASET=travistorrent-final-2017-01-25
+DATASET ?=
+# --conf for `airflow dags test`: DATASET alone, CONF alone, or both merged (DATASET wins only if
+# CONF has no "dataset"; a conflicting pair is an error). Recursive (=) so it is only evaluated
+# by the pipeline recipe.
+PIPELINE_CONF = $(shell DATASET='$(DATASET)' CONF='$(CONF)' python3 -c 'import json, os, sys; \
+	c = json.loads(os.environ["CONF"] or "{}"); d = os.environ["DATASET"]; \
+	(d and c.get("dataset", d) != d) and sys.exit("DATASET and CONF disagree on the dataset"); \
+	c.update({"dataset": d} if d else {}); print(json.dumps(c) if c else "")')
 
 PY_SRC := packages/rl_core/src packages/rl_db/src services/api/src services/worker/src \
-	data/pipeline/src demo/services/src
+	data/pipeline/src demo/services/src integrations/github-action
 
 .PHONY: help
 help: ## Show this help
@@ -66,7 +76,7 @@ typecheck: ## mypy (strict for rl_core / rl_db)
 
 .PHONY: test
 test: ## Unit tests (no Docker needed; the Airflow DAG tests run via pipeline-test-dag)
-	$(UV) run pytest -m "not integration" packages services data demo
+	$(UV) run pytest -m "not integration" packages services data demo integrations
 
 .PHONY: test-integration
 test-integration: doctor ## Integration tests (testcontainers: Postgres, Kafka, S3)
@@ -125,9 +135,30 @@ up-data: build-data ## Start postgres + object store (minio/silo) and create the
 	$(COMPOSE) --profile data run --rm minio-init
 
 .PHONY: pipeline
-pipeline: up-data ## Run historical_pipeline once via `airflow dags test` in a one-shot container (CONF='{...}')
-	$(COMPOSE) --profile data run --rm airflow-cli \
-		airflow dags test historical_pipeline $(if $(CONF),--conf '$(CONF)')
+pipeline: up-data ## Run historical_pipeline once via `airflow dags test` (DATASET=<key>, CONF='{...}')
+	@conf='$(PIPELINE_CONF)'; \
+		if [ -z "$$conf" ] && [ -n "$(if $(DATASET)$(CONF),x)" ]; then \
+			echo "invalid DATASET/CONF (see the error above)" >&2; exit 2; fi; \
+		echo "historical_pipeline conf: $${conf:-<defaults>}"; \
+		$(COMPOSE) --profile data run --rm airflow-cli \
+			airflow dags test historical_pipeline $${conf:+--conf "$$conf"}
+
+# ------------------------------------------------------------------ dbt (M3a, ADR-0006)
+# Run id of a dbt build: outputs land in marts/<model>/run_id=<id>/ and
+# features/release_features/schema=<v>/run_id=<id>/ (re-using an id overwrites with equal bytes).
+DBT_RUN_ID ?= local
+# --no-sync: dbt runs in the current workspace venv (`make install` syncs it).
+DBT_PARAMS = {"run_id": "$(DBT_RUN_ID)"}
+
+.PHONY: dbt-build
+dbt-build: doctor ## dbt deps + build staging/intermediate/marts/ml on the host against the object store (DBT_RUN_ID=<id>)
+	@curl -fsS -o /dev/null "http://localhost:$${RL_MINIO_HOST_PORT:-29000}/minio/health/live" \
+		|| { echo "✗ object store not reachable on :$${RL_MINIO_HOST_PORT:-29000} (make up-data)"; exit 1; }
+	$(UV) run --no-sync python -m rl_pipeline dbt_build_all --params-json '$(DBT_PARAMS)'
+
+.PHONY: dbt-fixture
+dbt-fixture: ## dbt build on the SYNTHETIC fixture: local Parquet, no S3 (what CI runs)
+	$(UV) run --no-sync python -m rl_pipeline dbt_build_fixture
 
 .PHONY: pipeline-test-dag
 pipeline-test-dag: $(COMPOSE_DIR)/.env doctor ## DAG integrity checks (mypy + pytest) inside the Airflow image; no DB/S3 needed

@@ -19,8 +19,10 @@ from rl_pipeline.convert import (
     temp_budget,
     typed_expr,
 )
+from rl_pipeline.datasets import TT_FINAL_2017 as V17
 from rl_pipeline.hashing import md5_file
-from rl_pipeline.schema import EXPECTED_NAMES, SchemaMismatchError
+from rl_pipeline.schema import FINAL_2017_NAMES as EXPECTED_NAMES
+from rl_pipeline.schema import SchemaMismatchError
 from rl_pipeline.testing import build_rows, write_csv_gz
 
 
@@ -81,8 +83,10 @@ def test_types_nulls_and_numeric_sort_order(converted: dict[str, Any]) -> None:
 def test_conversion_is_deterministic(
     tmp_path: Path, fixture_csv: Path, fixture_version: str, limits: DuckDBLimits
 ) -> None:
-    a = convert(fixture_csv, fixture_version, tmp_path / "a", limits=limits)
-    b = convert(fixture_csv, fixture_version, tmp_path / "b", limits=DuckDBLimits("512MB", 1))
+    a = convert(fixture_csv, fixture_version, tmp_path / "a", dataset=V17, limits=limits)
+    b = convert(
+        fixture_csv, fixture_version, tmp_path / "b", dataset=V17, limits=DuckDBLimits("512MB", 1)
+    )
     assert _shas(a) == _shas(b)
     assert a["manifest_sha256"] == b["manifest_sha256"]
 
@@ -90,17 +94,17 @@ def test_conversion_is_deterministic(
 def test_skip_path_and_regeneration_after_manifest_delete(
     tmp_path: Path, fixture_csv: Path, fixture_version: str, limits: DuckDBLimits
 ) -> None:
-    first = convert(fixture_csv, fixture_version, tmp_path, limits=limits)
+    first = convert(fixture_csv, fixture_version, tmp_path, dataset=V17, limits=limits)
     local = Path(first["local_dir"])
     mtimes = {p: p.stat().st_mtime_ns for p in local.rglob("*") if p.is_file()}
 
-    second = convert(fixture_csv, fixture_version, tmp_path, limits=limits)
+    second = convert(fixture_csv, fixture_version, tmp_path, dataset=V17, limits=limits)
     assert second["skipped"] is True
     assert _shas(second) == _shas(first)
     assert {p: p.stat().st_mtime_ns for p in local.rglob("*") if p.is_file()} == mtimes
 
     (local / MANIFEST_NAME).unlink()
-    third = convert(fixture_csv, fixture_version, tmp_path, limits=limits)
+    third = convert(fixture_csv, fixture_version, tmp_path, dataset=V17, limits=limits)
     assert third["skipped"] is False
     assert _shas(third) == _shas(first)
     assert third["manifest_sha256"] == first["manifest_sha256"]
@@ -112,10 +116,10 @@ def test_skip_path_and_regeneration_after_manifest_delete(
 def test_tampered_file_triggers_regeneration(
     tmp_path: Path, fixture_csv: Path, fixture_version: str, limits: DuckDBLimits
 ) -> None:
-    first = convert(fixture_csv, fixture_version, tmp_path, limits=limits)
+    first = convert(fixture_csv, fixture_version, tmp_path, dataset=V17, limits=limits)
     target = Path(first["local_dir"]) / first["files"][0]["path"]
     target.write_bytes(b"not parquet")
-    again = convert(fixture_csv, fixture_version, tmp_path, limits=limits)
+    again = convert(fixture_csv, fixture_version, tmp_path, dataset=V17, limits=limits)
     assert again["skipped"] is False
     assert _shas(again) == _shas(first)
 
@@ -134,7 +138,7 @@ def test_cast_failure_gate_trips(tmp_path: Path, limits: DuckDBLimits) -> None:
 
     path, version = _variant(tmp_path, mutate)
     with pytest.raises(DataQualityError) as err:
-        convert(path, version, tmp_path / "out", limits=limits)
+        convert(path, version, tmp_path / "out", dataset=V17, limits=limits)
     msg = str(err.value)
     assert "gh_team_size (INTEGER): 1 of 30" in msg
     assert "gh_build_started_at (TIMESTAMP): 1 of 30" in msg
@@ -146,7 +150,9 @@ def test_cast_failures_below_threshold_are_recorded(tmp_path: Path, limits: Duck
         rows[0]["gh_sloc"] = "lots"
 
     path, version = _variant(tmp_path, mutate)
-    result = convert(path, version, tmp_path / "out", limits=limits, max_cast_failure_rate=0.5)
+    result = convert(
+        path, version, tmp_path / "out", dataset=V17, limits=limits, max_cast_failure_rate=0.5
+    )
     manifest = json.loads(Path(result["manifest_path"]).read_text())
     col = manifest["cast_profile"]["columns"]["gh_sloc"]
     assert col["cast_failures"] == 1
@@ -163,7 +169,7 @@ def test_unsafe_or_missing_lang_is_rejected(
 
     path, version = _variant(tmp_path, mutate)
     with pytest.raises(DataQualityError, match="gh_lang"):
-        convert(path, version, tmp_path / "out", limits=limits)
+        convert(path, version, tmp_path / "out", dataset=V17, limits=limits)
 
 
 def test_duplicate_job_id_is_rejected(tmp_path: Path, limits: DuckDBLimits) -> None:
@@ -172,19 +178,19 @@ def test_duplicate_job_id_is_rejected(tmp_path: Path, limits: DuckDBLimits) -> N
 
     path, version = _variant(tmp_path, mutate)
     with pytest.raises(DataQualityError, match="1 duplicate tr_job_id"):
-        convert(path, version, tmp_path / "out", limits=limits)
+        convert(path, version, tmp_path / "out", dataset=V17, limits=limits)
 
 
 def test_header_mismatch_stops_conversion(tmp_path: Path, limits: DuckDBLimits) -> None:
     header = list(reversed(EXPECTED_NAMES))
     path = write_csv_gz(tmp_path / "rev.csv.gz", build_rows(), header)
     with pytest.raises(SchemaMismatchError):
-        convert(path, md5_file(path), tmp_path / "out", limits=limits)
+        convert(path, md5_file(path), tmp_path / "out", dataset=V17, limits=limits)
 
 
 def test_version_must_be_md5(tmp_path: Path, fixture_csv: Path) -> None:
     with pytest.raises(ValueError, match="md5"):
-        convert(fixture_csv, "../../etc", tmp_path)
+        convert(fixture_csv, "../../etc", tmp_path, dataset=V17)
 
 
 def test_typed_expr_shapes() -> None:
@@ -209,7 +215,9 @@ def test_lenient_duckdb_casts_are_rejected(tmp_path: Path, limits: DuckDBLimits)
         rows[5]["git_diff_src_churn"] = "1e3"
 
     path, version = _variant(tmp_path, mutate)
-    result = convert(path, version, tmp_path / "out", limits=limits, max_cast_failure_rate=0.5)
+    result = convert(
+        path, version, tmp_path / "out", dataset=V17, limits=limits, max_cast_failure_rate=0.5
+    )
     manifest = json.loads(Path(result["manifest_path"]).read_text())
     cols = manifest["cast_profile"]["columns"]
     for name in (
@@ -245,7 +253,7 @@ def test_strict_casts_accept_well_formed_values(tmp_path: Path, limits: DuckDBLi
         rows[3]["gh_is_pr"] = "true"
 
     path, version = _variant(tmp_path, mutate)
-    result = convert(path, version, tmp_path / "out", limits=limits)
+    result = convert(path, version, tmp_path / "out", dataset=V17, limits=limits)
     assert result["cast_failures_total"] == 0
 
 
@@ -258,12 +266,12 @@ def test_failed_conversion_leaves_no_work_dirs(
 ) -> None:
     from rl_pipeline import convert as convert_mod
 
-    def boom(path: Path) -> None:
+    def boom(path: Path, spec: Any) -> None:
         raise DataQualityError(f"simulated failure after writing {path.name}")
 
     monkeypatch.setattr(convert_mod, "_verify_parquet_schema", boom)
     with pytest.raises(DataQualityError, match="simulated"):
-        convert(fixture_csv, fixture_version, tmp_path, limits=limits)
+        convert(fixture_csv, fixture_version, tmp_path, dataset=V17, limits=limits)
     assert sorted(p.name for p in tmp_path.iterdir()) == []
 
 
@@ -286,7 +294,7 @@ def test_stale_work_dirs_of_dead_runs_are_swept(
     for d in [*stale, live, unrelated]:
         d.mkdir()
         (d / "x").write_bytes(b"spill")
-    convert(fixture_csv, fixture_version, tmp_path, limits=limits)
+    convert(fixture_csv, fixture_version, tmp_path, dataset=V17, limits=limits)
     assert not any(d.exists() for d in stale)
     assert live.exists()
     assert unrelated.exists()
@@ -306,7 +314,7 @@ def test_insufficient_disk_fails_before_writing(
     # convert.py calls shutil.disk_usage via the shared module object
     monkeypatch.setattr(shutil, "disk_usage", lambda _p: usage(10**9, 10**9, 10**6))
     with pytest.raises(InsufficientDiskError, match="free"):
-        convert(fixture_csv, fixture_version, tmp_path / "out", limits=limits)
+        convert(fixture_csv, fixture_version, tmp_path / "out", dataset=V17, limits=limits)
     assert not (tmp_path / "out" / f"version={fixture_version}").exists()
 
 
@@ -331,14 +339,14 @@ def test_null_job_id_is_not_double_counted_as_duplicate(
 
     path, version = _variant(tmp_path, mutate)
     with pytest.raises(DataQualityError, match="0 duplicate tr_job_id, 1 null tr_job_id"):
-        convert(path, version, tmp_path / "out", limits=limits)
+        convert(path, version, tmp_path / "out", dataset=V17, limits=limits)
 
 
 def test_unreadable_manifest_triggers_regeneration(
     tmp_path: Path, fixture_csv: Path, fixture_version: str, limits: DuckDBLimits
 ) -> None:
-    first = convert(fixture_csv, fixture_version, tmp_path, limits=limits)
+    first = convert(fixture_csv, fixture_version, tmp_path, dataset=V17, limits=limits)
     Path(first["manifest_path"]).write_text("{ truncated")
-    again = convert(fixture_csv, fixture_version, tmp_path, limits=limits)
+    again = convert(fixture_csv, fixture_version, tmp_path, dataset=V17, limits=limits)
     assert again["skipped"] is False
     assert again["manifest_sha256"] == first["manifest_sha256"]

@@ -1,0 +1,118 @@
+version: 2
+
+models:
+  - name: fct_builds
+    description: >
+      One row per Java build (128,819 in the real release): outcome, label, timing, change
+      profile. Written to <output_root>/marts/fct_builds/run_id=<run_id>/part-00000.parquet.
+    data_tests:
+      - no_duplicate_builds:
+          arguments:
+            column_name: build_id
+            compare_to: ref('stg_travis_builds')
+      - label_rate_between:
+          arguments:
+            column_name: label
+            min_value: "{{ var('label_rate_min') }}"
+            max_value: "{{ var('label_rate_max') }}"
+    columns:
+      - name: build_id
+        data_tests: [not_null, unique]
+      - name: project
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_project')
+                field: project
+      - name: started_date
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_time')
+                field: date_day
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["passed", "failed", "errored", "canceled", "started"]
+      - name: label
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+                quote: false
+
+  - name: dim_project
+    description: One row per project with its build window, volume and failure rate (95% Wilson CI).
+    columns:
+      - name: project
+        data_tests: [not_null, unique]
+      - name: n_builds
+        data_tests: [not_null]
+      - name: failure_rate
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "failure_rate is null or failure_rate between 0 and 1"
+
+  - name: dim_time
+    description: Gap-free UTC date spine from the first to the last build start date.
+    columns:
+      - name: date_day
+        data_tests: [not_null, unique]
+
+  - name: mart_build_reliability
+    description: Project x month (UTC) builds, failures and failure rate with a 95% Wilson interval.
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "n_failures <= n_labelled_builds and n_labelled_builds <= n_builds"
+          name: mart_build_reliability_counts_are_nested
+      - expression_is_true:
+          arguments:
+            expression: >-
+              failure_rate is null
+              or (failure_rate_ci95_low <= failure_rate and failure_rate <= failure_rate_ci95_high)
+          name: mart_build_reliability_interval_contains_rate
+    columns:
+      - name: project
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_project')
+                field: project
+      - name: month_start
+        data_tests: [not_null]
+
+  - name: mart_change_risk
+    description: >
+      Failure rate by total-churn bucket and by test-share bucket, with 95% Wilson intervals.
+      Associations, not causal effects.
+    columns:
+      - name: dimension
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["churn_bucket", "test_ratio_bucket"]
+      - name: bucket
+        data_tests: [not_null]
+
+  - name: mart_ci_performance
+    description: Build duration percentiles (seconds) overall, by status and by project.
+    columns:
+      - name: scope
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["overall", "status", "project"]
+      - name: scope_key
+        data_tests: [not_null]
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "p50_s <= p75_s and p75_s <= p90_s and p90_s <= p95_s and p95_s <= p99_s and p99_s <= max_s"
+          name: mart_ci_performance_percentiles_are_ordered

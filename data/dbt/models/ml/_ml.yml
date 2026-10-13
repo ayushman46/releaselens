@@ -1,0 +1,117 @@
+version: 2
+
+models:
+  - name: mart_build_inputs
+    description: >
+      Per-build inputs of rl_core.features.offline.compute_features: build timeline
+      (started_at, finished_at = upper bound, failed, duration_s), label and the rl_core
+      BUILD_INPUT_FIELDS mapped from the 2016 release (mapping in the SQL header and
+      docs/data/PIPELINE.md §8). Every Java build, labelled or not.
+    data_tests:
+      - no_duplicate_builds:
+          arguments:
+            column_name: build_id
+            compare_to: ref('stg_travis_builds')
+      - expression_is_true:
+          arguments:
+            expression: "finished_at is null or finished_at >= started_at"
+          name: mart_build_inputs_finished_not_before_started
+      - expression_is_true:
+          arguments:
+            expression: "failed is not distinct from label"
+          name: mart_build_inputs_failed_equals_label
+      - expression_is_true:
+          arguments:
+            expression: >-
+              num_commits_in_push is null and description_complexity is null
+              and repo_age_days is null
+          name: mart_build_inputs_unavailable_inputs_are_null
+    columns:
+      - name: build_id
+        data_tests: [not_null, unique]
+      - name: project
+        data_tests: [not_null]
+      - name: started_at
+        data_tests: [not_null]
+      - name: label
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+                quote: false
+
+  - name: split_cutpoints
+    description: >
+      One row: the global chronological cut timestamps (validation_start_at, test_start_at) of the
+      labelled builds and the realised split sizes.
+    data_tests:
+      - expression_is_true:
+          arguments:
+            expression: "n_train + n_validation + n_test = n_labelled_builds"
+          name: split_cutpoints_partition_every_labelled_build
+      - expression_is_true:
+          arguments:
+            expression: >-
+              first_started_at <= validation_start_at and validation_start_at <= test_start_at
+              and test_start_at <= last_started_at
+          name: split_cutpoints_are_chronological
+
+  - name: mart_build_features
+    description: >
+      rl_core feature vectors (ALL_FEATURE_NAMES) of every labelled build plus build_id, project,
+      started_at, label, split (train/validation/test) and the leakage audit column
+      max_history_input_finished_at (epoch seconds). Written under
+      features/release_features/schema=<FEATURE_SCHEMA_VERSION>/run_id=<run_id>/.
+    config:
+      meta:
+        rl_output: features
+        feature_schema_version: "{{ var('feature_schema_version') }}"
+    data_tests:
+      # (c) one row per labelled build, exactly the labelled builds of mart_build_inputs
+      - no_duplicate_builds:
+          arguments:
+            column_name: build_id
+            compare_to: ref('mart_build_inputs')
+            compare_filter: label is not null
+      # (b) overall label rate within sane bounds (the measured rate is in the task summary)
+      - label_rate_between:
+          arguments:
+            column_name: label
+            min_value: "{{ var('label_rate_min') }}"
+            max_value: "{{ var('label_rate_max') }}"
+      - expression_is_true:
+          arguments:
+            expression: >-
+              case split
+                when 'train' then started_at < (select coalesce(validation_start_at, 'infinity'::timestamptz) from {{ ref('split_cutpoints') }})
+                when 'validation' then started_at >= (select validation_start_at from {{ ref('split_cutpoints') }})
+                  and started_at < (select coalesce(test_start_at, 'infinity'::timestamptz) from {{ ref('split_cutpoints') }})
+                when 'test' then started_at >= (select test_start_at from {{ ref('split_cutpoints') }})
+              end
+          name: mart_build_features_split_follows_cutpoints
+    columns:
+      - name: build_id
+        data_tests: [not_null, unique]
+      - name: label
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+                quote: false
+      - name: split
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["train", "validation", "test"]
+      - name: max_history_input_finished_at
+        description: >
+          rl_core audit column: latest finish time (epoch s) among the past builds that fed this
+          row's history features; NULL when none did.
+        data_tests:
+          # (a) leakage guard: every history input finished strictly before started_at
+          - finished_before_started:
+              arguments:
+                started_column: started_at
+                key_column: build_id

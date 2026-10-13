@@ -1,20 +1,27 @@
-"""Stream the raw ``.csv.gz`` to typed, deterministic Parquet partitioned by language.
+"""Stream a raw TravisTorrent ``.csv.gz`` to typed, deterministic Parquet partitioned by language.
 
+Everything dataset-specific (columns, cast patterns, sort and unique keys, manifest extras) comes
+from a :class:`rl_pipeline.datasets.DatasetSpec`.
 Layout (``<lake>/raw/travistorrent/version=<md5>/``)::
 
-    lang=<gh_lang>/part-00000.parquet   one file per language, all 66 columns, typed
+    lang=<gh_lang>/part-00000.parquet   one file per language, every column, typed
     _manifest.json                      written last; deterministic (no timings/timestamps)
 
-Determinism: rows are ordered by ``(tr_build_id, tr_job_id)`` (a total order — ``tr_job_id`` is
-required to be unique), with a fixed row-group size and ZSTD compression, so identical input
-yields byte-identical files. The work is skipped when a manifest for the same version, schema and
-converter settings exists and every file's sha256 still matches.
+Determinism: rows are ordered by the spec's ``sort_key`` (``(tr_build_id, tr_job_id)`` for the
+2017 release, ``(tr_build_id, tr_job_id, row)`` for 2016), which ends in the spec's
+``unique_column`` and is therefore a total order; with a fixed row-group size and ZSTD
+compression, identical input yields byte-identical files. The work is skipped when a manifest for
+the same version, schema and converter settings exists and every file's sha256 still matches.
+
+Raw stays faithful: no deduplication and no placeholder remapping. Only the null tokens
+(``NA``) and empty fields become NULL; ``-1`` placeholders stay ``-1`` (staging decides).
 
 Data-quality gate (before anything is written): every column's cast-failure rate (values that are
-neither NULL nor a null token but fail to parse, over non-missing values) must be <= 0.1%,
-``gh_lang`` must be present and path-safe on every row, and ``tr_job_id`` must be unique.
-Casts are strict (:data:`rl_pipeline.schema.STRICT_PATTERNS`): a malformed value is NULL and a
-cast failure, never silently rounded or reinterpreted.
+neither NULL nor a null token but fail to parse, over non-missing values) must be <= 0.1%, the
+partition column must be present and path-safe on every row, the unique column must be non-null
+and unique, and ``tr_job_id`` / ``tr_build_id`` must be non-null.
+Casts are strict (:data:`rl_pipeline.schema.STRICT_PATTERNS` plus the spec's per-column
+overrides): a malformed value is NULL and a cast failure, never silently rounded or reinterpreted.
 The CSV is never decompressed to disk; DuckDB reads the gzip stream directly.
 
 Disk: the per-language ``ORDER BY`` spills to ``<out_root>/.duckdb_tmp-<pid>``. Measured in review
@@ -44,16 +51,13 @@ import duckdb
 import polars as pl
 
 from rl_pipeline import __version__
+from rl_pipeline.datasets import DatasetSpec
 from rl_pipeline.hashing import sha256_file
 from rl_pipeline.schema import (
-    EXPECTED_COLUMNS,
     NULL_TOKENS,
-    PARTITION_COLUMN,
-    SORT_KEY,
     STRICT_PATTERNS,
     TIMESTAMP_FORMAT,
     read_header,
-    schema_fingerprint,
     sql_literal,
     validate_header,
 )
@@ -173,73 +177,99 @@ def _ident(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
 
 
-def _raw_source(csv_path: Path) -> str:
+def _raw_source(csv_path: Path, spec: DatasetSpec) -> str:
     """read_csv with no type sniffing: every column VARCHAR, names from the expected schema."""
-    cols = ", ".join(f"{sql_literal(n)}: 'VARCHAR'" for n, _ in EXPECTED_COLUMNS)
+    cols = ", ".join(f"{sql_literal(n)}: 'VARCHAR'" for n in spec.names)
     return (
         f"read_csv({sql_literal(str(csv_path))}, header=true, auto_detect=false, "
         f"delim=',', quote='\"', escape='\"', compression='gzip', columns={{{cols}}})"
     )
 
 
-def _non_missing(name: str) -> str:
-    tokens = ", ".join(sql_literal(t) for t in NULL_TOKENS)
+def _non_missing(name: str, null_tokens: tuple[str, ...] = NULL_TOKENS) -> str:
+    tokens = ", ".join(sql_literal(t) for t in null_tokens)
     raw = _ident(name)
     return f"CASE WHEN {raw} IN ({tokens}) THEN NULL ELSE {raw} END"
 
 
-def typed_expr(name: str, duck_type: str) -> str:
+def typed_expr(
+    name: str,
+    duck_type: str,
+    *,
+    pattern: str | None = None,
+    null_tokens: tuple[str, ...] = NULL_TOKENS,
+    timestamp_format: str = TIMESTAMP_FORMAT,
+) -> str:
     """SQL turning the raw VARCHAR column into its target type (NULL on failure).
 
-    Strict: a value must fully match :data:`STRICT_PATTERNS` for its type before it is cast.
+    Strict: a value must fully match ``pattern`` (default: :data:`STRICT_PATTERNS` for its type)
+    before it is cast. Overrides only ever *widen the accepted spelling* of an exact value (e.g.
+    ``"12.0"`` for an integer), never the value itself.
     """
-    nn = _non_missing(name)
+    nn = _non_missing(name, null_tokens)
     if duck_type == "VARCHAR":
         return nn
     if duck_type == "BOOLEAN":
         return f"CASE upper({nn}) WHEN 'TRUE' THEN TRUE WHEN 'FALSE' THEN FALSE END"
-    guard = f"regexp_full_match({nn}, {sql_literal(STRICT_PATTERNS[duck_type])})"
+    guard = f"regexp_full_match({nn}, {sql_literal(pattern or STRICT_PATTERNS[duck_type])})"
     if duck_type == "TIMESTAMP":
-        return f"CASE WHEN {guard} THEN TRY_STRPTIME({nn}, {sql_literal(TIMESTAMP_FORMAT)}) END"
+        return f"CASE WHEN {guard} THEN TRY_STRPTIME({nn}, {sql_literal(timestamp_format)}) END"
     return f"CASE WHEN {guard} THEN TRY_CAST({nn} AS {duck_type}) END"
 
 
-def _typed_select() -> str:
-    return ", ".join(f"{typed_expr(n, t)} AS {_ident(n)}" for n, t in EXPECTED_COLUMNS)
+def spec_typed_expr(spec: DatasetSpec, name: str) -> str:
+    duck_type = spec.types[name]
+    return typed_expr(
+        name,
+        duck_type,
+        pattern=spec.pattern_for(name, duck_type),
+        null_tokens=spec.null_tokens,
+        timestamp_format=spec.timestamp_format,
+    )
+
+
+def _typed_select(spec: DatasetSpec) -> str:
+    return ", ".join(f"{spec_typed_expr(spec, n)} AS {_ident(n)}" for n in spec.names)
 
 
 # ---------------------------------------------------------------- profiling + gate
-def profile_raw(con: duckdb.DuckDBPyConnection, csv_path: Path) -> dict[str, Any]:
+def profile_raw(
+    con: duckdb.DuckDBPyConnection, csv_path: Path, spec: DatasetSpec
+) -> dict[str, Any]:
     """One streaming pass: rows per language, per-column non-missing and cast-failure counts."""
     aggs: list[str] = ["count(*) AS __rows"]
-    for name, duck_type in EXPECTED_COLUMNS:
-        nn = _non_missing(name)
+    for name, duck_type in spec.columns:
+        nn = _non_missing(name, spec.null_tokens)
         aggs.append(f"count({nn}) AS {_ident('nn__' + name)}")
         if duck_type != "VARCHAR":
             aggs.append(
-                f"count(*) FILTER (WHERE ({nn}) IS NOT NULL AND ({typed_expr(name, duck_type)}) "
+                f"count(*) FILTER (WHERE ({nn}) IS NOT NULL AND ({spec_typed_expr(spec, name)}) "
                 f"IS NULL) AS {_ident('fail__' + name)}"
             )
-    lang = _non_missing(PARTITION_COLUMN)
+    lang = _non_missing(spec.partition_column, spec.null_tokens)
+    source = _raw_source(csv_path, spec)
     sql = (
-        f"SELECT {lang} AS __lang, {', '.join(aggs)} FROM {_raw_source(csv_path)} "
+        f"SELECT {lang} AS __lang, {', '.join(aggs)} FROM {source} "
         "GROUP BY ALL ORDER BY __lang NULLS FIRST"
     )
     cur = con.execute(sql)
     names = [d[0] for d in cur.description]
     rows = [dict(zip(names, r, strict=True)) for r in cur.fetchall()]
 
-    job_id = typed_expr("tr_job_id", "BIGINT")
-    build_id = typed_expr("tr_build_id", "BIGINT")
+    job_id = spec_typed_expr(spec, spec.job_id_column)
+    build_id = spec_typed_expr(spec, spec.build_id_column)
+    unique = spec_typed_expr(spec, spec.unique_column)
     key_row = con.execute(
         f"SELECT count({job_id}) - count(DISTINCT {job_id}), "
         f"count(*) FILTER (WHERE {job_id} IS NULL), "
-        f"count(*) FILTER (WHERE {build_id} IS NULL) FROM {_raw_source(csv_path)}"
+        f"count(*) FILTER (WHERE {build_id} IS NULL), "
+        f"count({unique}) - count(DISTINCT {unique}), "
+        f"count(*) FILTER (WHERE {unique} IS NULL) FROM {source}"
     ).fetchone()
     assert key_row is not None
 
     columns: dict[str, dict[str, Any]] = {}
-    for name, duck_type in EXPECTED_COLUMNS:
+    for name, duck_type in spec.columns:
         non_missing = int(sum(r["nn__" + name] for r in rows))
         failures = int(sum(r.get("fail__" + name, 0) for r in rows))
         rate = failures / non_missing if non_missing else 0.0
@@ -259,10 +289,15 @@ def profile_raw(con: duckdb.DuckDBPyConnection, csv_path: Path) -> dict[str, Any
         "duplicate_job_ids": int(key_row[0]),
         "null_job_ids": int(key_row[1]),
         "null_build_ids": int(key_row[2]),
+        "unique_column": spec.unique_column,
+        "duplicate_unique_keys": int(key_row[3]),
+        "null_unique_keys": int(key_row[4]),
     }
 
 
-def quality_gate(profile: dict[str, Any], max_rate: float = CAST_FAILURE_MAX_RATE) -> None:
+def quality_gate(
+    profile: dict[str, Any], spec: DatasetSpec, max_rate: float = CAST_FAILURE_MAX_RATE
+) -> None:
     problems: list[str] = []
     for name, col in profile["columns"].items():
         if col["cast_failure_rate"] > max_rate:
@@ -273,27 +308,39 @@ def quality_gate(profile: dict[str, Any], max_rate: float = CAST_FAILURE_MAX_RAT
             )
     for lang in profile["rows_per_lang"]:
         if not _LANG_RE.match(lang):
-            problems.append(f"{PARTITION_COLUMN} value {lang!r} is missing or not path-safe")
-    if profile["duplicate_job_ids"] or profile["null_job_ids"] or profile["null_build_ids"]:
+            problems.append(f"{spec.partition_column} value {lang!r} is missing or not path-safe")
+    job, build, unique = spec.job_id_column, spec.build_id_column, spec.unique_column
+    if unique == job:
+        if profile["duplicate_job_ids"] or profile["null_job_ids"] or profile["null_build_ids"]:
+            problems.append(
+                f"key violation: {profile['duplicate_job_ids']} duplicate {job}, "
+                f"{profile['null_job_ids']} null {job}, {profile['null_build_ids']} null {build}"
+            )
+    elif (
+        profile["duplicate_unique_keys"]
+        or profile["null_unique_keys"]
+        or profile["null_job_ids"]
+        or profile["null_build_ids"]
+    ):
         problems.append(
-            f"key violation: {profile['duplicate_job_ids']} duplicate tr_job_id, "
-            f"{profile['null_job_ids']} null tr_job_id, {profile['null_build_ids']} null "
-            "tr_build_id"
+            f"key violation: {profile['duplicate_unique_keys']} duplicate {unique}, "
+            f"{profile['null_unique_keys']} null {unique}, {profile['null_job_ids']} null {job}, "
+            f"{profile['null_build_ids']} null {build}"
         )
     if problems:
         raise DataQualityError("data-quality gate failed: " + "; ".join(problems))
 
 
 # ---------------------------------------------------------------- manifest / skip path
-def _settings_block() -> dict[str, Any]:
+def _settings_block(spec: DatasetSpec) -> dict[str, Any]:
     return {
         "converter_version": CONVERTER_VERSION,
         "duckdb_version": duckdb.__version__,
         "compression": COMPRESSION,
         "row_group_size": ROW_GROUP_SIZE,
-        "order_by": list(SORT_KEY),
-        "partition_by": PARTITION_COLUMN,
-        "schema_fingerprint": schema_fingerprint(),
+        "order_by": list(spec.sort_key),
+        "partition_by": spec.partition_column,
+        "schema_fingerprint": spec.fingerprint(),
     }
 
 
@@ -311,7 +358,9 @@ def read_manifest(local_dir: Path) -> dict[str, Any] | None:
     return data
 
 
-def _manifest_still_valid(local_dir: Path, version: str) -> tuple[dict[str, Any] | None, str]:
+def _manifest_still_valid(
+    local_dir: Path, version: str, spec: DatasetSpec
+) -> tuple[dict[str, Any] | None, str]:
     try:
         manifest = read_manifest(local_dir)
     except (OSError, ValueError) as exc:  # unreadable / not JSON: regenerate, don't crash
@@ -320,7 +369,7 @@ def _manifest_still_valid(local_dir: Path, version: str) -> tuple[dict[str, Any]
         return None, "no manifest"
     if manifest.get("version") != version:
         return None, "manifest version differs"
-    if manifest.get("converter") != _settings_block():
+    if manifest.get("converter") != _settings_block(spec):
         return None, "converter settings or schema changed"
     files = manifest.get("files")
     if not isinstance(files, list) or not files:
@@ -337,10 +386,11 @@ def _manifest_still_valid(local_dir: Path, version: str) -> tuple[dict[str, Any]
 
 
 def _result(
-    manifest: dict[str, Any], local_dir: Path, *, skipped: bool, seconds: float
+    manifest: dict[str, Any], local_dir: Path, spec: DatasetSpec, *, skipped: bool, seconds: float
 ) -> dict[str, Any]:
     manifest_path = local_dir / MANIFEST_NAME
     return {
+        "dataset": spec.key,
         "version": manifest["version"],
         "local_dir": str(local_dir),
         "files": [
@@ -366,27 +416,31 @@ def _result(
     }
 
 
-def _verify_parquet_schema(path: Path) -> None:
+def _verify_parquet_schema(path: Path, spec: DatasetSpec) -> None:
     schema = pl.read_parquet_schema(path)
     actual = [(n, schema[n]) for n in schema]
-    expected = [(n, _POLARS_TYPES[t]) for n, t in EXPECTED_COLUMNS]
+    expected = [(n, _POLARS_TYPES[t]) for n, t in spec.columns]
     if actual != expected:
         raise DataQualityError(f"{path} has an unexpected Parquet schema: {actual}")
 
 
 def _write_partitions(
-    con: duckdb.DuckDBPyConnection, csv_path: Path, staging: Path, profile: dict[str, Any]
+    con: duckdb.DuckDBPyConnection,
+    csv_path: Path,
+    staging: Path,
+    profile: dict[str, Any],
+    spec: DatasetSpec,
 ) -> list[dict[str, Any]]:
     """One sorted, typed Parquet file per language under ``staging``; verified after writing."""
     files: list[dict[str, Any]] = []
-    order = ", ".join(_ident(c) for c in SORT_KEY)
+    order = ", ".join(_ident(c) for c in spec.sort_key)
     for lang in sorted(profile["rows_per_lang"]):
         rel = f"lang={lang}/{PART_FILENAME}"
         target = staging / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         con.execute(
-            f"COPY (SELECT {_typed_select()} FROM {_raw_source(csv_path)} "
-            f"WHERE {_ident(PARTITION_COLUMN)} = {sql_literal(lang)} ORDER BY {order}) "
+            f"COPY (SELECT {_typed_select(spec)} FROM {_raw_source(csv_path, spec)} "
+            f"WHERE {_ident(spec.partition_column)} = {sql_literal(lang)} ORDER BY {order}) "
             f"TO {sql_literal(str(target))} (FORMAT parquet, COMPRESSION {COMPRESSION}, "
             f"ROW_GROUP_SIZE {ROW_GROUP_SIZE})"
         )
@@ -398,7 +452,7 @@ def _write_partitions(
             raise DataQualityError(
                 f"{rel}: wrote {rows} rows, expected {profile['rows_per_lang'][lang]}"
             )
-        _verify_parquet_schema(target)
+        _verify_parquet_schema(target, spec)
         files.append(
             {
                 "path": rel,
@@ -413,33 +467,87 @@ def _write_partitions(
 
 
 # ---------------------------------------------------------------- conversion
+def _manifest(
+    spec: DatasetSpec,
+    version: str,
+    source: dict[str, Any] | None,
+    profile: dict[str, Any],
+    files: list[dict[str, Any]],
+    max_cast_failure_rate: float,
+) -> dict[str, Any]:
+    manifest: dict[str, Any] = {
+        "dataset": "travistorrent",
+        "version": version,
+        "source": source or {},
+        "converter": _settings_block(spec),
+        "schema": [{"name": n, "type": t} for n, t in spec.columns],
+        "null_tokens": list(spec.null_tokens),
+        "timestamp_format": spec.timestamp_format,
+        "timestamp_semantics": spec.timestamp_semantics,
+        "rows_total": profile["rows_total"],
+        "rows_per_lang": profile["rows_per_lang"],
+        "cast_profile": {
+            "max_failure_rate": max_cast_failure_rate,
+            "columns": profile["columns"],
+            "duplicate_job_ids": profile["duplicate_job_ids"],
+        },
+        "files": files,
+        "producer": f"rl_pipeline {__version__}",
+    }
+    if spec.manifest_extras:
+        manifest["dataset_key"] = spec.key
+        manifest["column_patterns"] = dict(sorted(spec.patterns.items()))
+        manifest["key_profile"] = {
+            k: profile[k]
+            for k in (
+                "unique_column",
+                "duplicate_unique_keys",
+                "null_unique_keys",
+                "duplicate_job_ids",
+                "null_job_ids",
+                "null_build_ids",
+            )
+        }
+    return manifest
+
+
 def convert(
     csv_path: Path,
     version: str,
     out_root: Path,
     *,
+    dataset: DatasetSpec,
     source: dict[str, Any] | None = None,
     limits: DuckDBLimits | None = None,
     max_cast_failure_rate: float = CAST_FAILURE_MAX_RATE,
 ) -> dict[str, Any]:
-    """Convert ``csv_path`` into ``<out_root>/version=<version>/`` (see module docstring)."""
+    """Convert ``csv_path`` (laid out as ``dataset``) into ``<out_root>/version=<version>/``."""
+    spec = dataset
     if not re.fullmatch(r"[0-9a-f]{32}", version):
         raise ValueError(f"version must be a 32-char lowercase hex md5, got {version!r}")
     started = time.perf_counter()
     local_dir = out_root / f"version={version}"
 
-    manifest, reason = _manifest_still_valid(local_dir, version)
+    manifest, reason = _manifest_still_valid(local_dir, version, spec)
     if manifest is not None:
-        log.info("conversion skipped", extra={"local_dir": str(local_dir), "reason": reason})
-        return _result(manifest, local_dir, skipped=True, seconds=time.perf_counter() - started)
-    log.info("converting", extra={"local_dir": str(local_dir), "reason": reason})
+        log.info(
+            "conversion skipped",
+            extra={"dataset": spec.key, "local_dir": str(local_dir), "reason": reason},
+        )
+        return _result(
+            manifest, local_dir, spec, skipped=True, seconds=time.perf_counter() - started
+        )
+    log.info(
+        "converting", extra={"dataset": spec.key, "local_dir": str(local_dir), "reason": reason}
+    )
 
     limits = limits or DuckDBLimits()
     out_root.mkdir(parents=True, exist_ok=True)
     sweep_stale_work_dirs(out_root)
-    # The input size is a safe upper bound for the ZSTD Parquet output (measured: 207,787,946 B
-    # of Parquet for the 264,607,174 B .csv.gz).
-    max_temp = temp_budget(out_root, csv_path.stat().st_size, limits)
+    # Output estimate = input size x the spec's measured factor (2017: 207,787,946 B of Parquet
+    # for the 264,607,174 B .csv.gz, factor 1.0 is a safe bound).
+    output_estimate = int(csv_path.stat().st_size * spec.output_size_factor)
+    max_temp = temp_budget(out_root, output_estimate, limits)
     tmp_dir = out_root / f".duckdb_tmp-{os.getpid()}"
     staging = out_root / f".staging-version={version}-{os.getpid()}"
     old = out_root / f".old-version={version}-{os.getpid()}"
@@ -448,15 +556,15 @@ def convert(
     try:
         con = connect(limits, tmp_dir, max_temp_bytes=max_temp)
         try:
-            validate_header(read_header(con, csv_path))
+            validate_header(read_header(con, csv_path), spec.names)
 
             t0 = time.perf_counter()
-            profile = profile_raw(con, csv_path)
+            profile = profile_raw(con, csv_path, spec)
             profile_seconds = time.perf_counter() - t0
-            quality_gate(profile, max_cast_failure_rate)
+            quality_gate(profile, spec, max_cast_failure_rate)
 
             t1 = time.perf_counter()
-            files = _write_partitions(con, csv_path, staging, profile)
+            files = _write_partitions(con, csv_path, staging, profile, spec)
             write_seconds = time.perf_counter() - t1
         except duckdb.OutOfMemoryException as exc:
             raise InsufficientDiskError(
@@ -468,25 +576,7 @@ def convert(
             con.close()
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
-        manifest = {
-            "dataset": "travistorrent",
-            "version": version,
-            "source": source or {},
-            "converter": _settings_block(),
-            "schema": [{"name": n, "type": t} for n, t in EXPECTED_COLUMNS],
-            "null_tokens": list(NULL_TOKENS),
-            "timestamp_format": TIMESTAMP_FORMAT,
-            "timestamp_semantics": "UTC wall-clock stored as TIMESTAMP (no zone)",
-            "rows_total": profile["rows_total"],
-            "rows_per_lang": profile["rows_per_lang"],
-            "cast_profile": {
-                "max_failure_rate": max_cast_failure_rate,
-                "columns": profile["columns"],
-                "duplicate_job_ids": profile["duplicate_job_ids"],
-            },
-            "files": files,
-            "producer": f"rl_pipeline {__version__}",
-        }
+        manifest = _manifest(spec, version, source, profile, files, max_cast_failure_rate)
         _write_json(staging / MANIFEST_NAME, manifest)
 
         # Swap the finished staging dir into place; the manifest's presence implies completeness.
@@ -504,7 +594,9 @@ def convert(
         raise
     shutil.rmtree(old, ignore_errors=True)
 
-    result = _result(manifest, local_dir, skipped=False, seconds=time.perf_counter() - started)
+    result = _result(
+        manifest, local_dir, spec, skipped=False, seconds=time.perf_counter() - started
+    )
     result["profile_seconds"] = round(profile_seconds, 3)
     result["write_seconds"] = round(write_seconds, 3)
     log.info(

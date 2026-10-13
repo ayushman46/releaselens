@@ -1,4 +1,8 @@
-"""Locate (or, only if missing/corrupt, download) the TravisTorrent Figshare dump (ADR-0004).
+"""Locate (or, only if missing/corrupt, download) a TravisTorrent Figshare file (ADR-0004/0017).
+
+Both registered files come from the same Figshare record (DOI 10.6084/m9.figshare.19314170,
+CC BY 4.0): :data:`TRAVISTORRENT_5_3_2016` (primary, ADR-0017) and :data:`TRAVISTORRENT_FIGSHARE`
+(``final-2017-01-25``, secondary). :mod:`rl_pipeline.datasets` pairs each with its schema.
 
 The dataset version is the publisher's md5, verified on every call. Downloads stream to a
 ``.part`` file with HTTP range resume, are md5-verified, and only then renamed into place.
@@ -52,6 +56,21 @@ TRAVISTORRENT_FIGSHARE = DatasetSource(
         "for Full-Stack Research on Continuous Integration. MSR 2017, "
         "DOI 10.1109/MSR.2017.24. Data: Figshare DOI 10.6084/m9.figshare.19314170 (CC BY 4.0)."
     ),
+)
+# Secondary release (ADR-0017). The name above is kept: its fields are part of the published
+# manifest of version 5d359345fecf0bf47be6edb10b5aae58, which must stay byte-identical.
+TRAVISTORRENT_FINAL_2017 = TRAVISTORRENT_FIGSHARE
+
+# Primary release (ADR-0017): same Figshare record and citation; size and md5 measured locally.
+TRAVISTORRENT_5_3_2016 = DatasetSource(
+    name="travistorrent-figshare-19314170-5_3_2016",
+    doi="10.6084/m9.figshare.19314170",
+    url="https://ndownloader.figshare.com/files/34303127",
+    filename="travistorrent_5_3_2016.csv.gz",
+    size=81_902_127,
+    md5="4713d8b73b667a2c375b89c20f531fc0",
+    license="CC BY 4.0",
+    citation=TRAVISTORRENT_FIGSHARE.citation,
 )
 
 
@@ -210,7 +229,7 @@ def _download(source: DatasetSource, dest: Path, fetcher: RangeFetcher, attempts
 
 def locate_or_download(
     dataset_dir: Path,
-    source: DatasetSource = TRAVISTORRENT_FIGSHARE,
+    source: DatasetSource = TRAVISTORRENT_5_3_2016,
     *,
     allow_download: bool = True,
     fetcher: RangeFetcher | None = None,
@@ -245,5 +264,5 @@ def locate_or_download(
     return LocatedDataset(str(dest), digest, source.size, digest, downloaded=downloaded)
 
 
-def source_as_dict(source: DatasetSource = TRAVISTORRENT_FIGSHARE) -> dict[str, Any]:
+def source_as_dict(source: DatasetSource = TRAVISTORRENT_5_3_2016) -> dict[str, Any]:
     return asdict(source)

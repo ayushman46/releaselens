@@ -1,21 +1,255 @@
 {
+  "build_input_map": [
+    {
+      "availability": "pre_build",
+      "column": "gh_src_churn",
+      "field": "src_churn",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.322126,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_test_churn",
+      "field": "test_churn",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.706891,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_files_added",
+      "field": "files_added",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.786452,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_files_deleted",
+      "field": "files_deleted",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.928427,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_files_modified",
+      "field": "files_modified",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.027892,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_tests_added",
+      "field": "tests_added",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.979498,
+      "note": "page versions disagree: lines vs cases",
+      "status": "approximate"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_tests_deleted",
+      "field": "tests_deleted",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.884085,
+      "note": "page versions disagree: lines vs cases",
+      "status": "approximate"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_src_files",
+      "field": "src_files",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.265551,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_doc_files",
+      "field": "doc_files",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.944325,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_other_files",
+      "field": "other_files",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.605835,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_sloc",
+      "field": "sloc",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.0,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_test_lines_per_kloc",
+      "field": "test_lines_per_kloc",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.049636,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_test_cases_per_kloc",
+      "field": "test_cases_per_kloc",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.079949,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_asserts_cases_per_kloc",
+      "field": "asserts_per_kloc",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.067374,
+      "note": "renamed",
+      "status": "direct"
+    },
+    {
+      "availability": null,
+      "column": null,
+      "field": "num_commits_in_push",
+      "java_null_rate": null,
+      "java_zero_rate": null,
+      "note": "no push-level count (GHTorrent push events); excluded per ADR-0004",
+      "status": "none"
+    },
+    {
+      "availability": "pre_build",
+      "column": "git_num_commits",
+      "field": "num_all_built_commits",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.0,
+      "note": "entries of git_commits, which excludes the built commit (see evidence)",
+      "status": "approximate"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_team_size",
+      "field": "team_size",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.00406,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_by_core_team_member",
+      "field": "by_core_team_member",
+      "java_null_rate": 0.0,
+      "java_zero_rate": null,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_is_pr",
+      "field": "is_pr",
+      "java_null_rate": 0.0,
+      "java_zero_rate": null,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": "uncertain",
+      "column": "gh_description_complexity",
+      "field": "description_complexity",
+      "java_null_rate": 0.859221,
+      "java_zero_rate": 0.0,
+      "note": "uncertain: excluded from model inputs by default",
+      "status": "direct"
+    },
+    {
+      "availability": "pre_build",
+      "column": "gh_commits_on_files_touched",
+      "field": "commits_on_files_touched",
+      "java_null_rate": 0.0,
+      "java_zero_rate": 0.055023,
+      "note": "",
+      "status": "direct"
+    },
+    {
+      "availability": null,
+      "column": null,
+      "field": "repo_age_days",
+      "java_null_rate": null,
+      "java_zero_rate": null,
+      "note": "no repository-age column; gh_first_commit_created_at is a copy of tr_started_at",
+      "status": "none"
+    }
+  ],
+  "cast_failures": {
+    "columns": {
+      "git_num_committers": {
+        "cast_failures": 10,
+        "non_missing": 2640823
+      },
+      "tr_num_jobs": {
+        "cast_failures": 10,
+        "non_missing": 2640823
+      },
+      "tr_prev_build": {
+        "cast_failures": 10,
+        "non_missing": 2640823
+      },
+      "tr_purebuildduration": {
+        "cast_failures": 12,
+        "non_missing": 273377
+      },
+      "tr_testduration": {
+        "cast_failures": 10,
+        "non_missing": 1563484
+      },
+      "tr_tests_failed": {
+        "cast_failures": 12,
+        "non_missing": 2640825
+      },
+      "tr_tests_ran": {
+        "cast_failures": 12,
+        "non_missing": 2640825
+      }
+    },
+    "max_failure_rate": 0.001,
+    "scope": "all languages, every job row, per the conversion manifest"
+  },
   "columns": [
     {
       "availability": "pre_build",
-      "duckdb_type": "BIGINT",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
+      "duckdb_type": "INTEGER",
+      "grain": "job",
+      "java_builds_with_varying_values": 57289,
       "java_profile": {
-        "distinct_count": 200561,
+        "distinct_count": 256055,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561
+        "rows_measured": 256055
       },
-      "justification": "Assigned when the build is created. Identifier — not a model feature.",
-      "meaning": "Travis CI build id of the analysed build.",
+      "justification": "Dump artifact (measured unique), used as the conversion's unique key and last sort column because tr_job_id is not unique in this release. Identifier — not a model feature.",
+      "meaning": "Row number of the job row in the dump; documented as the unique identifier of a build job.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_build_id",
+      "name": "row",
       "position": 1,
       "quality_flags": [],
       "role": "identifier"
@@ -26,17 +260,37 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 241,
+        "distinct_count": 123828,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561
+        "rows_measured": 128819
+      },
+      "justification": "Known at trigger time. Identifier — not a model feature.",
+      "meaning": "SHA-1 of the commit that triggered the build.",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "git_commit",
+      "position": 2,
+      "quality_flags": [],
+      "role": "identifier"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "VARCHAR",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 402,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819
       },
       "justification": "Known before the build. Identifier — not a model feature.",
       "meaning": "GitHub repository name (owner/repo).",
       "meaning_source": "official data-format page",
       "model_input_default": false,
       "name": "gh_project_name",
-      "position": 2,
+      "position": 3,
       "quality_flags": [],
       "role": "identifier"
     },
@@ -49,59 +303,37 @@
         "distinct_count": 2,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "true_rate": 0.107902
+        "rows_measured": 128819,
+        "true_rate": 0.140779
       },
       "justification": "Property of the trigger event.",
-      "meaning": "Whether a pull request triggered the build.",
+      "meaning": "Whether the build was triggered as part of a pull request.",
       "meaning_source": "official data-format page",
       "model_input_default": true,
       "name": "gh_is_pr",
-      "position": 3,
-      "quality_flags": [],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "TIMESTAMP",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 16729,
-        "max": "2016-08-31 21:13:27",
-        "min": "2012-07-13 11:45:01",
-        "null_count": 178920,
-        "null_rate": 0.892098,
-        "rows_measured": 200561
-      },
-      "justification": "A PR build needs an open PR, so the PR predates it. Measured exceptions (PR created after the build started; data errors) are counted under Invariant checks — features derived from it (e.g. PR age) must tolerate negative values.",
-      "meaning": "For PR builds: when the pull request was opened (UTC).",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "gh_pr_created_at",
       "position": 4,
       "quality_flags": [],
       "role": "feature_candidate"
     },
     {
-      "availability": "pre_build",
-      "duckdb_type": "BIGINT",
+      "availability": "uncertain",
+      "duckdb_type": "VARCHAR",
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 2797,
-        "null_count": 178920,
-        "null_rate": 0.892098,
-        "rows_measured": 200561
+        "distinct_count": 4,
+        "null_count": 110684,
+        "null_rate": 0.859221,
+        "rows_measured": 128819
       },
-      "justification": "Known at trigger time. Identifier — not a model feature.",
-      "meaning": "For PR builds: the pull request number on GitHub.",
+      "justification": "Describes how the PR was eventually merged, which can happen after the build — possible future information.",
+      "meaning": "For PR builds: how the pull request was merged. The page calls it the SHA-1 of the merging commit, but the values are a few categorical codes (see Distinct).",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "gh_pull_req_num",
+      "name": "git_merged_with",
       "position": 5,
       "quality_flags": [],
-      "role": "identifier"
+      "role": "excluded"
     },
     {
       "availability": "pre_build",
@@ -112,7 +344,7 @@
         "distinct_count": 1,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561
+        "rows_measured": 128819
       },
       "justification": "Repository metadata, used to select the Java subset. Context — not a model feature.",
       "meaning": "Dominant repository language according to GitHub (partition key).",
@@ -124,152 +356,24 @@
       "role": "context"
     },
     {
-      "availability": "uncertain",
-      "duckdb_type": "VARCHAR",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 4,
-        "null_count": 178920,
-        "null_rate": 0.892098,
-        "rows_measured": 200561
-      },
-      "justification": "Describes how the PR was closed, which can happen after the build — possible future information.",
-      "meaning": "For commits on a PR: how that PR was eventually closed (merge button, manual merge, ...).",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "git_merged_with",
-      "position": 7,
-      "quality_flags": [],
-      "role": "excluded"
-    },
-    {
       "availability": "pre_build",
       "duckdb_type": "VARCHAR",
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 13284,
+        "distinct_count": 8874,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561
+        "rows_measured": 128819
       },
       "justification": "Known at trigger time. Context — not a model feature.",
-      "meaning": "Branch that was built.",
+      "meaning": "Branch git_commit was committed on.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
       "name": "git_branch",
-      "position": 8,
+      "position": 7,
       "quality_flags": [],
       "role": "context"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 0,
-        "max": null,
-        "median": null,
-        "min": null,
-        "null_count": 200561,
-        "null_rate": 1.0,
-        "rows_measured": 200561,
-        "zero_rate": null
-      },
-      "justification": "The triggering push precedes the build.",
-      "meaning": "Number of commits in the push that triggered the build (from GHTorrent push events; nil when no push event was recorded).",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "gh_num_commits_in_push",
-      "position": 9,
-      "quality_flags": [
-        "all_null"
-      ],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "VARCHAR",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 0,
-        "null_count": 200561,
-        "null_rate": 1.0,
-        "rows_measured": 200561
-      },
-      "justification": "The triggering push precedes the build. Identifier — not a model feature.",
-      "meaning": "The commits contained in the triggering push.",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "gh_commits_in_push",
-      "position": 10,
-      "quality_flags": [
-        "all_null"
-      ],
-      "role": "identifier"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "VARCHAR",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 3,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561
-      },
-      "justification": "Derived from git history up to the built commit.",
-      "meaning": "Why the backwards walk for the previously built commit stopped: no previous build, previous build found, or a merge point reached.",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "git_prev_commit_resolution_status",
-      "position": 11,
-      "quality_flags": [],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "VARCHAR",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 135262,
-        "null_count": 42470,
-        "null_rate": 0.211756,
-        "rows_measured": 200561
-      },
-      "justification": "Refers to an earlier commit. Identifier — not a model feature.",
-      "meaning": "Commit of the previous build on the linearised history (nil at a merge point).",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "git_prev_built_commit",
-      "position": 12,
-      "quality_flags": [],
-      "role": "identifier"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "BIGINT",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 135155,
-        "null_count": 43414,
-        "null_rate": 0.216463,
-        "rows_measured": 200561
-      },
-      "justification": "The id is known at trigger time, but that build's outcome may not be (use the finished-before rule). Identifier — not a model feature.",
-      "meaning": "Build triggered by git_prev_built_commit (nil at a merge point).",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_prev_build",
-      "position": 13,
-      "quality_flags": [],
-      "role": "identifier"
     },
     {
       "availability": "pre_build",
@@ -277,23 +381,21 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 0,
-        "max": null,
-        "min": null,
-        "null_count": 200561,
-        "null_rate": 1.0,
-        "rows_measured": 200561
+        "distinct_count": 128146,
+        "max": "2015-08-19 03:52:38",
+        "min": "2011-06-20 14:04:06",
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819
       },
-      "justification": "The triggering push precedes the build.",
-      "meaning": "Timestamp of the first commit in the triggering push (UTC; nil when no push event was recorded).",
+      "justification": "Carries no information beyond tr_started_at and is not UTC (measured, see evidence): never use it as a commit time or a feature.",
+      "meaning": "Documented as the timestamp of the first commit in the triggering push (the 2016-07-28 page version: first commit of the whole repository). Measured: a copy of tr_started_at in UK local time (GMT/BST), not a commit timestamp (see evidence).",
       "meaning_source": "official data-format page",
       "model_input_default": false,
       "name": "gh_first_commit_created_at",
-      "position": 14,
-      "quality_flags": [
-        "all_null"
-      ],
-      "role": "feature_candidate"
+      "position": 8,
+      "quality_flags": [],
+      "role": "excluded"
     },
     {
       "availability": "pre_build",
@@ -301,21 +403,21 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 86,
-        "max": 85,
-        "median": 10.0,
+        "distinct_count": 55,
+        "max": 54,
+        "median": 6.0,
         "min": 0,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.004587
+        "rows_measured": 128819,
+        "zero_rate": 0.00406
       },
-      "justification": "The docs bound it to the window ending when the build was triggered.",
-      "meaning": "Developers who committed directly or merged PRs in the 3 months up to the build trigger.",
+      "justification": "The later page bounds it to the window ending at the trigger; the earlier page does not state a window.",
+      "meaning": "Developers who committed directly or merged PRs in the 3 months up to the build trigger (the 2016-07-28 page version: size of the team, no window).",
       "meaning_source": "official data-format page",
       "model_input_default": true,
       "name": "gh_team_size",
-      "position": 15,
+      "position": 9,
       "quality_flags": [],
       "role": "feature_candidate"
     },
@@ -325,17 +427,17 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 183119,
+        "distinct_count": 113653,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561
+        "rows_measured": 128819
       },
       "justification": "List of commit SHAs that exist before the build. Identifier — not a model feature.",
-      "meaning": "All commits built by this build, walking back to (excluding) the previous built commit or up to a merge point; the basis of the git_diff_* / gh_diff_* columns.",
+      "meaning": "Commits of the triggering push minus the built commit, '#'-separated (the 2016-07-28 page version: directly preceding commits without their own build).",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "git_all_built_commits",
-      "position": 16,
+      "name": "git_commits",
+      "position": 10,
       "quality_flags": [],
       "role": "identifier"
     },
@@ -345,63 +447,75 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 365,
-        "max": 6696,
+        "distinct_count": 84,
+        "max": 553,
         "median": 1.0,
         "min": 1,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
+        "rows_measured": 128819,
         "zero_rate": 0.0
       },
       "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Number of commits in git_all_built_commits.",
+      "meaning": "Number of entries in git_commits.",
       "meaning_source": "official data-format page",
       "model_input_default": true,
-      "name": "git_num_all_built_commits",
-      "position": 17,
+      "name": "git_num_commits",
+      "position": 11,
       "quality_flags": [],
       "role": "feature_candidate"
     },
     {
-      "availability": "pre_build",
-      "duckdb_type": "VARCHAR",
+      "availability": "uncertain",
+      "duckdb_type": "INTEGER",
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 183119,
+        "distinct_count": 26,
+        "max": 39,
+        "median": 0.0,
+        "min": 0,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561
+        "rows_measured": 128819,
+        "zero_rate": 0.973832
       },
-      "justification": "Known at trigger time. Identifier — not a model feature.",
-      "meaning": "Commit that triggered the build.",
+      "justification": "Not time-bounded to the build start in the docs; may count comments written after the build — possible future information.",
+      "meaning": "If git_commit is linked to a PR: number of discussion comments on that PR.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "git_trigger_commit",
-      "position": 18,
-      "quality_flags": [],
-      "role": "identifier"
+      "name": "gh_num_issue_comments",
+      "position": 12,
+      "quality_flags": [
+        "mostly_zero"
+      ],
+      "role": "excluded"
     },
     {
-      "availability": "pre_build",
-      "duckdb_type": "VARCHAR",
+      "availability": "uncertain",
+      "duckdb_type": "INTEGER",
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 13585,
-        "null_count": 178920,
-        "null_rate": 0.892098,
-        "rows_measured": 200561
+        "distinct_count": 58,
+        "max": 238,
+        "median": 0.0,
+        "min": 0,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.959781
       },
-      "justification": "Known at trigger time. Identifier — not a model feature.",
-      "meaning": "For PR builds: the target-branch commit the PR commit was merged into for testing.",
+      "justification": "Not time-bounded to the build start in the docs; may count comments written after the build — possible future information.",
+      "meaning": "Number of GitHub comments on the built commits.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_virtual_merged_into",
-      "position": 19,
-      "quality_flags": [],
-      "role": "identifier"
+      "name": "gh_num_commit_comments",
+      "position": 13,
+      "quality_flags": [
+        "mostly_zero"
+      ],
+      "role": "excluded"
     },
     {
       "availability": "uncertain",
@@ -410,71 +524,23 @@
       "java_builds_with_varying_values": 0,
       "java_profile": {
         "distinct_count": 44,
-        "max": 78,
-        "median": 0.0,
-        "min": 0,
-        "null_count": 178920,
-        "null_rate": 0.892098,
-        "rows_measured": 200561,
-        "zero_rate": 0.706945
-      },
-      "justification": "Not time-bounded to the build start in the docs; may count comments written after the build — possible future information.",
-      "meaning": "For commits linked to a PR: number of discussion comments on that PR.",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "gh_num_issue_comments",
-      "position": 20,
-      "quality_flags": [],
-      "role": "excluded"
-    },
-    {
-      "availability": "uncertain",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 30,
-        "max": 82,
+        "max": 108,
         "median": 0.0,
         "min": 0,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.985177
-      },
-      "justification": "Not time-bounded to the build start in the docs; may count comments written after the build — possible future information.",
-      "meaning": "Number of GitHub comments on the built commits.",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "gh_num_commit_comments",
-      "position": 21,
-      "quality_flags": [
-        "mostly_zero"
-      ],
-      "role": "excluded"
-    },
-    {
-      "availability": "uncertain",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 75,
-        "max": 211,
-        "median": 0.0,
-        "min": 0,
-        "null_count": 178920,
-        "null_rate": 0.892098,
-        "rows_measured": 200561,
-        "zero_rate": 0.866041
+        "rows_measured": 128819,
+        "zero_rate": 0.987067
       },
       "justification": "Not time-bounded to the build start in the docs; may count review comments written after the build — possible future information.",
       "meaning": "For PR builds: number of code-review comments on the pull request.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
       "name": "gh_num_pr_comments",
-      "position": 22,
-      "quality_flags": [],
+      "position": 14,
+      "quality_flags": [
+        "mostly_zero"
+      ],
       "role": "excluded"
     },
     {
@@ -483,24 +549,22 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 225,
-        "max": 5205,
-        "median": 0.0,
+        "distinct_count": 3499,
+        "max": 196663,
+        "median": 10.0,
         "min": 0,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.990786
+        "rows_measured": 128819,
+        "zero_rate": 0.322126
       },
       "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Lines of production code changed across the built commits.",
+      "meaning": "Lines of production code changed by the commits built by this build (the 2016-07-28 page version: churn of git_commit only).",
       "meaning_source": "official data-format page",
       "model_input_default": true,
-      "name": "git_diff_src_churn",
-      "position": 23,
-      "quality_flags": [
-        "mostly_zero"
-      ],
+      "name": "gh_src_churn",
+      "position": 15,
+      "quality_flags": [],
       "role": "feature_candidate"
     },
     {
@@ -509,23 +573,119 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 1,
-        "max": 0,
+        "distinct_count": 1738,
+        "max": 50566,
         "median": 0.0,
         "min": 0,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 1.0
+        "rows_measured": 128819,
+        "zero_rate": 0.706891
       },
       "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Lines of test code changed across the built commits.",
+      "meaning": "Lines of test code changed by the commits built by this build (the 2016-07-28 page version: churn of git_commit only).",
       "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "git_diff_test_churn",
-      "position": 24,
+      "model_input_default": true,
+      "name": "gh_test_churn",
+      "position": 16,
+      "quality_flags": [],
+      "role": "feature_candidate"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "INTEGER",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 215,
+        "max": 4212,
+        "median": 0.0,
+        "min": 0,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.786452
+      },
+      "justification": "Computed from the commits being built, which exist before the build starts.",
+      "meaning": "Files added by the commits built by this build.",
+      "meaning_source": "official data-format page",
+      "model_input_default": true,
+      "name": "gh_files_added",
+      "position": 17,
+      "quality_flags": [],
+      "role": "feature_candidate"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "INTEGER",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 171,
+        "max": 4072,
+        "median": 0.0,
+        "min": 0,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.928427
+      },
+      "justification": "Computed from the commits being built, which exist before the build starts.",
+      "meaning": "Files deleted by the commits built by this build.",
+      "meaning_source": "official data-format page",
+      "model_input_default": true,
+      "name": "gh_files_deleted",
+      "position": 18,
+      "quality_flags": [],
+      "role": "feature_candidate"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "INTEGER",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 378,
+        "max": 6369,
+        "median": 2.0,
+        "min": 0,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.027892
+      },
+      "justification": "Computed from the commits being built, which exist before the build starts.",
+      "meaning": "Files modified by the commits built by this build.",
+      "meaning_source": "official data-format page",
+      "model_input_default": true,
+      "name": "gh_files_modified",
+      "position": 19,
+      "quality_flags": [],
+      "role": "feature_candidate"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "INTEGER",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 81,
+        "max": 996,
+        "median": 0.0,
+        "min": 0,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.979498
+      },
+      "justification": "Computed from the commits being built, which exist before the build starts.",
+      "meaning": "Tests added by the built commits: lines of test code per the later page, test cases (e.g. @Test annotations) per the 2016-07-28 page version (see evidence).",
+      "meaning_source": "official data-format page",
+      "model_input_default": true,
+      "name": "gh_tests_added",
+      "position": 20,
       "quality_flags": [
-        "constant"
+        "mostly_zero"
       ],
       "role": "feature_candidate"
     },
@@ -535,235 +695,133 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 314,
-        "max": 19892,
+        "distinct_count": 212,
+        "max": 3075,
         "median": 0.0,
         "min": 0,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.796286
+        "rows_measured": 128819,
+        "zero_rate": 0.884085
       },
       "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Files added by the built commits.",
+      "meaning": "Tests deleted by the built commits (same two definitions as gh_tests_added).",
       "meaning_source": "official data-format page",
       "model_input_default": true,
-      "name": "gh_diff_files_added",
+      "name": "gh_tests_deleted",
+      "position": 21,
+      "quality_flags": [],
+      "role": "feature_candidate"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "INTEGER",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 431,
+        "max": 6372,
+        "median": 1.0,
+        "min": 0,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.265551
+      },
+      "justification": "Computed from the commits being built, which exist before the build starts.",
+      "meaning": "Production source files changed by the built commits (the 2016-07-28 page version: production files in the whole repository; see evidence).",
+      "meaning_source": "official data-format page",
+      "model_input_default": true,
+      "name": "gh_src_files",
+      "position": 22,
+      "quality_flags": [],
+      "role": "feature_candidate"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "INTEGER",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 117,
+        "max": 1641,
+        "median": 0.0,
+        "min": 0,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.944325
+      },
+      "justification": "Computed from the commits being built, which exist before the build starts.",
+      "meaning": "Documentation files changed by the built commits (the 2016-07-28 page version: documentation files in the repository).",
+      "meaning_source": "official data-format page",
+      "model_input_default": true,
+      "name": "gh_doc_files",
+      "position": 23,
+      "quality_flags": [],
+      "role": "feature_candidate"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "INTEGER",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 211,
+        "max": 4213,
+        "median": 0.0,
+        "min": 0,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.605835
+      },
+      "justification": "Computed from the commits being built, which exist before the build starts.",
+      "meaning": "Changed files that are neither production code nor documentation (the 2016-07-28 page version: such files in the repository).",
+      "meaning_source": "official data-format page",
+      "model_input_default": true,
+      "name": "gh_other_files",
+      "position": 24,
+      "quality_flags": [],
+      "role": "feature_candidate"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "INTEGER",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 410,
+        "max": 878,
+        "median": 11.0,
+        "min": 0,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.055023
+      },
+      "justification": "Counts commits that precede the trigger under either page version.",
+      "meaning": "Distinct commits in the 3 months up to the trigger that touched the files changed by the built commits (the 2016-07-28 page version: all earlier commits on those files, no window).",
+      "meaning_source": "official data-format page",
+      "model_input_default": true,
+      "name": "gh_commits_on_files_touched",
       "position": 25,
       "quality_flags": [],
       "role": "feature_candidate"
     },
     {
       "availability": "pre_build",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 254,
-        "max": 8450,
-        "median": 0.0,
-        "min": 0,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.933242
-      },
-      "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Files deleted by the built commits.",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "gh_diff_files_deleted",
-      "position": 26,
-      "quality_flags": [],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 428,
-        "max": 2596,
-        "median": 2.0,
-        "min": 0,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.025294
-      },
-      "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Files modified by the built commits.",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "gh_diff_files_modified",
-      "position": 27,
-      "quality_flags": [],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 75,
-        "max": 560,
-        "median": 0.0,
-        "min": 0,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.984972
-      },
-      "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Test cases added by the built commits.",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "gh_diff_tests_added",
-      "position": 28,
-      "quality_flags": [
-        "mostly_zero"
-      ],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 238,
-        "max": 1824,
-        "median": 0.0,
-        "min": 0,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.903565
-      },
-      "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Test cases deleted by the built commits.",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "gh_diff_tests_deleted",
-      "position": 29,
-      "quality_flags": [],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 65,
-        "max": 295,
-        "median": 0.0,
-        "min": 0,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.990586
-      },
-      "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Production source files changed by the built commits.",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "gh_diff_src_files",
-      "position": 30,
-      "quality_flags": [
-        "mostly_zero"
-      ],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 4,
-        "max": 4,
-        "median": 0.0,
-        "min": 0,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.999965
-      },
-      "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Documentation files changed by the built commits.",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "gh_diff_doc_files",
-      "position": 31,
-      "quality_flags": [
-        "mostly_zero"
-      ],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 533,
-        "max": 19908,
-        "median": 2.0,
-        "min": 0,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.004522
-      },
-      "justification": "Computed from the commits being built, which exist before the build starts.",
-      "meaning": "Changed files that are neither source code nor documentation.",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "gh_diff_other_files",
-      "position": 32,
-      "quality_flags": [],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 4677,
-        "max": 8866,
-        "median": 47.0,
-        "min": 0,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.017675
-      },
-      "justification": "The docs bound it to the window ending when the build was triggered.",
-      "meaning": "Distinct commits in the 3 months up to the trigger that touched the files changed by the built commits (how active that code area is).",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "gh_num_commits_on_files_touched",
-      "position": 33,
-      "quality_flags": [],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
       "duckdb_type": "BIGINT",
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 64214,
-        "max": 808399,
-        "median": 41783.0,
-        "min": 1,
+        "distinct_count": 44856,
+        "max": 742475,
+        "median": 25872.0,
+        "min": 14,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
+        "rows_measured": 128819,
         "zero_rate": 0.0
       },
       "justification": "Repository state at the built commit.",
@@ -771,7 +829,7 @@
       "meaning_source": "official data-format page",
       "model_input_default": true,
       "name": "gh_sloc",
-      "position": 34,
+      "position": 26,
       "quality_flags": [],
       "role": "feature_candidate"
     },
@@ -781,21 +839,21 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 92022,
-        "max": 414076.9231,
-        "median": 297.2117,
+        "distinct_count": 63469,
+        "max": 7065.8363,
+        "median": 342.1327,
         "min": 0.0,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.052637
+        "rows_measured": 128819,
+        "zero_rate": 0.049636
       },
       "justification": "Repository state at the built commit.",
       "meaning": "Test density: lines of test code per 1,000 gh_sloc.",
       "meaning_source": "official data-format page",
       "model_input_default": true,
       "name": "gh_test_lines_per_kloc",
-      "position": 35,
+      "position": 27,
       "quality_flags": [],
       "role": "feature_candidate"
     },
@@ -805,21 +863,21 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 80900,
-        "max": 6192.3077,
-        "median": 9.2071,
+        "distinct_count": 56461,
+        "max": 318.5484,
+        "median": 10.694,
         "min": 0.0,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.084034
+        "rows_measured": 128819,
+        "zero_rate": 0.079949
       },
       "justification": "Repository state at the built commit.",
       "meaning": "Test density: test cases per 1,000 gh_sloc.",
       "meaning_source": "official data-format page",
       "model_input_default": true,
       "name": "gh_test_cases_per_kloc",
-      "position": 36,
+      "position": 28,
       "quality_flags": [],
       "role": "feature_candidate"
     },
@@ -829,21 +887,21 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 82303,
-        "max": 62000.0,
-        "median": 33.2795,
+        "distinct_count": 57913,
+        "max": 596.9425,
+        "median": 37.1868,
         "min": 0.0,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 0.086477
+        "rows_measured": 128819,
+        "zero_rate": 0.067374
       },
       "justification": "Repository state at the built commit.",
       "meaning": "Assert density: assertions per 1,000 gh_sloc.",
       "meaning_source": "official data-format page",
       "model_input_default": true,
       "name": "gh_asserts_cases_per_kloc",
-      "position": 37,
+      "position": 29,
       "quality_flags": [],
       "role": "feature_candidate"
     },
@@ -856,111 +914,41 @@
         "distinct_count": 2,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "true_rate": 0.797648
+        "rows_measured": 128819,
+        "true_rate": 0.782843
       },
-      "justification": "The docs bound it to the 3 months before the commit.",
-      "meaning": "Whether the commit author committed or merged at least once in the 3 months before the commit (core team member).",
+      "justification": "Property of the commit author before the build.",
+      "meaning": "Whether the built commit was authored by a core team member.",
       "meaning_source": "official data-format page",
       "model_input_default": true,
       "name": "gh_by_core_team_member",
-      "position": 38,
+      "position": 30,
       "quality_flags": [],
       "role": "feature_candidate"
     },
     {
-      "availability": "pre_build",
+      "availability": "uncertain",
       "duckdb_type": "INTEGER",
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 317,
-        "max": 1002,
-        "median": 17.0,
+        "distinct_count": 299,
+        "max": 1538,
+        "median": 16.0,
         "min": 1,
-        "null_count": 178990,
-        "null_rate": 0.892447,
-        "rows_measured": 200561,
+        "null_count": 110684,
+        "null_rate": 0.859221,
+        "rows_measured": 128819,
         "zero_rate": 0.0
       },
-      "justification": "The PR exists before its builds. Caveat: the docs do not say the text was captured at build time, so later edits cannot be ruled out.",
-      "meaning": "For PR builds: total words in the PR title and description.",
+      "justification": "Taken from the final PR text, which can be edited after the build (ADR-0017 context) — possible future information.",
+      "meaning": "For PR builds: total words in the pull request title and description.",
       "meaning_source": "official data-format page",
-      "model_input_default": true,
+      "model_input_default": false,
       "name": "gh_description_complexity",
-      "position": 39,
+      "position": 31,
       "quality_flags": [],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "TIMESTAMP",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 0,
-        "max": null,
-        "min": null,
-        "null_count": 200561,
-        "null_rate": 1.0,
-        "rows_measured": 200561
-      },
-      "justification": "The push precedes the build.",
-      "meaning": "Timestamp of the triggering push as reported by GitHub (UTC).",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "gh_pushed_at",
-      "position": 40,
-      "quality_flags": [
-        "all_null"
-      ],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "TIMESTAMP",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 198292,
-        "max": "2016-08-31 23:59:27",
-        "min": "2012-01-27 14:36:49",
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561
-      },
-      "justification": "Trigger time; used for ordering, history windows and time features. UTC confirmed in M2 review: equal to the secondary archive's explicit-UTC started_at for all 27,055 builds joined on tr_build_id. Caveat: a restart overwrites it (DATASET_AUDIT §4.3).",
-      "meaning": "Build trigger/start timestamp as reported by Travis (UTC); the docs describe it as the Travis-provided time of the triggering push.",
-      "meaning_source": "official data-format page",
-      "model_input_default": true,
-      "name": "gh_build_started_at",
-      "position": 41,
-      "quality_flags": [],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "DOUBLE",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 118693,
-        "max": 6504.88,
-        "median": 1044.07,
-        "min": 0.0,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 5e-05
-      },
-      "justification": "Measured to advance ~1 day per day of gh_build_started_at within a project (see evidence), i.e. repository age at build time.",
-      "meaning": "Not described on the official data-format page.",
-      "meaning_source": "none",
-      "model_input_default": true,
-      "name": "gh_repo_age",
-      "position": 42,
-      "quality_flags": [],
-      "role": "feature_candidate"
+      "role": "excluded"
     },
     {
       "availability": "pre_build",
@@ -968,41 +956,17 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 21767,
-        "max": 44393,
-        "median": 2621.0,
-        "min": 0,
+        "distinct_count": 128819,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 200561,
-        "zero_rate": 1e-05
+        "rows_measured": 128819
       },
-      "justification": "Measured to vary over time within a project (see evidence), consistent with a commit count at build time rather than a crawl-time snapshot.",
-      "meaning": "Not described on the official data-format page.",
-      "meaning_source": "none",
-      "model_input_default": true,
-      "name": "gh_repo_num_commits",
-      "position": 43,
-      "quality_flags": [],
-      "role": "feature_candidate"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "BIGINT",
-      "grain": "job",
-      "java_builds_with_varying_values": 76115,
-      "java_profile": {
-        "distinct_count": 401767,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 401767
-      },
-      "justification": "Assigned when the build's jobs are created. Identifier — not a model feature.",
-      "meaning": "Travis job id of the analysed job (one CSV row per job).",
+      "justification": "Assigned when the build is created. Identifier — not a model feature.",
+      "meaning": "Travis CI build id.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_job_id",
-      "position": 44,
+      "name": "tr_build_id",
+      "position": 32,
       "quality_flags": [],
       "role": "identifier"
     },
@@ -1012,57 +976,343 @@
       "grain": "build",
       "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 8408,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561
+        "distinct_count": 1890,
+        "null_count": 110684,
+        "null_rate": 0.859221,
+        "rows_measured": 128819
       },
-      "justification": "Assigned when the build is created. Identifier — not a model feature.",
-      "meaning": "Per-project serial build number.",
+      "justification": "Known at trigger time. Identifier — not a model feature.",
+      "meaning": "For PR builds: the pull request number on GitHub.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_build_number",
-      "position": 45,
+      "name": "gh_pull_req_num",
+      "position": 33,
       "quality_flags": [],
       "role": "identifier"
     },
     {
       "availability": "post_build",
       "duckdb_type": "VARCHAR",
-      "grain": "job",
-      "java_builds_with_varying_values": 698,
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 11,
+        "distinct_count": 5,
         "null_count": 0,
         "null_rate": 0.0,
-        "rows_measured": 401767
+        "rows_measured": 128819
       },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Primary programming language detected by build-log analysis.",
+      "justification": "The prediction target (ADR-0005); only known once the build finished.",
+      "meaning": "Build status from the Travis API (passed, failed, errored, canceled, started).",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_log_lan",
+      "name": "tr_status",
+      "position": 34,
+      "quality_flags": [],
+      "role": "label"
+    },
+    {
+      "availability": "post_build",
+      "duckdb_type": "INTEGER",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 7312,
+        "max": 34785,
+        "median": 452.0,
+        "min": 0,
+        "null_count": 12,
+        "null_rate": 9.3e-05,
+        "rows_measured": 128819,
+        "zero_rate": 3.9e-05
+      },
+      "justification": "Only known once the build finished; usable only as lagged history of finished builds.",
+      "meaning": "Overall build duration reported by Travis, in seconds (summed job time per DATASET_AUDIT §4.1, so started_at + duration only bounds the finish time).",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_duration",
+      "position": 35,
+      "quality_flags": [],
+      "role": "outcome"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "TIMESTAMP",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 128146,
+        "max": "2015-08-19 02:52:38",
+        "min": "2011-06-20 13:04:06",
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819
+      },
+      "justification": "Trigger time; used for ordering, history windows and time features. Caveat: a restart overwrites it (DATASET_AUDIT §4.3).",
+      "meaning": "Start of the build process (UTC wall-clock, verified against the secondary archive; see evidence).",
+      "meaning_source": "official data-format page",
+      "model_input_default": true,
+      "name": "tr_started_at",
+      "position": 36,
+      "quality_flags": [],
+      "role": "feature_candidate"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "VARCHAR",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
+      "java_profile": {
+        "distinct_count": 128819,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819
+      },
+      "justification": "Jobs are created together with the build (the matrix is known at creation). Identifier — not a model feature.",
+      "meaning": "Travis job ids of the build, as a bracketed comma-separated list ('[id, id, ...]').",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_jobs",
+      "position": 37,
+      "quality_flags": [],
+      "role": "identifier"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "BIGINT",
+      "grain": "build",
+      "java_builds_with_varying_values": 8943,
+      "java_profile": {
+        "distinct_count": 6268,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819
+      },
+      "justification": "Assigned when the build is created. Identifier — not a model feature.",
+      "meaning": "Per-project serial build number on Travis.",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_build_number",
+      "position": 38,
+      "quality_flags": [],
+      "role": "identifier"
+    },
+    {
+      "availability": "pre_build",
+      "duckdb_type": "BIGINT",
+      "grain": "job",
+      "java_builds_with_varying_values": 57289,
+      "java_profile": {
+        "distinct_count": 234391,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 256055
+      },
+      "justification": "Assigned when the build's jobs are created. Identifier — not a model feature.",
+      "meaning": "Travis job id of this row; documented as one of tr_jobs (not always true, see invariants).",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_job_id",
+      "position": 39,
+      "quality_flags": [],
+      "role": "identifier"
+    },
+    {
+      "availability": "uncertain",
+      "duckdb_type": "VARCHAR",
+      "grain": "job",
+      "java_builds_with_varying_values": 99,
+      "java_profile": {
+        "distinct_count": 3,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 256055
+      },
+      "justification": "Derived from the build log (formally post-build) while the language itself is a repository property already given by gh_lang; tagged uncertain. Identifier — not a model feature.",
+      "meaning": "Language of the build as recognised by the build-log analyzer.",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_lan",
+      "position": 40,
+      "quality_flags": [],
+      "role": "identifier"
+    },
+    {
+      "availability": "post_build",
+      "duckdb_type": "DOUBLE",
+      "grain": "job",
+      "java_builds_with_varying_values": 12292,
+      "java_profile": {
+        "distinct_count": 503,
+        "max": 25461.0,
+        "median": 1.0,
+        "min": 0.0,
+        "null_count": 113063,
+        "null_rate": 0.441557,
+        "rows_measured": 256055,
+        "zero_rate": 0.382623
+      },
+      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
+      "meaning": "Setup time before the Travis build started, in seconds.",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_setup_time",
+      "position": 41,
+      "quality_flags": [],
+      "role": "outcome"
+    },
+    {
+      "availability": "post_build",
+      "duckdb_type": "VARCHAR",
+      "grain": "job",
+      "java_builds_with_varying_values": 2848,
+      "java_profile": {
+        "distinct_count": 4,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 256055
+      },
+      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
+      "meaning": "Build-log analyzer that processed the log (e.g. java-ant, java-maven, java-gradle).",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_analyzer",
+      "position": 42,
+      "quality_flags": [],
+      "role": "outcome"
+    },
+    {
+      "availability": "post_build",
+      "duckdb_type": "VARCHAR",
+      "grain": "job",
+      "java_builds_with_varying_values": 3596,
+      "java_profile": {
+        "distinct_count": 3,
+        "null_count": 129444,
+        "null_rate": 0.505532,
+        "rows_measured": 256055
+      },
+      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
+      "meaning": "Test frameworks the analyzer recognised, '#'-separated.",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_frameworks",
+      "position": 43,
+      "quality_flags": [],
+      "role": "outcome"
+    },
+    {
+      "availability": "post_build",
+      "duckdb_type": "INTEGER",
+      "grain": "job",
+      "java_builds_with_varying_values": 6441,
+      "java_profile": {
+        "distinct_count": 1911,
+        "max": 724958,
+        "median": 24.0,
+        "min": -15,
+        "null_count": 144666,
+        "null_rate": 0.56498,
+        "rows_measured": 256055,
+        "zero_rate": 0.074065
+      },
+      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
+      "meaning": "Number of passed tests, if the analyzer could tell.",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_tests_ok",
+      "position": 44,
+      "quality_flags": [],
+      "role": "outcome"
+    },
+    {
+      "availability": "post_build",
+      "duckdb_type": "INTEGER",
+      "grain": "job",
+      "java_builds_with_varying_values": 5172,
+      "java_profile": {
+        "distinct_count": 117,
+        "max": 2037,
+        "median": 0.0,
+        "min": 0,
+        "null_count": 98235,
+        "null_rate": 0.383648,
+        "rows_measured": 256055,
+        "zero_rate": 0.943398
+      },
+      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
+      "meaning": "Number of failed tests, if the analyzer could tell.",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_tests_fail",
+      "position": 45,
+      "quality_flags": [],
+      "role": "outcome"
+    },
+    {
+      "availability": "post_build",
+      "duckdb_type": "INTEGER",
+      "grain": "job",
+      "java_builds_with_varying_values": 5914,
+      "java_profile": {
+        "distinct_count": 1798,
+        "max": 724959,
+        "median": 25.0,
+        "min": 0,
+        "null_count": 144666,
+        "null_rate": 0.56498,
+        "rows_measured": 256055,
+        "zero_rate": 0.066371
+      },
+      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
+      "meaning": "Number of tests run, if the analyzer could tell.",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_tests_run",
       "position": 46,
       "quality_flags": [],
       "role": "outcome"
     },
     {
       "availability": "post_build",
-      "duckdb_type": "VARCHAR",
+      "duckdb_type": "INTEGER",
       "grain": "job",
-      "java_builds_with_varying_values": 14928,
+      "java_builds_with_varying_values": 4437,
       "java_profile": {
-        "distinct_count": 5,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 401767
+        "distinct_count": 185,
+        "max": 3159,
+        "median": 0.0,
+        "min": 0,
+        "null_count": 144666,
+        "null_rate": 0.56498,
+        "rows_measured": 256055,
+        "zero_rate": 0.749302
       },
       "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Overall return status detected by build-log analysis.",
+      "meaning": "Number of skipped or ignored tests, if the analyzer could tell.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_log_status",
+      "name": "tr_tests_skipped",
       "position": 47,
+      "quality_flags": [],
+      "role": "outcome"
+    },
+    {
+      "availability": "post_build",
+      "duckdb_type": "VARCHAR",
+      "grain": "job",
+      "java_builds_with_varying_values": 1961,
+      "java_profile": {
+        "distinct_count": 2385,
+        "null_count": 247654,
+        "null_rate": 0.967191,
+        "rows_measured": 256055
+      },
+      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
+      "meaning": "Names of the failed tests, '#'-separated (free text).",
+      "meaning_source": "official data-format page",
+      "model_input_default": false,
+      "name": "tr_failed_tests",
+      "position": 48,
       "quality_flags": [],
       "role": "outcome"
     },
@@ -1070,62 +1320,46 @@
       "availability": "post_build",
       "duckdb_type": "DOUBLE",
       "grain": "job",
-      "java_builds_with_varying_values": 31407,
+      "java_builds_with_varying_values": 28973,
       "java_profile": {
-        "distinct_count": 708,
-        "max": 4736.0,
-        "median": 2.0,
+        "distinct_count": 32721,
+        "max": 14019.06,
+        "median": 19.39,
         "min": 0.0,
-        "null_count": 91647,
-        "null_rate": 0.22811,
-        "rows_measured": 401767,
-        "zero_rate": 0.131069
+        "null_count": 137660,
+        "null_rate": 0.537619,
+        "rows_measured": 256055,
+        "zero_rate": 0.074615
       },
       "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Seconds of setup before the script phase, from build-log analysis.",
+      "meaning": "Seconds spent running the tests.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_log_setup_time",
-      "position": 48,
-      "quality_flags": [],
-      "role": "outcome"
-    },
-    {
-      "availability": "post_build",
-      "duckdb_type": "VARCHAR",
-      "grain": "job",
-      "java_builds_with_varying_values": 3920,
-      "java_profile": {
-        "distinct_count": 6,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 401767
-      },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Which build-log analyzer processed the log.",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_log_analyzer",
+      "name": "tr_testduration",
       "position": 49,
       "quality_flags": [],
       "role": "outcome"
     },
     {
       "availability": "post_build",
-      "duckdb_type": "VARCHAR",
+      "duckdb_type": "DOUBLE",
       "grain": "job",
-      "java_builds_with_varying_values": 8220,
+      "java_builds_with_varying_values": 22998,
       "java_profile": {
-        "distinct_count": 4,
-        "null_count": 219056,
-        "null_rate": 0.545231,
-        "rows_measured": 401767
+        "distinct_count": 8604,
+        "max": 3598.0,
+        "median": 46.11,
+        "min": 0.0,
+        "null_count": 115672,
+        "null_rate": 0.451747,
+        "rows_measured": 256055,
+        "zero_rate": 0.281337
       },
       "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Test frameworks detected by build-log analysis.",
+      "meaning": "Seconds the build itself ran, without Travis scheduling and provisioning.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_log_frameworks",
+      "name": "tr_purebuildduration",
       "position": 50,
       "quality_flags": [],
       "role": "outcome"
@@ -1134,19 +1368,19 @@
       "availability": "post_build",
       "duckdb_type": "BOOLEAN",
       "grain": "job",
-      "java_builds_with_varying_values": 8220,
+      "java_builds_with_varying_values": 3596,
       "java_profile": {
         "distinct_count": 2,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 401767,
-        "true_rate": 0.454769
+        "null_count": 2,
+        "null_rate": 8e-06,
+        "rows_measured": 256055,
+        "true_rate": 0.494464
       },
       "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Whether tests ran, from build-log analysis.",
+      "meaning": "Whether tests ran in this job.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_log_bool_tests_ran",
+      "name": "tr_tests_ran",
       "position": 51,
       "quality_flags": [],
       "role": "outcome"
@@ -1155,456 +1389,313 @@
       "availability": "post_build",
       "duckdb_type": "BOOLEAN",
       "grain": "job",
-      "java_builds_with_varying_values": 11145,
+      "java_builds_with_varying_values": 2123,
       "java_profile": {
         "distinct_count": 2,
-        "null_count": 219056,
-        "null_rate": 0.545231,
-        "rows_measured": 401767,
-        "true_rate": 0.088856
+        "null_count": 2,
+        "null_rate": 8e-06,
+        "rows_measured": 256055,
+        "true_rate": 0.038773
       },
       "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Whether tests failed, from build-log analysis.",
+      "meaning": "Whether tests failed in this job.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_log_bool_tests_failed",
+      "name": "tr_tests_failed",
       "position": 52,
       "quality_flags": [],
       "role": "outcome"
     },
     {
-      "availability": "post_build",
+      "availability": "pre_build",
       "duckdb_type": "INTEGER",
-      "grain": "job",
-      "java_builds_with_varying_values": 13799,
+      "grain": "build",
+      "java_builds_with_varying_values": 2,
       "java_profile": {
-        "distinct_count": 3019,
-        "max": 733960,
-        "median": 16.0,
+        "distinct_count": 22,
+        "max": 24,
+        "median": 1.0,
         "min": 0,
-        "null_count": 246761,
-        "null_rate": 0.614189,
-        "rows_measured": 401767,
-        "zero_rate": 0.082674
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 4.7e-05
       },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Number of passing tests, from build-log analysis.",
+      "justification": "Measured to be bounded by git_num_commits + 1 (evidence), i.e. committers of commits that exist before the build; the page's project-wide wording is not time-bounded, so verify before relying on it.",
+      "meaning": "Documented as the number of people who committed to the project; measured to count the committers of the built commits (see evidence).",
       "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_log_num_tests_ok",
+      "model_input_default": true,
+      "name": "git_num_committers",
       "position": 53,
       "quality_flags": [],
-      "role": "outcome"
+      "role": "feature_candidate"
     },
     {
-      "availability": "post_build",
+      "availability": "pre_build",
       "duckdb_type": "INTEGER",
-      "grain": "job",
-      "java_builds_with_varying_values": 11408,
+      "grain": "build",
+      "java_builds_with_varying_values": 2,
       "java_profile": {
-        "distinct_count": 91,
-        "max": 697,
-        "median": 0.0,
-        "min": 0,
-        "null_count": 221591,
-        "null_rate": 0.551541,
-        "rows_measured": 401767,
-        "zero_rate": 0.923963
+        "distinct_count": 21,
+        "max": 42,
+        "median": 1.0,
+        "min": 1,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.0
       },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Number of failing tests, from build-log analysis.",
+      "justification": "The build matrix is known when the build is created.",
+      "meaning": "Number of jobs of the build (length of tr_jobs).",
       "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_log_num_tests_failed",
+      "model_input_default": true,
+      "name": "tr_num_jobs",
       "position": 54,
       "quality_flags": [],
-      "role": "outcome"
+      "role": "feature_candidate"
     },
     {
-      "availability": "post_build",
-      "duckdb_type": "INTEGER",
+      "availability": "pre_build",
+      "duckdb_type": "BIGINT",
       "grain": "job",
-      "java_builds_with_varying_values": 12810,
+      "java_builds_with_varying_values": 16169,
       "java_profile": {
-        "distinct_count": 2883,
-        "max": 733960,
-        "median": 20.0,
-        "min": 0,
-        "null_count": 257435,
-        "null_rate": 0.640757,
-        "rows_measured": 401767,
-        "zero_rate": 7e-06
+        "distinct_count": 40772,
+        "null_count": 2,
+        "null_rate": 8e-06,
+        "rows_measured": 256055
       },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Total number of tests run, from build-log analysis.",
+      "justification": "Linkage to an earlier build: its id is known at trigger time, but that build's outcome may not be (use the finished-before rule). -1 is a placeholder that staging turns into NULL. Identifier — not a model feature.",
+      "meaning": "Link to the previous build, given as its tr_build_id; -1 (also written -1.0) when there is none. Measured to differ between jobs of the same build.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_log_num_tests_run",
+      "name": "tr_prev_build",
       "position": 55,
       "quality_flags": [],
-      "role": "outcome"
+      "role": "identifier"
     },
     {
       "availability": "post_build",
-      "duckdb_type": "INTEGER",
-      "grain": "job",
-      "java_builds_with_varying_values": 9604,
+      "duckdb_type": "BIGINT",
+      "grain": "build",
+      "java_builds_with_varying_values": 0,
       "java_profile": {
-        "distinct_count": 164,
-        "max": 3159,
-        "median": 0.0,
-        "min": 0,
-        "null_count": 246750,
-        "null_rate": 0.614162,
-        "rows_measured": 401767,
-        "zero_rate": 0.752814
+        "distinct_count": 21883,
+        "max": 44463310,
+        "median": 60.0,
+        "min": -58865485,
+        "null_count": 0,
+        "null_rate": 0.0,
+        "rows_measured": 128819,
+        "zero_rate": 0.000171
       },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Number of skipped tests, from build-log analysis.",
+      "justification": "Only observable once Travis picked the build up, i.e. after the trigger moment.",
+      "meaning": "Latency induced by Travis (scheduling, build pick-up), in seconds; -1 placeholder.",
       "meaning_source": "official data-format page",
       "model_input_default": false,
-      "name": "tr_log_num_tests_skipped",
+      "name": "tr_ci_latency",
       "position": 56,
       "quality_flags": [],
       "role": "outcome"
-    },
-    {
-      "availability": "post_build",
-      "duckdb_type": "INTEGER",
-      "grain": "job",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 0,
-        "max": null,
-        "median": null,
-        "min": null,
-        "null_count": 401767,
-        "null_rate": 1.0,
-        "rows_measured": 401767,
-        "zero_rate": null
-      },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Not described on the official data-format page (the name suggests test suites run, from build-log analysis; unverified).",
-      "meaning_source": "none",
-      "model_input_default": false,
-      "name": "tr_log_num_test_suites_run",
-      "position": 57,
-      "quality_flags": [
-        "all_null"
-      ],
-      "role": "outcome"
-    },
-    {
-      "availability": "post_build",
-      "duckdb_type": "INTEGER",
-      "grain": "job",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 0,
-        "max": null,
-        "median": null,
-        "min": null,
-        "null_count": 401767,
-        "null_rate": 1.0,
-        "rows_measured": 401767,
-        "zero_rate": null
-      },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Not described on the official data-format page (the name suggests passing test suites, from build-log analysis; unverified).",
-      "meaning_source": "none",
-      "model_input_default": false,
-      "name": "tr_log_num_test_suites_ok",
-      "position": 58,
-      "quality_flags": [
-        "all_null"
-      ],
-      "role": "outcome"
-    },
-    {
-      "availability": "post_build",
-      "duckdb_type": "INTEGER",
-      "grain": "job",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 0,
-        "max": null,
-        "median": null,
-        "min": null,
-        "null_count": 401767,
-        "null_rate": 1.0,
-        "rows_measured": 401767,
-        "zero_rate": null
-      },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Not described on the official data-format page (the name suggests failing test suites, from build-log analysis; unverified).",
-      "meaning_source": "none",
-      "model_input_default": false,
-      "name": "tr_log_num_test_suites_failed",
-      "position": 59,
-      "quality_flags": [
-        "all_null"
-      ],
-      "role": "outcome"
-    },
-    {
-      "availability": "post_build",
-      "duckdb_type": "VARCHAR",
-      "grain": "job",
-      "java_builds_with_varying_values": 3796,
-      "java_profile": {
-        "distinct_count": 2804,
-        "null_count": 388126,
-        "null_rate": 0.966047,
-        "rows_measured": 401767
-      },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Names of the failing tests, from build-log analysis (free text).",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_log_tests_failed",
-      "position": 60,
-      "quality_flags": [],
-      "role": "outcome"
-    },
-    {
-      "availability": "post_build",
-      "duckdb_type": "DOUBLE",
-      "grain": "job",
-      "java_builds_with_varying_values": 40063,
-      "java_profile": {
-        "distinct_count": 60896,
-        "max": 14019.06,
-        "median": 65.57,
-        "min": 0.0,
-        "null_count": 235204,
-        "null_rate": 0.585424,
-        "rows_measured": 401767,
-        "zero_rate": 0.083062
-      },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Seconds spent running tests, from build-log analysis.",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_log_testduration",
-      "position": 61,
-      "quality_flags": [],
-      "role": "outcome"
-    },
-    {
-      "availability": "post_build",
-      "duckdb_type": "DOUBLE",
-      "grain": "job",
-      "java_builds_with_varying_values": 30732,
-      "java_profile": {
-        "distinct_count": 8898,
-        "max": 3598.0,
-        "median": 127.0,
-        "min": 0.0,
-        "null_count": 229231,
-        "null_rate": 0.570557,
-        "rows_measured": 401767,
-        "zero_rate": 0.059049
-      },
-      "justification": "Produced by analysing the finished build's log; forbidden for the current build.",
-      "meaning": "Seconds spent in the build tool (e.g. Maven, Ant), from build-log analysis; includes the test phase.",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_log_buildduration",
-      "position": 62,
-      "quality_flags": [],
-      "role": "outcome"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "VARCHAR",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 190813,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561
-      },
-      "justification": "Known at trigger time. Identifier — not a model feature.",
-      "meaning": "Commit SHA Travis built; for PRs possibly a virtual merge commit not in the repository.",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_original_commit",
-      "position": 63,
-      "quality_flags": [],
-      "role": "identifier"
-    },
-    {
-      "availability": "post_build",
-      "duckdb_type": "INTEGER",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 11104,
-        "max": 354680,
-        "median": 575.0,
-        "min": 0,
-        "null_count": 108,
-        "null_rate": 0.000538,
-        "rows_measured": 200561,
-        "zero_rate": 0.001402
-      },
-      "justification": "Only known once the build finished; usable only as lagged history of finished builds.",
-      "meaning": "Full build duration reported by the Travis API. Summed job time, not wall-clock (DATASET_AUDIT §4.1; equal to that archive's duration for 26,990 of 27,055 builds joined in M2 review), so started_at + tr_duration only bounds the finish time.",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_duration",
-      "position": 64,
-      "quality_flags": [],
-      "role": "outcome"
-    },
-    {
-      "availability": "post_build",
-      "duckdb_type": "VARCHAR",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 4,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561
-      },
-      "justification": "The prediction target (ADR-0005); only known once the build finished.",
-      "meaning": "Build status from the Travis API (passed, failed, errored, canceled, ...).",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_status",
-      "position": 65,
-      "quality_flags": [],
-      "role": "label"
-    },
-    {
-      "availability": "pre_build",
-      "duckdb_type": "VARCHAR",
-      "grain": "build",
-      "java_builds_with_varying_values": 0,
-      "java_profile": {
-        "distinct_count": 200561,
-        "null_count": 0,
-        "null_rate": 0.0,
-        "rows_measured": 200561
-      },
-      "justification": "Jobs are created together with the build. Identifier — not a model feature.",
-      "meaning": "Travis job ids of the build, '#'-separated.",
-      "meaning_source": "official data-format page",
-      "model_input_default": false,
-      "name": "tr_jobs",
-      "position": 66,
-      "quality_flags": [],
-      "role": "identifier"
     }
   ],
   "counts": {
     "by_lang": {
-      "go": {
-        "builds": 113940,
-        "jobs": 255358,
-        "projects": 198
-      },
       "java": {
-        "builds": 200561,
-        "jobs": 401767,
-        "projects": 241
-      },
-      "python": {
-        "builds": 338176,
-        "jobs": 1520967,
-        "projects": 261
+        "builds": 128819,
+        "distinct_job_ids": 234391,
+        "jobs": 256055,
+        "projects": 402
       },
       "ruby": {
-        "builds": 273220,
-        "jobs": 1703900,
-        "projects": 248
+        "builds": 231951,
+        "distinct_job_ids": 1565999,
+        "jobs": 2384770,
+        "projects": 898
       }
     },
     "java": {
-      "builds": 200561,
-      "jobs": 401767,
-      "projects": 241
+      "builds": 128819,
+      "distinct_job_ids": 234391,
+      "jobs": 256055,
+      "projects": 402
     },
     "java_build_started_at_range": {
-      "max": "2016-08-31 23:59:27",
-      "min": "2012-01-27 14:36:49"
+      "column": "tr_started_at",
+      "max": "2015-08-19 02:52:38",
+      "min": "2011-06-20 13:04:06"
     },
     "java_label_distribution": {
-      "canceled": 535,
-      "errored": 19490,
-      "failed": 37399,
-      "passed": 143137
+      "canceled": 199,
+      "errored": 15267,
+      "failed": 22068,
+      "passed": 91282,
+      "started": 3
     },
     "overall": {
-      "builds": 925897,
-      "jobs": 3881992,
-      "projects": 948
+      "builds": 360770,
+      "distinct_job_ids": 1800390,
+      "jobs": 2640825,
+      "projects": 1300
     }
   },
   "dataformat_doc": {
-    "commit": "d3f5ece6d73dcc440c13a3668d5038fbdca2f703",
-    "sha256": "cd7cc220d67b0df3f1ef08d847195335e48157bd78d0cb8bccdc0280de1a8801",
-    "url": "https://raw.githubusercontent.com/TestRoots/travistorrent-site/master/page_dataformat.md"
+    "commit": "7466b3d2ca08f1f4b792007705ae5bafb33a8224",
+    "note": "Last page version describing this 56-column format (2016-11-09). The first version (commit 1ca2ce08d42e, 2016-07-28) defines gh_first_commit_created_at, gh_team_size, git_commits, the comment counts, the change columns, gh_tests_added/deleted, gh_src/doc/other_files, gh_commits_on_files_touched and gh_description_complexity differently. Both post-date the dump (dated 2016-03-05 by its file name); measured evidence below decides where possible.",
+    "sha256": "863c28af7b11a19025b4c622ddc7c153945adaad159316e731eb78069237444d",
+    "url": "https://raw.githubusercontent.com/TestRoots/travistorrent-site/7466b3d2ca08f1f4b792007705ae5bafb33a8224/page_dataformat.md"
   },
   "dataset": {
     "attribution": "Beller, M., Gousios, G., Zaidman, A. TravisTorrent: Synthesizing Travis CI and GitHub for Full-Stack Research on Continuous Integration. MSR 2017, DOI 10.1109/MSR.2017.24. Data: Figshare DOI 10.6084/m9.figshare.19314170 (CC BY 4.0).",
     "doi": "10.6084/m9.figshare.19314170",
-    "filename": "final-2017-01-25.csv.gz",
+    "filename": "travistorrent_5_3_2016.csv.gz",
+    "key": "travistorrent-5-3-2016",
     "license": "CC BY 4.0",
-    "md5": "5d359345fecf0bf47be6edb10b5aae58",
-    "size_bytes": 264607174,
-    "url": "https://ndownloader.figshare.com/files/34303124",
-    "version": "5d359345fecf0bf47be6edb10b5aae58"
+    "md5": "4713d8b73b667a2c375b89c20f531fc0",
+    "size_bytes": 81902127,
+    "timestamp_semantics": "TIMESTAMP (no zone). tr_started_at is UTC wall-clock (measured: equal to the secondary archive's explicit-UTC started_at on every joined build). gh_first_commit_created_at is tr_started_at rendered in Europe/London local time (measured), i.e. not UTC.",
+    "title": "TravisTorrent (Figshare `travistorrent_5_3_2016`)",
+    "url": "https://ndownloader.figshare.com/files/34303127",
+    "version": "4713d8b73b667a2c375b89c20f531fc0"
   },
   "evidence": {
-    "gh_repo_age": {
-      "median_slope_days_per_day": 0.9999,
-      "method": "per-project OLS slope of gh_repo_age on days since epoch of gh_build_started_at (Java projects with >= 20 builds)",
-      "p10_slope": 0.9952,
-      "p90_slope": 1.0009,
-      "projects": 215
+    "duplicate_job_rows": {
+      "builds_without_a_listed_row": 78,
+      "distinct_job_ids": 234391,
+      "duplicated_ids_listed_on_exactly_one_row": 16520,
+      "duplicated_ids_listed_on_no_row": 43,
+      "job_ids_in_more_than_one_build": 16563,
+      "job_ids_on_more_than_one_row": 16563,
+      "method": "Java job rows grouped by tr_job_id; 'listed' = the job id appears in the row's own tr_jobs",
+      "rows": 256055,
+      "rows_listed_in_own_build": 234184,
+      "rows_of_duplicated_ids": 38227
     },
-    "gh_repo_num_commits": {
-      "master_push_builds": {
-        "method": "same, restricted to non-PR builds on git_branch = 'master'",
-        "non_decreasing_share": 0.9897,
-        "pairs": 103372,
-        "strictly_increasing_share": 0.9682
-      },
-      "method": "share of consecutive builds of a project (ordered by gh_build_started_at) whose value does not decrease",
-      "non_decreasing_share": 0.8933,
-      "pairs": 200320,
-      "positive_time_slope_projects": 215,
-      "projects": 241,
-      "projects_with_more_than_one_value": 240,
-      "slope_projects": 215
+    "file_count_definition": {
+      "builds_measured": 128819,
+      "categorised_eq_touched": 103234,
+      "categorised_le_touched": 122599,
+      "method": "Java builds: src + doc + other files vs files added + deleted + modified (repository-wide counts would usually exceed the touched files)"
+    },
+    "gh_first_commit_created_at": {
+      "equal_to_started_at_in_europe_london": 256015,
+      "method": "Java job rows: gh_first_commit_created_at compared with tr_started_at",
+      "offset_0h": 93521,
+      "offset_plus_1h": 162526,
+      "offset_plus_2h": 8,
+      "projects": 402,
+      "projects_with_a_single_value": 0,
+      "rows": 256055
+    },
+    "git_commits": {
+      "git_commits_contains_git_commit": 0,
+      "method": "Java job rows",
+      "min_git_num_commits": 1,
+      "num_commits_equals_entries": 256055,
+      "rows_measured": 256055
+    },
+    "git_num_committers": {
+      "at_most_num_commits_plus_1": 256053,
+      "equal_to_1": 236494,
+      "method": "Java job rows with both values",
+      "rows_measured": 256053
+    },
+    "tests_added_definition": {
+      "builds_measured": 128819,
+      "builds_with_test_churn": 37758,
+      "method": "Java builds: if gh_tests_added/deleted were lines of test code, test churn > 0 would imply tests added or deleted > 0, and tests added could not exceed churn",
+      "tests_added_greater_than_test_churn": 912,
+      "with_test_churn_but_no_tests_added_or_deleted": 28151
     }
   },
-  "generator": "rl_pipeline.dictionary (python -m rl_pipeline build_data_dictionary)",
+  "generator": "rl_pipeline.dictionary (python -m rl_pipeline build_data_dictionary --dataset travistorrent-5-3-2016)",
   "invariants": {
-    "pr_created_after_build_start": {
-      "max_hours_after": 6913.9714,
-      "pr_builds": 21641,
-      "rule": "gh_pr_created_at <= gh_build_started_at (a PR build needs an open PR)",
-      "violations": 12
+    "build_columns_constant": {
+      "note": "varying: tr_build_number, git_num_committers, tr_num_jobs (at most 8,943 builds)",
+      "of": 40,
+      "of_label": "build-grain columns",
+      "rule": "build-grain columns are constant within a build",
+      "violations": 3
+    },
+    "ci_latency_non_negative": {
+      "note": "minimum -58865485 s",
+      "of": 128819,
+      "of_label": "builds with a value",
+      "rule": "tr_ci_latency >= 0 unless it is the -1 placeholder",
+      "violations": 13011
+    },
+    "ci_latency_placeholder": {
+      "note": "",
+      "of": 128819,
+      "of_label": "builds with a value",
+      "rule": "tr_ci_latency is not the -1 placeholder",
+      "violations": 6756
+    },
+    "first_commit_before_start": {
+      "note": "every violation is an exact +1 h / +2 h offset (see evidence)",
+      "of": 128819,
+      "of_label": "builds",
+      "rule": "gh_first_commit_created_at <= tr_started_at (the first commit precedes the build)",
+      "violations": 77902
+    },
+    "job_id_unique": {
+      "note": "extra rows beyond one per distinct tr_job_id (see evidence: duplicate job rows)",
+      "of": 256055,
+      "of_label": "job rows",
+      "rule": "tr_job_id is unique across job rows",
+      "violations": 21664
+    },
+    "job_listed_in_own_build": {
+      "note": "",
+      "of": 256055,
+      "of_label": "job rows",
+      "rule": "tr_job_id is one of its build's tr_jobs",
+      "violations": 21871
+    },
+    "num_jobs_matches_list": {
+      "note": "",
+      "of": 256053,
+      "of_label": "job rows with both values",
+      "rule": "tr_num_jobs = length of tr_jobs",
+      "violations": 0
     },
     "prev_build_not_earlier": {
-      "builds_with_prev": 157147,
+      "note": "order history by tr_started_at with the finished-before rule, not by this link",
+      "of": 225087,
+      "of_label": "job rows with tr_prev_build > 0",
       "rule": "tr_prev_build < tr_build_id (the previous build was created earlier)",
+      "violations": 81249
+    },
+    "prev_build_other_non_positive": {
+      "note": "",
+      "of": 256053,
+      "of_label": "job rows with a value",
+      "rule": "tr_prev_build is > 0 unless it is the -1 placeholder",
       "violations": 0
+    },
+    "prev_build_placeholder": {
+      "note": "",
+      "of": 256053,
+      "of_label": "job rows with a value",
+      "rule": "tr_prev_build is a build id (not the -1 placeholder)",
+      "violations": 30966
+    },
+    "test_counts_non_negative": {
+      "note": "minimum -15",
+      "of": 157820,
+      "of_label": "job rows with a test count",
+      "rule": "tr_tests_ok / _fail / _run / _skipped >= 0",
+      "violations": 17
     }
   },
+  "json_name": "data_dictionary.json",
   "measurement": {
-    "build_grain": "one row per tr_build_id (the job row with the lowest tr_job_id)",
+    "build_grain": "one row per tr_build_id: a job row whose tr_job_id is listed in the build's own tr_jobs first, then the lowest (tr_job_id, row)",
     "distinct_count": "exact count(DISTINCT), NULL excluded",
-    "job_grain": "every job row",
-    "null_definition": "SQL NULL after conversion (raw empty field or the 'NA' token)",
+    "job_grain": "every job row (raw is not deduplicated)",
+    "null_definition": "SQL NULL after conversion (raw empty field, the 'NA' token, or a value that failed its strict cast — see Cast failures)",
     "source_files": [
-      "lang=go/part-00000.parquet",
       "lang=java/part-00000.parquet",
-      "lang=python/part-00000.parquet",
       "lang=ruby/part-00000.parquet"
     ],
     "subset": "gh_lang = 'java'"
@@ -1612,79 +1703,79 @@
   "spec_name_map": [
     {
       "availability": "pre_build",
-      "column": "git_diff_src_churn",
+      "column": "gh_src_churn",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_src_churn"
     },
     {
       "availability": "pre_build",
-      "column": "git_diff_test_churn",
+      "column": "gh_test_churn",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_test_churn"
     },
     {
       "availability": "pre_build",
-      "column": "gh_diff_files_added",
+      "column": "gh_files_added",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_files_added"
     },
     {
       "availability": "pre_build",
-      "column": "gh_diff_files_deleted",
+      "column": "gh_files_deleted",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_files_deleted"
     },
     {
       "availability": "pre_build",
-      "column": "gh_diff_files_modified",
+      "column": "gh_files_modified",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_files_modified"
     },
     {
       "availability": "pre_build",
-      "column": "gh_diff_tests_added",
+      "column": "gh_tests_added",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_tests_added"
     },
     {
       "availability": "pre_build",
-      "column": "gh_diff_tests_deleted",
+      "column": "gh_tests_deleted",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_tests_deleted"
     },
     {
       "availability": "pre_build",
-      "column": "gh_diff_src_files",
+      "column": "gh_src_files",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_src_files"
     },
     {
       "availability": "pre_build",
-      "column": "gh_diff_doc_files",
+      "column": "gh_doc_files",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_doc_files"
     },
     {
       "availability": "pre_build",
-      "column": "gh_diff_other_files",
+      "column": "gh_other_files",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_other_files"
     },
     {
       "availability": "pre_build",
-      "column": "gh_num_commits_on_files_touched",
+      "column": "gh_commits_on_files_touched",
       "present_in_header": true,
-      "renamed": true,
+      "renamed": false,
       "spec_name": "gh_commits_on_files_touched"
     },
     {
@@ -1730,26 +1821,40 @@
       "spec_name": "gh_by_core_team_member"
     },
     {
-      "availability": "pre_build",
-      "column": "gh_num_commits_in_push",
-      "present_in_header": true,
-      "renamed": false,
-      "spec_name": "gh_num_commits_in_push"
-    },
-    {
-      "availability": "pre_build",
+      "availability": "uncertain",
       "column": "gh_description_complexity",
       "present_in_header": true,
       "renamed": false,
       "spec_name": "gh_description_complexity"
+    },
+    {
+      "availability": "pre_build",
+      "column": "tr_started_at",
+      "present_in_header": true,
+      "renamed": false,
+      "spec_name": "tr_started_at"
+    },
+    {
+      "availability": "pre_build",
+      "column": "tr_prev_build",
+      "present_in_header": true,
+      "renamed": false,
+      "spec_name": "tr_prev_build"
     }
   ],
-  "title": "TravisTorrent (Figshare final-2017-01-25) data dictionary",
-  "undocumented_columns": [
-    "gh_repo_age",
-    "gh_repo_num_commits",
-    "tr_log_num_test_suites_run",
-    "tr_log_num_test_suites_ok",
-    "tr_log_num_test_suites_failed"
-  ]
+  "title": "TravisTorrent (Figshare `travistorrent_5_3_2016`) data dictionary",
+  "undocumented_columns": [],
+  "utc_crosscheck": {
+    "archive": "travistorrent-java-ci-build-dataset-master",
+    "archive_files": 19,
+    "archive_rows": 64736,
+    "archive_rows_with_explicit_utc": 64628,
+    "duration_equal": 7315,
+    "joined_java_builds": 7317,
+    "joined_projects": 7,
+    "started_at_column": "tr_started_at",
+    "started_at_equal": 7317,
+    "started_at_off_by_1h_or_2h": 0,
+    "status_equal": 7317
+  }
 }
