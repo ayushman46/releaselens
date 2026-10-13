@@ -4,28 +4,39 @@
 > `DECISIONS.md`, `BLOCKERS.md`, `git log --oneline -20`; run `make check` to confirm the real
 > state; continue from **Next step**. Tests beat this file if they disagree.
 
-## Current state (2026-10-13, after integrating all parallel branches)
+## Current state (2026-10-13 ~09:10 UTC, M12 in progress)
 
-- **main = `290f861`**, which includes M0–M4, M6–M10, the M5 GitHub Action and M11a.
-- **Verified on merged main:**
-  - ruff and format clean; mypy clean on 199 files; bandit clean repo-wide.
-  - 874 unit tests pass.
-  - Integration suites pass per branch at merge time (446 for M7+M10).
-- **Model:** champion `release_risk_ci/3`, XGBoost, registered in MLflow. MLflow ran as a host
-  process during M4; the compose `mlflow` service exists.
-  - Test PR-AUC 0.811, ROC-AUC 0.881, against a 0.279 base rate.
-  - Most of the signal is persistence: after a passing build, PR-AUC is 0.320 against a 0.122
-    base rate.
-  - See `docs/ml/RESULTS.md` and `docs/ml/MODEL_CARD.md`.
+- **main = `5cc6bc2`** (pushed). M0–M11 done; M5 and M11 completed after the parallel merge.
+- **Verified on main at `5cc6bc2`:**
+  - ruff, format and mypy clean.
+  - API suite: 497 passed (unit + integration).
+  - Worker suite: 119 passed. One SIGTERM offset assertion was racy under full-suite load; it
+    was fixed to check its own message's partition, then passed 3 of 3 runs.
+  - rl_db suite: 78 passed, including the 5 new RLS tests.
+  - 544 non-integration API, worker and core tests pass.
+- **Live demo, payment scenario (06:06 UTC):** REGRESSED HIGH, probable origin payment (HIGH);
+  see `docs/demo/DEMO_SCRIPT.md`.
+- **M12 done so far:**
+  - MLflow OOM fix: one worker, no job runner, 768 MiB.
+  - Model-loader retries are bounded and can no longer die.
+  - Webhook-delivery purge in housekeeping.
+  - **Postgres RLS (ADR-0023, Q13 resolved).**
+  - Analysis jobs get their own DB timeout, and job timeouts are labelled correctly (seen
+    live).
+  - k6 scripts in `bench/`.
+- **Discarded run:** the control run at 08:12 UTC was discarded, because I ran testcontainers
+  suites in the same 2-CPU VM during its post window. Every service slowed at once, giving
+  REGRESSED with no single origin (LOW confidence). It must be re-run with the VM otherwise
+  idle.
 - **Next steps:**
-  1. M5: the risk endpoint serving the champion, `ci_runs` history, GitHub App webhooks and
-     Check Runs (fixture-tested), and the offline/online parity test on historical builds.
-  2. M11: wire the pages to the real APIs (auth, deployments, regressions, services, map,
-     analytics findings.json, model).
-  3. Rebuild images and run `demo/scenarios/run_demo.sh` for real (payment, fraud, control).
-  4. M12: k6 benchmarks, Trivy image scans, RLS, README, DEMO_SCRIPT, DONE.md.
-- **Disk:** host ≈ 4 GiB free. Only `rlens`-labelled images and our own build cache may be
-  pruned.
+  1. Rebuild `rlens/python:dev` at HEAD.
+  2. Restart the core stack (migration 0007 applies).
+  3. Re-run the control, then fraud, live scenarios with nothing else in the VM.
+  4. Run the k6 benchmarks (`bench/run_benchmarks.sh`) and write `docs/benchmarks/README.md`.
+  5. Accessibility check of the web app, final README, `DONE.md`.
+- **Disk:** the VM hit 100% during a rebuild (09:00). It was recovered by removing only my own
+  build-cache records (`docker buildx prune -a --filter id=…`) and our unused
+  `rlens/airflow:dev` image (rebuildable). Host ≈ 5.8 GiB free.
 
 ## Verification commands (current)
 

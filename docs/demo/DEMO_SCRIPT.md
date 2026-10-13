@@ -37,3 +37,44 @@ demo org, or sign up and use the org the script printed.
 | Evidence | self-time p95 104 → 352 ms (+239%); own error rate 0.00% → 4.50% (p = 1.8e-23); fraud healthy |
 | Blast radius | orders, gateway AFFECTED_UPSTREAM; fraud HEALTHY_DOWNSTREAM; inventory not in radius |
 | Raw result | `demo/scenarios/out/20261013T060603Z-payment.analysis.json` (git-ignored, regenerate with the script) |
+
+## Measured control run (2026-10-13, `SCENARIO=control`)
+
+`payment` is redeployed **v1 → v1**: the same code, so nothing may alarm.
+
+| Item | Value |
+|---|---|
+| Deployment | payment v1 → v1 at 13:54:27 UTC, env `demo`, commit `5cc6bc2` (RLS on) |
+| Traffic | k6 at 20 req/s for 21 min (baseline 11 min); about 90–99k spans per analysis window |
+| early_5m / early_10m / final | **HEALTHY / HEALTHY / HEALTHY**, severity 0.0, no probable origin; all five services HEALTHY in every look |
+| Jobs | 3 of 3 succeeded on the first attempt |
+| Verdict stored after deploy | +309 s, +616 s and +908 s (scheduled +300, +600 and +900 s, so 9, 16 and 8 s to compute) |
+| Raw result | `demo/scenarios/out/20261013T134214Z-control.analysis.json` (git-ignored) |
+
+A first control attempt at 08:12 UTC was **discarded**. I ran testcontainers test suites in the
+same 2-CPU VM during its post window, which slowed every service at once. The engine reported
+REGRESSED, but named no single probable origin (LOW confidence, all five services as
+candidates). That is the honest answer for a fleet-wide slowdown, but it is not a valid
+control. The rule is now that nothing else runs in the VM during a live run.
+
+**Pre-deploy risk call in the same run:** 88/100 HIGH from `release_risk_ci_cold/1` (no CI
+history in the demo org). The demo feeds the extractor this repository's own HEAD, and this is
+a Python repository scored by a Java-trained model. SHAP named "codebase size lower than in
+any build in the training data" (`sloc = 0`) as the top driver, so the score was an
+out-of-domain artefact. The extractor now reports `sloc` as unknown, with a warning, when the
+repository has no source in the model's language. Treat the demo's risk number as an
+illustration of the API, not as an assessment of this repository.
+
+## Measured fraud run (2026-10-13, `SCENARIO=fraud`)
+
+`fraud` v1 → v2 adds +250 ms in fraud's own code path. Payment's code is unchanged, but it
+calls fraud, so its latency rises too. The engine must blame fraud, not payment.
+
+| Item | Value |
+|---|---|
+| Deployment | fraud v1 → v2 at 14:21:42 UTC, env `demo`, commit `5cc6bc2` |
+| early_5m / early_10m / final | REGRESSED HIGH in all three (severity 46.6 / 46.7 / 46.7); probable origin **fraud**, HIGH confidence in all three |
+| Triage | fraud score 10, next best payment 2 (margin 8). Reasons: fraud was the deployed service; its own self-time p95 went 62 → 312 ms (+405%); it has no downstream dependencies; payment, orders and gateway degraded upstream, consistent with propagation |
+| Blast radius | payment (depth 1), orders (2), gateway (3): AFFECTED_UPSTREAM; inventory not in the radius |
+| Jobs | 3 of 3 succeeded on the first attempt; verdicts stored at +377 s, +613 s and +909 s |
+| Raw result | `demo/scenarios/out/20261013T141000Z-fraud.analysis.json` (git-ignored) |
