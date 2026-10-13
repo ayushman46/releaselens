@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rl_core.ids import uuid7
 from rl_core.tenancy import TenantContext
 from rl_db.models.outbox import MAX_KEY_LEN, MAX_TOPIC_LEN, RESERVED_HEADERS, OutboxEvent
-from rl_db.repositories._tenancy import require_tenant
+from rl_db.repositories._tenancy import require_tenant, tenant_scoped
 
 # Payload, key and headers together stay well under Kafka's default 1 MB message limit. A
 # row too large to publish would fail on every relay round, so it is refused at write time.
@@ -24,6 +24,7 @@ MAX_HEADERS_BYTES = 16 * 1024
 _TOPIC_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
+@tenant_scoped
 async def add_outbox_event(
     session: AsyncSession,
     ctx: TenantContext,

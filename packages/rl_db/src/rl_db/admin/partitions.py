@@ -26,6 +26,8 @@ from typing import Final
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 
+from rl_db.repositories._tenancy import cross_tenant
+
 PARENT_TABLE: Final = "spans"
 _PARTITION_RE: Final = re.compile(r"^spans_p(\d{8})$")
 # pg_advisory_xact_lock(int4, int4) key: (namespace, object). Namespace 0x524C ("RL").
@@ -69,6 +71,7 @@ def _bounds(day: date) -> tuple[str, str]:
     return start.isoformat(), (start + timedelta(days=1)).isoformat()
 
 
+@cross_tenant
 async def list_partitions(executor: Executor) -> list[date]:
     """Days that have a partition, oldest first (other children of ``spans`` are ignored)."""
     rows = await executor.execute(
@@ -86,6 +89,7 @@ async def list_partitions(executor: Executor) -> list[date]:
     return sorted(days)
 
 
+@cross_tenant
 async def ensure_partitions_for_days(executor: Executor, days: Iterable[date]) -> list[date]:
     """Create the partitions of ``days`` that do not exist yet. Returns the days created."""
     wanted = sorted(set(days))
@@ -112,6 +116,7 @@ async def ensure_partitions_for_days(executor: Executor, days: Iterable[date]) -
     return created
 
 
+@cross_tenant
 async def ensure_partitions(
     executor: Executor, *, days_ahead: int = 2, today: date | None = None
 ) -> list[date]:
@@ -124,6 +129,7 @@ async def ensure_partitions(
     )
 
 
+@cross_tenant
 async def drop_partitions_older_than(
     executor: Executor, days: int, *, now: datetime | None = None
 ) -> list[date]:

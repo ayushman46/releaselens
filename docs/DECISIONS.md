@@ -539,3 +539,37 @@ and mark the old one superseded.
   (ROC-AUC 0.712) and say so (`cold_start: true`). Workflow-level CI runs differ from
   TravisTorrent's per-push builds; the feature-fidelity measurement is still open.
 
+
+## ADR-0023 — Row-level security by role switch (M12, closes Q13)
+
+- **Context.** ADR-0010 item 3 promised Postgres RLS as a second guard behind the
+  tenant-scoped repositories. Two facts shaped the design. First, the compose and test
+  databases connect as a superuser, and superusers bypass RLS even with `FORCE`. Second, a
+  second set of login credentials would be one more secret to provision for every environment.
+- **Decision.**
+  - Migration `0007_row_level_security` creates a **NOLOGIN, non-superuser, non-owner role
+    `rl_tenant`**, grants it DML on the schema (plus default privileges for future tables), and
+    lets the connecting role switch to it. It enables RLS on the 21 tables with a non-null
+    `tenant_id`, each with a `tenant_isolation` policy:
+    `tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid`, for both `USING`
+    and `WITH CHECK`. With no tenant bound, `rl_tenant` sees no rows.
+  - Every tenant-scoped repository function is decorated with `@tenant_scoped`. Before it runs,
+    it executes
+    `set_config('role', 'rl_tenant', true), set_config('app.tenant_id', <ctx>, true)` in one
+    round trip, so the rest of the transaction is filtered by Postgres even if a query forgets
+    `WHERE tenant_id`.
+  - Every `rl_db.admin` function (cross-tenant by design: auth lookups, job claiming, outbox
+    relay, retention, partitions) is decorated with `@cross_tenant`. It switches a bound
+    transaction back to the connecting role, and costs nothing when the transaction was never
+    bound. Admin and tenant calls can therefore share a transaction in either order.
+  - Tables whose `tenant_id` is nullable by design (`webhook_deliveries`, `stripe_events`,
+    `audit_log`) stay admin-only, with no policy.
+  - `test_rls.py` fails if any later table with a `tenant_id` column lacks RLS and the policy.
+- **Consequences.**
+  - Each tenant-scoped repository call costs one extra round trip, a `SELECT set_config`
+    (sub-millisecond on the same host).
+  - Raw SQL that runs after a tenant call in the same transaction is filtered to that tenant.
+    Two existing tests relied on unfiltered reads and were moved into fresh transactions.
+  - The guard covers repository code. Admin code is trusted by construction and kept in one
+    module, as ADR-0010 intends.
+  - Span partitions are reached only through the RLS-protected parent table.

@@ -17,12 +17,14 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_db.models.github import MAX_GITHUB_LOGIN_LEN, GithubInstallation, WebhookDelivery
+from rl_db.repositories._tenancy import cross_tenant
 
 
 class InstallationLinkedElsewhereError(ValueError):
     """The installation already belongs to another organization."""
 
 
+@cross_tenant
 async def record_delivery(
     session: AsyncSession, *, delivery_id: str, event: str, installation_id: int | None
 ) -> bool:
@@ -36,6 +38,7 @@ async def record_delivery(
     return (await session.execute(stmt)).scalar_one_or_none() is not None
 
 
+@cross_tenant
 async def set_delivery_outcome(
     session: AsyncSession, delivery_id: str, *, outcome: str, tenant_id: uuid.UUID | None
 ) -> None:
@@ -46,6 +49,7 @@ async def set_delivery_outcome(
     )
 
 
+@cross_tenant
 async def delete_old_deliveries(session: AsyncSession, *, older_than: timedelta) -> int:
     """Retention: GitHub redelivers for days at most, so old ids are no longer needed."""
     cutoff = datetime.now(UTC) - older_than
@@ -55,6 +59,7 @@ async def delete_old_deliveries(session: AsyncSession, *, older_than: timedelta)
     return int(getattr(result, "rowcount", 0) or 0)
 
 
+@cross_tenant
 async def find_installation(
     session: AsyncSession, installation_id: int
 ) -> GithubInstallation | None:
@@ -62,6 +67,7 @@ async def find_installation(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@cross_tenant
 async def link_installation(
     session: AsyncSession, *, installation_id: int, tenant_id: uuid.UUID, account_login: str
 ) -> GithubInstallation:
@@ -89,6 +95,7 @@ async def link_installation(
     return row
 
 
+@cross_tenant
 async def set_installation_suspended(
     session: AsyncSession, installation_id: int, *, suspended_at: datetime | None
 ) -> bool:

@@ -50,7 +50,7 @@ from rl_core.telemetry.rollup import (
     minute_rollups,
 )
 from rl_core.tenancy import TenantContext
-from rl_db.repositories._tenancy import require_tenant
+from rl_db.repositories._tenancy import require_tenant, tenant_scoped
 
 # Parent and child spans further apart than this are not linked into an edge. It bounds the
 # trace-view query to a few daily partitions instead of all of them.
@@ -172,6 +172,7 @@ def _dedupe(spans: Sequence[Span]) -> list[Span]:
     return out
 
 
+@tenant_scoped
 async def insert_spans(
     session: AsyncSession, ctx: TenantContext, spans: Sequence[Span]
 ) -> list[Span]:
@@ -211,6 +212,7 @@ def tenant_lock_key(tenant_id: uuid.UUID) -> int:
     return value - 2**32 if value >= 2**31 else value
 
 
+@tenant_scoped
 async def lock_edge_derivation(session: AsyncSession, ctx: TenantContext) -> None:
     """Serialise edge derivation of this tenant until the transaction ends."""
     await session.execute(
@@ -219,6 +221,7 @@ async def lock_edge_derivation(session: AsyncSession, ctx: TenantContext) -> Non
     )
 
 
+@tenant_scoped
 async def load_trace_view(
     session: AsyncSession, ctx: TenantContext, spans: Sequence[Span]
 ) -> list[StoredSpanRef]:
@@ -244,6 +247,7 @@ async def load_trace_view(
     ]
 
 
+@tenant_scoped
 async def add_edge_calls(
     session: AsyncSession, ctx: TenantContext, increments: Mapping[EdgeKey, EdgeIncrement]
 ) -> None:
@@ -263,6 +267,7 @@ async def add_edge_calls(
     )
 
 
+@tenant_scoped
 async def add_minute_rollups(
     session: AsyncSession, ctx: TenantContext, rollups: Mapping[RollupKey, MinuteRollup]
 ) -> None:
@@ -284,6 +289,7 @@ async def add_minute_rollups(
     )
 
 
+@tenant_scoped
 async def fold_new_spans(
     session: AsyncSession, ctx: TenantContext, new: Sequence[Span]
 ) -> tuple[dict[EdgeKey, EdgeIncrement], dict[RollupKey, MinuteRollup]]:
@@ -304,6 +310,7 @@ async def fold_new_spans(
     return edges, rollups
 
 
+@tenant_scoped
 async def record_spans(
     session: AsyncSession, ctx: TenantContext, spans: Sequence[Span]
 ) -> SpanWriteResult:

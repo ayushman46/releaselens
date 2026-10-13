@@ -15,8 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rl_core.ids import uuid7
 from rl_db.models.billing import StripeEvent, Subscription
 from rl_db.models.identity import Organization, Plan
+from rl_db.repositories._tenancy import cross_tenant
 
 
+@cross_tenant
 async def record_stripe_event(
     session: AsyncSession, *, event_id: str, event_type: str, created_at: datetime
 ) -> bool:
@@ -30,17 +32,20 @@ async def record_stripe_event(
     return (await session.execute(stmt)).scalar_one_or_none() is not None
 
 
+@cross_tenant
 async def tag_stripe_event(session: AsyncSession, event_id: str, tenant_id: uuid.UUID) -> None:
     await session.execute(
         update(StripeEvent).where(StripeEvent.id == event_id).values(tenant_id=tenant_id)
     )
 
 
+@cross_tenant
 async def organization_exists(session: AsyncSession, tenant_id: uuid.UUID) -> bool:
     stmt = select(Organization.id).where(Organization.id == tenant_id)
     return (await session.execute(stmt)).scalar_one_or_none() is not None
 
 
+@cross_tenant
 async def find_subscription(
     session: AsyncSession,
     *,
@@ -77,6 +82,7 @@ class SubscriptionState:
     event_at: datetime
 
 
+@cross_tenant
 async def apply_subscription_state(session: AsyncSession, state: SubscriptionState) -> bool:
     """Upsert the tenant's subscription and set ``organizations.plan``, unless a newer event
     was already applied (Stripe does not guarantee delivery order). Returns True if applied.
@@ -119,6 +125,7 @@ async def apply_subscription_state(session: AsyncSession, state: SubscriptionSta
     return True
 
 
+@cross_tenant
 async def mark_payment_failed(
     session: AsyncSession, subscription: Subscription, *, at: datetime
 ) -> None:

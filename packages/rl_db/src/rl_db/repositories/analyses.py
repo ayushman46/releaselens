@@ -32,6 +32,7 @@ from rl_core.tenancy import TenantContext
 from rl_db.models.analyses import RegressionAnalysisRecord
 from rl_db.models.deployments import Deployment
 from rl_db.models.jobs import JobKind
+from rl_db.repositories._tenancy import tenant_scoped
 
 LOAD_TAIL_MARGIN: Final = timedelta(minutes=2)
 SAMPLE_METHOD: Final = "trace_id_md5_32"
@@ -86,6 +87,7 @@ def sample_threshold(matched: int, max_spans: int) -> int | None:
     return max(1, math.floor(max_spans / matched * 2**32))
 
 
+@tenant_scoped
 async def load_analysis_spans(
     session: AsyncSession,
     ctx: TenantContext,
@@ -148,6 +150,7 @@ class AnalysisWrite:
     sampling: dict[str, Any]
 
 
+@tenant_scoped
 async def upsert_analysis(
     session: AsyncSession, ctx: TenantContext, row: AnalysisWrite
 ) -> uuid.UUID:
@@ -181,6 +184,7 @@ async def upsert_analysis(
     return (await session.execute(stmt)).scalar_one()
 
 
+@tenant_scoped
 async def list_analyses(
     session: AsyncSession, ctx: TenantContext, deployment_id: uuid.UUID
 ) -> list[RegressionAnalysisRecord]:
@@ -196,6 +200,7 @@ async def list_analyses(
     return list((await session.execute(stmt)).scalars())
 
 
+@tenant_scoped
 async def latest_analysis_windows(
     session: AsyncSession, ctx: TenantContext, deployment_id: uuid.UUID
 ) -> Row[Any] | None:
@@ -233,6 +238,7 @@ def _latest_per_deployment(ctx: TenantContext) -> Any:
     )
 
 
+@tenant_scoped
 async def list_regressions(
     session: AsyncSession,
     ctx: TenantContext,
@@ -288,6 +294,7 @@ async def list_regressions(
     return (await session.execute(stmt)).all()
 
 
+@tenant_scoped
 async def latest_environment_analysis(
     session: AsyncSession, ctx: TenantContext, environment: str
 ) -> RegressionAnalysisRecord | None:

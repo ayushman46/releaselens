@@ -13,9 +13,10 @@ from rl_core.ids import uuid7
 from rl_core.tenancy import TenantContext
 from rl_db.admin.accounts import normalize_email
 from rl_db.models.identity import Invitation, Membership, Organization, Role, User
-from rl_db.repositories._tenancy import require_tenant
+from rl_db.repositories._tenancy import require_tenant, tenant_scoped
 
 
+@tenant_scoped
 async def get_organization(
     session: AsyncSession, ctx: TenantContext, *, for_update: bool = False
 ) -> Organization | None:
@@ -27,12 +28,14 @@ async def get_organization(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def rename_organization(session: AsyncSession, ctx: TenantContext, name: str) -> None:
     await session.execute(
         update(Organization).where(Organization.id == ctx.tenant_id).values(name=name)
     )
 
 
+@tenant_scoped
 async def delete_organization(session: AsyncSession, ctx: TenantContext) -> bool:
     """Delete the tenant and, through ``ON DELETE CASCADE``, everything it owns. The audit
     log is kept on purpose (it has no foreign key to organizations)."""
@@ -52,6 +55,7 @@ class MemberRow:
     joined_at: datetime
 
 
+@tenant_scoped
 async def add_member(
     session: AsyncSession, ctx: TenantContext, *, user_id: uuid.UUID, role: Role
 ) -> None:
@@ -59,6 +63,7 @@ async def add_member(
     await session.flush()
 
 
+@tenant_scoped
 async def list_members(session: AsyncSession, ctx: TenantContext) -> list[MemberRow]:
     stmt = (
         select(User.id, User.email, User.display_name, Membership.role, Membership.created_at)
@@ -78,6 +83,7 @@ async def list_members(session: AsyncSession, ctx: TenantContext) -> list[Member
     ]
 
 
+@tenant_scoped
 async def get_member_role(
     session: AsyncSession, ctx: TenantContext, user_id: uuid.UUID
 ) -> Role | None:
@@ -88,6 +94,7 @@ async def get_member_role(
     return Role(role) if role is not None else None
 
 
+@tenant_scoped
 async def count_owners(session: AsyncSession, ctx: TenantContext) -> int:
     stmt = select(func.count()).where(
         Membership.tenant_id == ctx.tenant_id, Membership.role == Role.OWNER
@@ -95,6 +102,7 @@ async def count_owners(session: AsyncSession, ctx: TenantContext) -> int:
     return int((await session.execute(stmt)).scalar_one())
 
 
+@tenant_scoped
 async def set_member_role(
     session: AsyncSession, ctx: TenantContext, user_id: uuid.UUID, role: Role
 ) -> bool:
@@ -106,6 +114,7 @@ async def set_member_role(
     return bool(getattr(result, "rowcount", 0))
 
 
+@tenant_scoped
 async def remove_member(session: AsyncSession, ctx: TenantContext, user_id: uuid.UUID) -> bool:
     result = await session.execute(
         delete(Membership).where(
@@ -115,6 +124,7 @@ async def remove_member(session: AsyncSession, ctx: TenantContext, user_id: uuid
     return bool(getattr(result, "rowcount", 0))
 
 
+@tenant_scoped
 async def is_member_email(session: AsyncSession, ctx: TenantContext, email: str) -> bool:
     stmt = (
         select(func.count())
@@ -130,6 +140,7 @@ async def is_member_email(session: AsyncSession, ctx: TenantContext, email: str)
 # ----------------------------------------------------------------------------- invitations
 
 
+@tenant_scoped
 async def create_invitation(
     session: AsyncSession,
     ctx: TenantContext,
@@ -168,6 +179,7 @@ async def create_invitation(
     return row
 
 
+@tenant_scoped
 async def list_pending_invitations(
     session: AsyncSession, ctx: TenantContext, *, now: datetime
 ) -> list[Invitation]:
@@ -184,6 +196,7 @@ async def list_pending_invitations(
     return list((await session.execute(stmt)).scalars())
 
 
+@tenant_scoped
 async def revoke_invitation(
     session: AsyncSession, ctx: TenantContext, invitation_id: uuid.UUID, *, now: datetime
 ) -> Invitation | None:
@@ -201,6 +214,7 @@ async def revoke_invitation(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def mark_invitation_accepted(
     session: AsyncSession,
     ctx: TenantContext,

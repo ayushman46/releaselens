@@ -23,6 +23,7 @@ from sqlalchemy import delete, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_db.models.billing import RateLimitBucket
+from rl_db.repositories._tenancy import cross_tenant
 
 MAX_BUCKET_KEY_LEN = 255
 
@@ -54,6 +55,7 @@ class RateDecision:
     retry_after_s: int  # 0 when allowed
 
 
+@cross_tenant
 async def take_token(
     session: AsyncSession, key: str, *, capacity: int, refill_per_s: float
 ) -> RateDecision:
@@ -75,6 +77,7 @@ async def take_token(
     return RateDecision(allowed=False, remaining=0, retry_after_s=max(1, math.ceil(wait)))
 
 
+@cross_tenant
 async def delete_idle_buckets(session: AsyncSession, *, idle_for: timedelta) -> int:
     """Drop buckets untouched for ``idle_for`` (they would be full again anyway)."""
     result = await session.execute(

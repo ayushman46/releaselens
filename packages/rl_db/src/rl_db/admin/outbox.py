@@ -21,6 +21,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_db.models.outbox import OutboxEvent
+from rl_db.repositories._tenancy import cross_tenant
 
 MAX_ERROR_LEN = 2000
 
@@ -36,6 +37,7 @@ class PendingOutboxEvent:
     attempts: int
 
 
+@cross_tenant
 async def claim_unpublished(session: AsyncSession, *, limit: int) -> list[PendingOutboxEvent]:
     """Lock and return the oldest unpublished rows that are due (UUIDv7 ids are
     time-ordered). Rows waiting out a retry backoff are skipped.
@@ -71,6 +73,7 @@ async def claim_unpublished(session: AsyncSession, *, limit: int) -> list[Pendin
     ]
 
 
+@cross_tenant
 async def mark_published(session: AsyncSession, ids: Sequence[uuid.UUID]) -> int:
     if not ids:
         return 0
@@ -83,6 +86,7 @@ async def mark_published(session: AsyncSession, ids: Sequence[uuid.UUID]) -> int
     return int(getattr(result, "rowcount", 0))
 
 
+@cross_tenant
 async def mark_failed(
     session: AsyncSession,
     row_id: uuid.UUID,

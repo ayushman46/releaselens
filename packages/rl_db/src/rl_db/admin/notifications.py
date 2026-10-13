@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_core.tenancy import Principal, TenantContext
 from rl_db.models.alerts import NotificationLog, NotificationStatus
+from rl_db.repositories._tenancy import cross_tenant
 
 MAX_ERROR_LEN = 2000
 
@@ -39,6 +40,7 @@ class ClaimedNotification:
         return TenantContext(tenant_id=self.tenant_id, principal=Principal.SYSTEM)
 
 
+@cross_tenant
 async def claim_due_notifications(
     session: AsyncSession, *, worker_id: str, limit: int, lease: timedelta
 ) -> list[ClaimedNotification]:
@@ -115,6 +117,7 @@ def _owned(row_id: uuid.UUID, worker_id: str) -> Any:
     )
 
 
+@cross_tenant
 async def mark_sent(session: AsyncSession, row_id: uuid.UUID, worker_id: str) -> bool:
     result = await session.execute(
         update(NotificationLog)
@@ -131,6 +134,7 @@ async def mark_sent(session: AsyncSession, row_id: uuid.UUID, worker_id: str) ->
     return bool(getattr(result, "rowcount", 0))
 
 
+@cross_tenant
 async def mark_failed(
     session: AsyncSession,
     row_id: uuid.UUID,
@@ -167,6 +171,7 @@ async def mark_failed(
     return str(status) if status is not None else None
 
 
+@cross_tenant
 async def mark_skipped(
     session: AsyncSession, row_id: uuid.UUID, worker_id: str, *, reason: str
 ) -> bool:
@@ -184,6 +189,7 @@ async def mark_skipped(
     return bool(getattr(result, "rowcount", 0))
 
 
+@cross_tenant
 async def reap_expired_leases(session: AsyncSession, *, lease: timedelta) -> int:
     """Mark ``dead`` the rows whose last allowed attempt crashed its dispatcher (claiming
     only re-takes expired leases while attempts remain)."""
@@ -205,6 +211,7 @@ async def reap_expired_leases(session: AsyncSession, *, lease: timedelta) -> int
     return int(getattr(result, "rowcount", 0))
 
 
+@cross_tenant
 async def release_notification(session: AsyncSession, row_id: uuid.UUID, worker_id: str) -> bool:
     """Hand a claimed row back without using up an attempt (graceful shutdown)."""
     result = await session.execute(

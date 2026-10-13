@@ -11,8 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_core.ids import uuid7
 from rl_db.models.identity import ApiKey, Organization
+from rl_db.repositories._tenancy import cross_tenant
 
 
+@cross_tenant
 async def create_organization(
     session: AsyncSession, *, name: str, slug: str, is_demo: bool = False
 ) -> Organization:
@@ -22,6 +24,7 @@ async def create_organization(
     return org
 
 
+@cross_tenant
 async def get_organization_by_slug(session: AsyncSession, slug: str) -> Organization | None:
     stmt = select(Organization).where(Organization.slug == slug)
     return (await session.execute(stmt)).scalar_one_or_none()
@@ -40,6 +43,7 @@ class ApiKeyCredential:
     last_used_at: datetime | None
 
 
+@cross_tenant
 async def find_api_key_by_prefix(session: AsyncSession, prefix: str) -> ApiKeyCredential | None:
     """Look up a key by its public prefix. The caller must still verify the secret hash.
 
@@ -68,6 +72,7 @@ async def find_api_key_by_prefix(session: AsyncSession, prefix: str) -> ApiKeyCr
     )
 
 
+@cross_tenant
 async def touch_api_key(
     session: AsyncSession, key_id: uuid.UUID, *, now: datetime, min_interval: timedelta
 ) -> bool:

@@ -18,7 +18,7 @@ from rl_core.tenancy import TenantContext
 from rl_db.models.analyses import RegressionAnalysisRecord
 from rl_db.models.deployments import Deployment
 from rl_db.models.jobs import DEFAULT_MAX_ATTEMPTS, AnalysisJob, JobKind
-from rl_db.repositories._tenancy import require_tenant
+from rl_db.repositories._tenancy import require_tenant, tenant_scoped
 
 # End of the post-deploy observation window (ARCHITECTURE.md §6: post = [T+2m, T+15m]).
 DEFAULT_POST_WINDOW_END = timedelta(minutes=15)
@@ -54,6 +54,7 @@ class RecordedDeployment:
     jobs_scheduled: int
 
 
+@tenant_scoped
 async def record_deployment(
     session: AsyncSession,
     ctx: TenantContext,
@@ -118,6 +119,7 @@ async def record_deployment(
     return RecordedDeployment(created=True, deployment_id=deployment_id, jobs_scheduled=len(jobs))
 
 
+@tenant_scoped
 async def get_deployment(
     session: AsyncSession, ctx: TenantContext, deployment_id: uuid.UUID
 ) -> Deployment | None:
@@ -137,6 +139,7 @@ class DeploymentCursor:
     id: uuid.UUID
 
 
+@tenant_scoped
 async def list_deployments(
     session: AsyncSession,
     ctx: TenantContext,
@@ -222,6 +225,7 @@ def _with_latest(rows: Sequence[Any]) -> list[tuple[Deployment, LatestAnalysis |
     ]
 
 
+@tenant_scoped
 async def list_deployments_with_latest_analysis(
     session: AsyncSession,
     ctx: TenantContext,
@@ -247,6 +251,7 @@ async def list_deployments_with_latest_analysis(
     return _with_latest((await session.execute(stmt)).all())
 
 
+@tenant_scoped
 async def get_deployment_with_latest_analysis(
     session: AsyncSession, ctx: TenantContext, deployment_id: uuid.UUID
 ) -> tuple[Deployment, LatestAnalysis | None] | None:
@@ -287,6 +292,7 @@ def _list_filter[S: Select[Any]](
     return stmt.order_by(Deployment.deployed_at.desc(), Deployment.id.desc()).limit(limit)
 
 
+@tenant_scoped
 async def list_analysis_jobs(
     session: AsyncSession, ctx: TenantContext, deployment_id: uuid.UUID
 ) -> list[AnalysisJob]:

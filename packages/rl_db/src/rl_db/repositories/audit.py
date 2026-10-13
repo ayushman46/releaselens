@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rl_core.ids import uuid7
 from rl_core.tenancy import TenantContext
 from rl_db.models.audit import AuditLogEntry
+from rl_db.repositories._tenancy import tenant_scoped
 
 MAX_USER_AGENT_LEN = 512
 MAX_TARGET_ID_LEN = 200
@@ -64,6 +65,7 @@ def audit_values(
     }
 
 
+@tenant_scoped
 async def record_audit(
     session: AsyncSession,
     ctx: TenantContext,
@@ -106,6 +108,7 @@ class AuditCursor:
     id: uuid.UUID
 
 
+@tenant_scoped
 async def list_audit(
     session: AsyncSession,
     ctx: TenantContext,

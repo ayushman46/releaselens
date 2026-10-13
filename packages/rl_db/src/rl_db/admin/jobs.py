@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_core.tenancy import Principal, TenantContext
 from rl_db.models.jobs import AnalysisJob, JobKind, JobStatus
+from rl_db.repositories._tenancy import cross_tenant
 
 MAX_ERROR_LEN = 2000
 
@@ -43,6 +44,7 @@ class ClaimedJob:
         return TenantContext(tenant_id=self.tenant_id, principal=Principal.SYSTEM)
 
 
+@cross_tenant
 async def claim_due_jobs(
     session: AsyncSession,
     *,
@@ -127,6 +129,7 @@ def _owned(job_id: uuid.UUID, worker_id: str) -> ColumnElement[bool]:
     )
 
 
+@cross_tenant
 async def renew_lease(session: AsyncSession, job_id: uuid.UUID, worker_id: str) -> bool:
     """Restart the lease clock of a claimed job just before its handler runs.
 
@@ -146,6 +149,7 @@ async def renew_lease(session: AsyncSession, job_id: uuid.UUID, worker_id: str) 
     return bool(getattr(result, "rowcount", 0))
 
 
+@cross_tenant
 async def complete_job(session: AsyncSession, job_id: uuid.UUID, worker_id: str) -> bool:
     stmt = (
         update(AnalysisJob)
@@ -162,6 +166,7 @@ async def complete_job(session: AsyncSession, job_id: uuid.UUID, worker_id: str)
     return bool(getattr(result, "rowcount", 0))
 
 
+@cross_tenant
 async def fail_job(
     session: AsyncSession,
     job_id: uuid.UUID,
@@ -196,6 +201,7 @@ async def fail_job(
     return JobStatus(status) if status is not None else None
 
 
+@cross_tenant
 async def release_job(session: AsyncSession, job_id: uuid.UUID, worker_id: str) -> bool:
     """Hand a claimed job back without using up an attempt (graceful shutdown)."""
     stmt = (
@@ -213,6 +219,7 @@ async def release_job(session: AsyncSession, job_id: uuid.UUID, worker_id: str) 
     return bool(getattr(result, "rowcount", 0))
 
 
+@cross_tenant
 async def reap_expired_leases(session: AsyncSession, *, lease: timedelta) -> int:
     """Mark ``dead`` the running jobs whose lease expired after their last allowed attempt.
 

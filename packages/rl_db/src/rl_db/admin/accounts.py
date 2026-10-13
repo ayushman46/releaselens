@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rl_core.ids import uuid7
 from rl_db.models.accounts import AuthSession, OAuthState, RefreshToken, UserToken
 from rl_db.models.identity import Invitation, Membership, Organization, Role, User
+from rl_db.repositories._tenancy import cross_tenant
 
 # ----------------------------------------------------------------------------- users
 
@@ -29,20 +30,24 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
+@cross_tenant
 async def get_user(session: AsyncSession, user_id: uuid.UUID) -> User | None:
     return await session.get(User, user_id)
 
 
+@cross_tenant
 async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
     stmt = select(User).where(func.lower(User.email) == normalize_email(email))
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@cross_tenant
 async def get_user_by_github_id(session: AsyncSession, github_user_id: int) -> User | None:
     stmt = select(User).where(User.github_user_id == github_user_id)
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@cross_tenant
 async def create_user(
     session: AsyncSession,
     *,
@@ -65,6 +70,7 @@ async def create_user(
     return user
 
 
+@cross_tenant
 async def set_password_hash(session: AsyncSession, user_id: uuid.UUID, password_hash: str) -> None:
     await session.execute(
         update(User).where(User.id == user_id).values(password_hash=password_hash)
@@ -74,6 +80,7 @@ async def set_password_hash(session: AsyncSession, user_id: uuid.UUID, password_
 # ----------------------------------------------------------------------------- one-time tokens
 
 
+@cross_tenant
 async def issue_user_token(
     session: AsyncSession,
     *,
@@ -106,6 +113,7 @@ async def issue_user_token(
     await session.flush()
 
 
+@cross_tenant
 async def consume_user_token(
     session: AsyncSession, *, purpose: str, token_hash: str, now: datetime
 ) -> uuid.UUID | None:
@@ -125,6 +133,7 @@ async def consume_user_token(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@cross_tenant
 async def retire_user_tokens(
     session: AsyncSession, *, user_id: uuid.UUID, purpose: str, now: datetime
 ) -> None:
@@ -142,6 +151,7 @@ async def retire_user_tokens(
 # ----------------------------------------------------------------------------- sessions
 
 
+@cross_tenant
 async def create_auth_session(
     session: AsyncSession,
     *,
@@ -191,6 +201,7 @@ class SessionUser:
     access_expires_at: datetime
 
 
+@cross_tenant
 async def find_session_by_access_hash(
     session: AsyncSession, access_token_hash: str, *, now: datetime
 ) -> SessionUser | None:
@@ -225,6 +236,7 @@ async def find_session_by_access_hash(
     )
 
 
+@cross_tenant
 async def find_session_id_by_access_hash(
     session: AsyncSession, access_token_hash: str
 ) -> uuid.UUID | None:
@@ -247,6 +259,7 @@ class PresentedRefresh:
     session_revoked_at: datetime | None
 
 
+@cross_tenant
 async def find_refresh_token(
     session: AsyncSession, refresh_token_hash: str
 ) -> PresentedRefresh | None:
@@ -277,6 +290,7 @@ async def find_refresh_token(
     )
 
 
+@cross_tenant
 async def mark_refresh_used(session: AsyncSession, token_id: uuid.UUID, *, now: datetime) -> bool:
     """Claim a refresh token for rotation. False if it was already used: a concurrent
     rotation won, and this presentation is a reuse."""
@@ -289,6 +303,7 @@ async def mark_refresh_used(session: AsyncSession, token_id: uuid.UUID, *, now: 
     return bool(getattr(result, "rowcount", 0))
 
 
+@cross_tenant
 async def rotate_session(
     session: AsyncSession,
     *,
@@ -320,6 +335,7 @@ async def rotate_session(
     await session.flush()
 
 
+@cross_tenant
 async def revoke_session(
     session: AsyncSession, session_id: uuid.UUID, *, reason: str, now: datetime
 ) -> bool:
@@ -332,6 +348,7 @@ async def revoke_session(
     return bool(getattr(result, "rowcount", 0))
 
 
+@cross_tenant
 async def revoke_user_sessions(
     session: AsyncSession, user_id: uuid.UUID, *, reason: str, now: datetime
 ) -> int:
@@ -347,6 +364,7 @@ async def revoke_user_sessions(
 # ----------------------------------------------------------------------------- OAuth state
 
 
+@cross_tenant
 async def store_oauth_state(
     session: AsyncSession, *, state_hash: str, code_verifier: str, expires_at: datetime
 ) -> None:
@@ -356,6 +374,7 @@ async def store_oauth_state(
     await session.flush()
 
 
+@cross_tenant
 async def consume_oauth_state(
     session: AsyncSession, *, state_hash: str, now: datetime
 ) -> str | None:
@@ -383,6 +402,7 @@ class UserMembership:
     role: Role
 
 
+@cross_tenant
 async def list_user_memberships(session: AsyncSession, user_id: uuid.UUID) -> list[UserMembership]:
     """The organizations a user belongs to. It reads across tenants by design: it is how a
     signed-in user discovers which tenants they may select."""
@@ -406,6 +426,7 @@ async def list_user_memberships(session: AsyncSession, user_id: uuid.UUID) -> li
     ]
 
 
+@cross_tenant
 async def get_membership_role(
     session: AsyncSession, *, tenant_id: uuid.UUID, user_id: uuid.UUID
 ) -> Role | None:
@@ -421,6 +442,7 @@ async def get_membership_role(
 # ----------------------------------------------------------------------------- invitations
 
 
+@cross_tenant
 async def find_invitation_by_token(
     session: AsyncSession, token_hash: str, *, for_update: bool = False
 ) -> Invitation | None:

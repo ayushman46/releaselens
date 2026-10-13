@@ -32,6 +32,7 @@ from rl_db.models.risk import (
     CiRun,
     RiskAssessment,
 )
+from rl_db.repositories._tenancy import tenant_scoped
 
 DEFAULT_HISTORY_LIMIT: Final = 200
 FULL_SHA_LEN: Final = 40
@@ -76,6 +77,7 @@ class CiRunUpsert:
     outcome: str  # created | updated | duplicate
 
 
+@tenant_scoped
 async def upsert_ci_run(session: AsyncSession, ctx: TenantContext, run: CiRunWrite) -> CiRunUpsert:
     """Record a CI run idempotently on ``(tenant, source, external_id)``.
 
@@ -154,6 +156,7 @@ def _past_run(started_at: datetime, finished_at: datetime | None, status: str, d
     )
 
 
+@tenant_scoped
 async def load_history(
     session: AsyncSession,
     ctx: TenantContext,
@@ -231,6 +234,7 @@ async def load_history(
     return window, HistoryTotals(eligible=total, since_last_failure=since_last)
 
 
+@tenant_scoped
 async def list_ci_runs(
     session: AsyncSession,
     ctx: TenantContext,
@@ -279,6 +283,7 @@ async def lock_idempotency_key(session: AsyncSession, key: str) -> None:
     )
 
 
+@tenant_scoped
 async def find_recent_assessment(
     session: AsyncSession,
     ctx: TenantContext,
@@ -307,6 +312,7 @@ async def find_recent_assessment(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def insert_assessment(
     session: AsyncSession, ctx: TenantContext, values: Mapping[str, Any]
 ) -> RiskAssessment:
@@ -322,6 +328,7 @@ async def insert_assessment(
     return row
 
 
+@tenant_scoped
 async def get_assessment(
     session: AsyncSession, ctx: TenantContext, assessment_id: uuid.UUID
 ) -> RiskAssessment | None:
@@ -338,6 +345,7 @@ class AssessmentCursor:
     id: uuid.UUID
 
 
+@tenant_scoped
 async def list_assessments(
     session: AsyncSession,
     ctx: TenantContext,

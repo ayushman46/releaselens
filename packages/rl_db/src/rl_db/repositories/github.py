@@ -16,8 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rl_core.ids import uuid7
 from rl_core.tenancy import TenantContext
 from rl_db.models.github import GithubInstallation, GithubPullRequest
+from rl_db.repositories._tenancy import tenant_scoped
 
 
+@tenant_scoped
 async def installation_for_repository(
     session: AsyncSession, ctx: TenantContext, repository: str
 ) -> GithubInstallation | None:
@@ -53,6 +55,7 @@ class PullRequestWrite:
     github_updated_at: datetime
 
 
+@tenant_scoped
 async def upsert_pull_request(
     session: AsyncSession, ctx: TenantContext, pr: PullRequestWrite
 ) -> None:
@@ -87,6 +90,7 @@ async def upsert_pull_request(
     await session.execute(stmt)
 
 
+@tenant_scoped
 async def get_pull_request(
     session: AsyncSession, ctx: TenantContext, repository: str, number: int
 ) -> GithubPullRequest | None:

@@ -17,15 +17,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rl_core.ids import uuid7
 from rl_core.tenancy import TenantContext
 from rl_db.models.catalog import Environment, Project, Service
+from rl_db.repositories._tenancy import tenant_scoped
 
 # ----------------------------------------------------------------------------- projects
 
 
+@tenant_scoped
 async def count_projects(session: AsyncSession, ctx: TenantContext) -> int:
     stmt = select(func.count()).where(Project.tenant_id == ctx.tenant_id)
     return int((await session.execute(stmt)).scalar_one())
 
 
+@tenant_scoped
 async def create_project(
     session: AsyncSession,
     ctx: TenantContext,
@@ -52,6 +55,7 @@ async def create_project(
     return row
 
 
+@tenant_scoped
 async def list_projects(session: AsyncSession, ctx: TenantContext) -> list[Project]:
     stmt = (
         select(Project).where(Project.tenant_id == ctx.tenant_id).order_by(Project.name, Project.id)
@@ -59,6 +63,7 @@ async def list_projects(session: AsyncSession, ctx: TenantContext) -> list[Proje
     return list((await session.execute(stmt)).scalars())
 
 
+@tenant_scoped
 async def get_project(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID
 ) -> Project | None:
@@ -66,6 +71,7 @@ async def get_project(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def find_project_by_repository(
     session: AsyncSession, ctx: TenantContext, repository: str
 ) -> Project | None:
@@ -84,6 +90,7 @@ async def find_project_by_repository(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def update_project(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID, values: dict[str, Any]
 ) -> Project | None:
@@ -98,6 +105,7 @@ async def update_project(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def delete_project(session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID) -> bool:
     result = await session.execute(
         delete(Project).where(Project.tenant_id == ctx.tenant_id, Project.id == project_id)
@@ -108,11 +116,13 @@ async def delete_project(session: AsyncSession, ctx: TenantContext, project_id: 
 # ----------------------------------------------------------------------------- services
 
 
+@tenant_scoped
 async def count_services(session: AsyncSession, ctx: TenantContext) -> int:
     stmt = select(func.count()).where(Service.tenant_id == ctx.tenant_id)
     return int((await session.execute(stmt)).scalar_one())
 
 
+@tenant_scoped
 async def create_service(
     session: AsyncSession,
     ctx: TenantContext,
@@ -133,6 +143,7 @@ async def create_service(
     return row
 
 
+@tenant_scoped
 async def list_services(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID
 ) -> list[Service]:
@@ -144,6 +155,7 @@ async def list_services(
     return list((await session.execute(stmt)).scalars())
 
 
+@tenant_scoped
 async def get_service(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID, service_id: uuid.UUID
 ) -> Service | None:
@@ -155,6 +167,7 @@ async def get_service(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def find_service_by_name(
     session: AsyncSession, ctx: TenantContext, name: str
 ) -> Service | None:
@@ -163,6 +176,7 @@ async def find_service_by_name(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def update_service(
     session: AsyncSession,
     ctx: TenantContext,
@@ -185,6 +199,7 @@ async def update_service(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def delete_service(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID, service_id: uuid.UUID
 ) -> bool:
@@ -201,6 +216,7 @@ async def delete_service(
 # ----------------------------------------------------------------------------- environments
 
 
+@tenant_scoped
 async def create_environment(
     session: AsyncSession, ctx: TenantContext, *, project_id: uuid.UUID, name: str
 ) -> Environment:
@@ -210,6 +226,7 @@ async def create_environment(
     return row
 
 
+@tenant_scoped
 async def list_environments(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID
 ) -> list[Environment]:
@@ -221,6 +238,7 @@ async def list_environments(
     return list((await session.execute(stmt)).scalars())
 
 
+@tenant_scoped
 async def get_environment(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID, environment_id: uuid.UUID
 ) -> Environment | None:
@@ -232,6 +250,7 @@ async def get_environment(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def rename_environment(
     session: AsyncSession,
     ctx: TenantContext,
@@ -252,6 +271,7 @@ async def rename_environment(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def delete_environment(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID, environment_id: uuid.UUID
 ) -> bool:

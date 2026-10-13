@@ -11,9 +11,11 @@ from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_db.models.audit import AuditLogEntry
+from rl_db.repositories._tenancy import cross_tenant
 from rl_db.repositories.audit import AuditActor, AuditRequestInfo, audit_values
 
 
+@cross_tenant
 async def record_security_event(
     session: AsyncSession,
     *,

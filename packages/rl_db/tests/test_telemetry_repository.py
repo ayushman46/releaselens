@@ -337,6 +337,7 @@ async def test_analyses_upsert_per_kind_and_regression_listing(
         assert await list_analyses(s, other, regressed) == []
         assert await list_regressions(s, other, limit=10) == []
         assert await latest_environment_analysis(s, other, "staging") is None
+    async with sessions() as s:  # unbound: the calls above bound this transaction to `other`
         count = await s.scalar(
             select(RegressionAnalysisRecord.id).where(
                 RegressionAnalysisRecord.deployment_id == regressed,

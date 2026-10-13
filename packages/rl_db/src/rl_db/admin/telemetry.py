@@ -17,8 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_db.models.identity import Organization
 from rl_db.models.telemetry import ServiceMinuteRollup
+from rl_db.repositories._tenancy import cross_tenant
 
 
+@cross_tenant
 async def existing_tenants(
     session: AsyncSession, tenant_ids: Collection[uuid.UUID]
 ) -> set[uuid.UUID]:
@@ -30,6 +32,7 @@ async def existing_tenants(
     return set(rows)
 
 
+@cross_tenant
 async def delete_rollups_older_than(
     session: AsyncSession, days: int, *, now: datetime | None = None
 ) -> int:

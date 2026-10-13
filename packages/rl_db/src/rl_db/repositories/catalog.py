@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_core.telemetry.rollup import merge_histograms
 from rl_core.tenancy import TenantContext
+from rl_db.repositories._tenancy import tenant_scoped
 
 CATALOG_LOOKBACK: Final = timedelta(days=7)
 VERSION_LOOKBACK: Final = timedelta(days=1)
@@ -200,6 +201,7 @@ class CatalogEntry:
     health: WindowHealth
 
 
+@tenant_scoped
 async def service_catalog(
     session: AsyncSession,
     ctx: TenantContext,
@@ -274,6 +276,7 @@ class MapEdge:
     last_seen: datetime
 
 
+@tenant_scoped
 async def service_map_edges(
     session: AsyncSession, ctx: TenantContext, *, environment: str, since: datetime
 ) -> tuple[list[MapEdge], set[str]]:
@@ -296,6 +299,7 @@ class EnvironmentSeen:
     last_telemetry_at: datetime | None  # newest rollup minute (its start) or edge call
 
 
+@tenant_scoped
 async def list_environments(session: AsyncSession, ctx: TenantContext) -> list[EnvironmentSeen]:
     """The tenant's environments seen in deployments, minute rollups or service edges, by name
     (at most :data:`MAX_ENVIRONMENTS`)."""
@@ -324,6 +328,7 @@ class MinuteRow:
     buckets: list[int]
 
 
+@tenant_scoped
 async def minute_series(
     session: AsyncSession,
     ctx: TenantContext,

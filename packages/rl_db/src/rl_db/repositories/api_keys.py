@@ -12,8 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rl_core.ids import uuid7
 from rl_core.tenancy import TenantContext
 from rl_db.models.identity import ApiKey
+from rl_db.repositories._tenancy import tenant_scoped
 
 
+@tenant_scoped
 async def insert_api_key(
     session: AsyncSession,
     ctx: TenantContext,
@@ -41,6 +43,7 @@ async def insert_api_key(
     return key
 
 
+@tenant_scoped
 async def list_api_keys(session: AsyncSession, ctx: TenantContext) -> list[ApiKey]:
     stmt = (
         select(ApiKey)
@@ -50,6 +53,7 @@ async def list_api_keys(session: AsyncSession, ctx: TenantContext) -> list[ApiKe
     return list((await session.execute(stmt)).scalars())
 
 
+@tenant_scoped
 async def get_api_key(
     session: AsyncSession, ctx: TenantContext, key_id: uuid.UUID, *, for_update: bool = False
 ) -> ApiKey | None:
@@ -60,6 +64,7 @@ async def get_api_key(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def revoke_api_key(
     session: AsyncSession, ctx: TenantContext, key_id: uuid.UUID, *, at: datetime | None = None
 ) -> bool:

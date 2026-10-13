@@ -232,7 +232,7 @@ flowchart LR
 
 | Store | Holds | Tenancy |
 |---|---|---|
-| Postgres (app DB) | OLTP tables, spans (declaratively partitioned by day), edges, minute rollups, jobs, outbox, analytics_* | `tenant_id NOT NULL` on every tenant-owned table; composite indexes lead with `tenant_id`; optional RLS (ADR-0010) |
+| Postgres (app DB) | OLTP tables, spans (declaratively partitioned by day), edges, minute rollups, jobs, outbox, analytics_* | `tenant_id NOT NULL` on every tenant-owned table; composite indexes lead with `tenant_id`; Postgres RLS on all 21 tenant-owned tables (ADR-0023) |
 | Postgres (MLflow / Airflow metadata) | Separate **databases** on the same server in dev | n/a (internal) |
 | Object store `releaselens-data` | raw/, marts/, features/, outcomes/, reports/ (Parquet/JSON) | historical data is not tenant data; `outcomes/` partitioned by tenant |
 | Object store `releaselens-mlflow` | MLflow artifacts | n/a |
@@ -264,8 +264,10 @@ rl_core/
 
 ## 10. Cross-cutting concerns
 
-- **Multi-tenancy:** API key or session → `TenantContext`; repositories refuse calls without it;
-  Kafka keys/payloads carry `tenant_id`; cross-tenant tests are mandatory (M6, M10).
+- **Multi-tenancy:** API key or session → `TenantContext`; repositories refuse calls without it
+  and bind the transaction to that tenant (`SET LOCAL ROLE rl_tenant` + `app.tenant_id`), so
+  Postgres row-level security filters every statement as a second guard (ADR-0023). Kafka
+  keys/payloads carry `tenant_id`; cross-tenant tests are mandatory (M6, M10, `test_rls.py`).
 - **Idempotency:** `(tenant_id, event_id)` for deployment events, GitHub delivery IDs, Stripe
   event IDs, outbox row IDs.
 - **Self-observability:** structured JSON logs with trace/span IDs from day one (M1);

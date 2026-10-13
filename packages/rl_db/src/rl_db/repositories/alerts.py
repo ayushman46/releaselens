@@ -21,6 +21,7 @@ from rl_db.models.alerts import (
     NotificationLog,
     NotificationStatus,
 )
+from rl_db.repositories._tenancy import tenant_scoped
 from rl_db.repositories.projects import find_project_by_repository, find_service_by_name
 
 # Order of the severity / risk bands that can trigger an alert.
@@ -34,6 +35,7 @@ def band_meets(band: str | None, minimum: str) -> bool:
     return _BAND_RANK.get(band.upper(), -1) >= _BAND_RANK[minimum]
 
 
+@tenant_scoped
 async def create_alert_rule(
     session: AsyncSession, ctx: TenantContext, *, project_id: uuid.UUID, values: dict[str, Any]
 ) -> AlertRule:
@@ -44,6 +46,7 @@ async def create_alert_rule(
     return row
 
 
+@tenant_scoped
 async def list_alert_rules(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID
 ) -> list[AlertRule]:
@@ -55,6 +58,7 @@ async def list_alert_rules(
     return list((await session.execute(stmt)).scalars())
 
 
+@tenant_scoped
 async def get_alert_rule(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID, rule_id: uuid.UUID
 ) -> AlertRule | None:
@@ -66,6 +70,7 @@ async def get_alert_rule(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def get_alert_rule_by_id(
     session: AsyncSession, ctx: TenantContext, rule_id: uuid.UUID
 ) -> AlertRule | None:
@@ -74,6 +79,7 @@ async def get_alert_rule_by_id(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def update_alert_rule(
     session: AsyncSession,
     ctx: TenantContext,
@@ -96,6 +102,7 @@ async def update_alert_rule(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+@tenant_scoped
 async def delete_alert_rule(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID, rule_id: uuid.UUID
 ) -> bool:
@@ -109,6 +116,7 @@ async def delete_alert_rule(
     return bool(getattr(result, "rowcount", 0))
 
 
+@tenant_scoped
 async def count_slack_rules(session: AsyncSession, ctx: TenantContext) -> int:
     stmt = select(func.count()).where(
         AlertRule.tenant_id == ctx.tenant_id, AlertRule.slack_webhook_ciphertext.is_not(None)
@@ -122,6 +130,7 @@ class EnqueueResult:
     created: int  # new notification_log rows (0 on a redelivery)
 
 
+@tenant_scoped
 async def enqueue_notifications(
     session: AsyncSession,
     ctx: TenantContext,
@@ -184,6 +193,7 @@ async def enqueue_notifications(
     return EnqueueResult(matched_rules=len(matched), created=created)
 
 
+@tenant_scoped
 async def list_notifications(
     session: AsyncSession,
     ctx: TenantContext,
@@ -217,6 +227,7 @@ __all__ = [
 ]
 
 
+@tenant_scoped
 async def notify_risk(
     session: AsyncSession,
     ctx: TenantContext,

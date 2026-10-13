@@ -20,6 +20,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_core.tenancy import TenantContext
+from rl_db.repositories._tenancy import tenant_scoped
 from rl_db.repositories.analyses import REGRESSION_STATUSES
 
 _DEPLOYMENTS: Final = text(
@@ -92,6 +93,7 @@ class OverviewCounts:
     services_seen: int
 
 
+@tenant_scoped
 async def overview_counts(
     session: AsyncSession,
     ctx: TenantContext,

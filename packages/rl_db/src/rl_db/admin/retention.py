@@ -19,6 +19,7 @@ from rl_core.plans import PLANS, limits_for
 from rl_db.models.accounts import AuthSession, OAuthState, UserToken
 from rl_db.models.deployments import Deployment
 from rl_db.models.identity import Organization
+from rl_db.repositories._tenancy import cross_tenant
 
 
 def _retention_days_sql() -> object:
@@ -29,6 +30,7 @@ def _retention_days_sql() -> object:
     )
 
 
+@cross_tenant
 async def purge_expired_deployments(session: AsyncSession, *, batch_size: int = 1000) -> int:
     """Delete one batch of deployments older than their organization's plan retention
     (their analysis jobs cascade). Returns the number deleted; call until it returns 0."""
@@ -48,6 +50,7 @@ async def purge_expired_deployments(session: AsyncSession, *, batch_size: int = 
     return int(getattr(result, "rowcount", 0))
 
 
+@cross_tenant
 async def purge_stale_auth_rows(session: AsyncSession, *, grace: timedelta) -> int:
     """Drop sessions, one-time tokens and OAuth states that ended more than ``grace`` ago."""
     total = 0
