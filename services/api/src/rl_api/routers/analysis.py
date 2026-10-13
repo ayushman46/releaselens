@@ -25,9 +25,9 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rl_api.auth import require_scope
 from rl_api.deps import get_session
 from rl_api.errors import ApiError
+from rl_api.principal import require_tenant_read
 from rl_core.telemetry.rollup import approx_quantile
 from rl_core.tenancy import TenantContext
 from rl_db.models import RegressionAnalysisRecord
@@ -237,7 +237,7 @@ def _regression_cursor(cursor: str) -> RegressionCursor:
 )
 async def get_deployment_analysis(
     deployment_id: uuid.UUID,
-    ctx: Annotated[TenantContext, Depends(require_scope("read"))],
+    ctx: Annotated[TenantContext, Depends(require_tenant_read)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> DeploymentAnalysis:
     if await get_deployment(session, ctx, deployment_id) is None:
@@ -255,7 +255,7 @@ async def get_deployment_analysis(
     responses=_ERRORS,
 )
 async def list_regressions_route(
-    ctx: Annotated[TenantContext, Depends(require_scope("read"))],
+    ctx: Annotated[TenantContext, Depends(require_tenant_read)],
     session: Annotated[AsyncSession, Depends(get_session)],
     environment: Annotated[str | None, Query(max_length=64)] = None,
     service: Annotated[str | None, Query(max_length=200)] = None,
@@ -323,7 +323,7 @@ def _health(h: WindowHealth, start: datetime, end: datetime) -> ServiceHealth:
     responses=_ERRORS,
 )
 async def list_services(
-    ctx: Annotated[TenantContext, Depends(require_scope("read"))],
+    ctx: Annotated[TenantContext, Depends(require_tenant_read)],
     session: Annotated[AsyncSession, Depends(get_session)],
     environment: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
@@ -376,7 +376,7 @@ async def list_services(
     responses=_ERRORS,
 )
 async def get_service_map(
-    ctx: Annotated[TenantContext, Depends(require_scope("read"))],
+    ctx: Annotated[TenantContext, Depends(require_tenant_read)],
     session: Annotated[AsyncSession, Depends(get_session)],
     environment: Annotated[str, Query(min_length=1, max_length=64)],
     window_hours: Annotated[int, Query(ge=1, le=24 * 30)] = 24,

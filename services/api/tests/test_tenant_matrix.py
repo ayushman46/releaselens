@@ -324,6 +324,27 @@ async def test_session_org_header_on_tenant_implicit_reads(world: World) -> None
     assert other.status_code == 404
 
 
+@pytest.mark.parametrize(
+    "path",
+    ["/api/v1/regressions", "/api/v1/services", "/api/v1/service-map?environment=demo"],
+)
+async def test_session_reads_on_analysis_routes(world: World, path: str) -> None:
+    """Signed-in users (not only API keys) read the analysis routes of their own org."""
+    viewer, outsider = world.a.users[VIEWER], world.b.users[OWNER]
+    ok = await viewer.get(path, headers={"X-RL-Org": str(world.a.id)})
+    assert ok.status_code == 200, ok.text
+    foreign = await outsider.get(path, headers={"X-RL-Org": str(world.a.id)})
+    assert foreign.status_code == 404
+    assert (await viewer.get(path)).status_code == 400
+
+
+async def test_session_read_of_a_foreign_deployment_analysis_is_404(world: World) -> None:
+    resp = await world.b.users[OWNER].get(
+        f"/api/v1/deployments/{uuid.uuid4()}/analysis", headers={"X-RL-Org": str(world.a.id)}
+    )
+    assert resp.status_code == 404
+
+
 async def test_my_orgs_lists_only_memberships(world: World) -> None:
     mine = (await world.b.users[OWNER].get("/api/v1/orgs")).json()
     assert [o["id"] for o in mine] == [str(world.b.id)]
