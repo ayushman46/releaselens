@@ -207,6 +207,7 @@ services:
     command: ["python", "-m", "rl_worker"]
     environment:
       <<: [*python-env, *saas-env]
+      RL_ANALYSIS_MAX_SPANS: ${RL_ANALYSIS_MAX_SPANS:-100000}
     ports: ["${RL_WORKER_HOST_PORT:-28001}:8001"]
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -218,7 +219,9 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
-    mem_limit: 256m
+    # Regression analysis holds the windows' spans in memory: 1 GiB fits the default
+    # RL_ANALYSIS_MAX_SPANS cap below (measured OOM at 256 MiB with ~300k demo spans).
+    mem_limit: 1g
 
   mailpit:
     # SMTP sink for verification, reset, invitation and alert e-mails (UI on 28025).
