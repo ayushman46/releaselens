@@ -73,7 +73,15 @@ Full diagrams, component responsibilities and data flows are in
 - **Leakage controls:** a past build counts as history only if it **finished before** the current
   build started (finish time is conservatively upper-bounded). This is enforced by property tests
   against a naive oracle and by offline/online parity tests.
-- **Model metrics:** `TBD — measured in M4` (chronological, cross-project and cold-start splits).
+- **Model (champion `release_risk_ci/3`, XGBoost; test split = most recent 15%, evaluated once):**
+  PR-AUC **0.811** (base rate 0.279), ROC-AUC **0.881**, Brier 0.109; calibration gate passed
+  (ECE 0.0155), so a probability is shown. Held-out projects: PR-AUC 0.825. **Honest caveat:**
+  most of the signal is build-failure persistence. After a *passing* build, PR-AUC is 0.320
+  (base rate 0.122). Day-one tenants get a no-history model (test PR-AUC 0.537, no probability).
+  See [`docs/ml/RESULTS.md`](docs/ml/RESULTS.md) and [`docs/ml/MODEL_CARD.md`](docs/ml/MODEL_CARD.md).
+- **Live demo (measured):** payment v1→v2 with an injected +250 ms / ~3.5% errors → REGRESSED,
+  probable origin **payment** (HIGH confidence); self-time p95 104 → 352 ms; blast radius
+  orders + gateway affected, fraud healthy. See [`docs/demo/DEMO_SCRIPT.md`](docs/demo/DEMO_SCRIPT.md).
 - **Regression detection:** a metric is flagged only if every gate passes (sample size, relative
   and absolute deltas, and a seeded bootstrap CI or a z-test). Severity is a documented
   deterministic score, **not a probability**. The tool reports a **probable** origin, never a
