@@ -14,10 +14,12 @@ Product loop: **PREDICT → DEPLOY → OBSERVE → DETECT → EXPLAIN → LEARN*
 ReleaseLens never deploys code. It plugs into your existing GitHub / CI/CD through a GitHub App
 and Action, a deployment-event API, and an OTLP endpoint.
 
-> **Status:** under active development, milestone by milestone. See [`docs/PLAN.md`](docs/PLAN.md)
-> for the status board and [`docs/PROGRESS.md`](docs/PROGRESS.md) for verified results with
-> the exact commands that were run. Every number in this README comes from a recorded run.
-> Anything not yet measured is marked `TBD — measured in Mx`.
+> **Status:** all milestones (M0–M12) are built and verified locally. See
+> [`docs/DONE.md`](docs/DONE.md) for what exists, the evidence and the limits,
+> [`docs/PLAN.md`](docs/PLAN.md) for the status board and [`docs/PROGRESS.md`](docs/PROGRESS.md)
+> for the commands that were run. Every number in this README comes from a recorded run.
+> External integrations (GitHub App, Stripe, Slack, OAuth) need owner credentials and run in
+> fixture or test mode until then ([`docs/BLOCKERS.md`](docs/BLOCKERS.md)).
 
 ## Quick start (local, ₹0)
 
@@ -79,13 +81,32 @@ Full diagrams, component responsibilities and data flows are in
   most of the signal is build-failure persistence. After a *passing* build, PR-AUC is 0.320
   (base rate 0.122). Day-one tenants get a no-history model (test PR-AUC 0.537, no probability).
   See [`docs/ml/RESULTS.md`](docs/ml/RESULTS.md) and [`docs/ml/MODEL_CARD.md`](docs/ml/MODEL_CARD.md).
-- **Live demo (measured):** payment v1→v2 with an injected +250 ms / ~3.5% errors → REGRESSED,
-  probable origin **payment** (HIGH confidence); self-time p95 104 → 352 ms; blast radius
-  orders + gateway affected, fraud healthy. See [`docs/demo/DEMO_SCRIPT.md`](docs/demo/DEMO_SCRIPT.md).
+- **Live demo (measured, three scenarios):**
+  - **payment v1→v2** (injected +250 ms and ~3.5% errors): REGRESSED, probable origin
+    **payment** (HIGH confidence). Self-time p95 rose from 104 to 352 ms. Blast radius: orders
+    and gateway affected, fraud healthy.
+  - **fraud v1→v2:** REGRESSED HIGH, probable origin **fraud** (HIGH confidence, score 10 vs 2).
+    Payment's latency rose too, but it was correctly not blamed.
+  - **Control, payment v1→v1:** HEALTHY in all three looks.
+  - See [`docs/demo/DEMO_SCRIPT.md`](docs/demo/DEMO_SCRIPT.md).
 - **Regression detection:** a metric is flagged only if every gate passes (sample size, relative
   and absolute deltas, and a seeded bootstrap CI or a z-test). Severity is a documented
   deterministic score, **not a probability**. The tool reports a **probable** origin, never a
   "root cause".
+
+## Security and tenancy
+
+- Every tenant-owned row carries `tenant_id`. Repositories refuse calls without a tenant
+  context, and Postgres **row-level security** filters every tenant-scoped transaction as a
+  second guard (ADR-0010, ADR-0023).
+- A route-enumerating cross-tenant and RBAC test matrix fails if a new route is not covered.
+- API keys are stored as SHA-256 hashes (`rlk_<prefix>_<secret>`). Browser sessions are opaque
+  and DB-backed, with CSRF protection.
+- Postgres token-bucket rate limits apply per IP (auth) and per key (deployment events, risk,
+  OTLP).
+- Slack webhook URLs are encrypted at rest (AES-GCM).
+- CI runs gitleaks, Trivy, pip-audit, bandit and pnpm audit on every push.
+  [`docs/security/AUTH.md`](docs/security/AUTH.md) has the details.
 
 ## Repository layout
 
@@ -105,7 +126,7 @@ docs/                  Plan, progress, ADRs, architecture, data & ML docs
 ## Testing
 
 ```bash
-make check             # ruff + mypy + unit tests
+make check             # ruff + bandit + mypy + unit tests
 make test-integration  # testcontainers: Postgres 16, Kafka 4.3 (KRaft), S3
 make web-check         # eslint + tsc + vitest
 ```
@@ -115,11 +136,28 @@ pip-audit, bandit, pnpm audit). Third-party actions are pinned by commit SHA.
 
 ## Benchmarks
 
-`TBD — measured in M12` with k6: risk-inference p50/p95, deployment-event API p95, ingest
-spans/sec, deployment-to-detection latency, historical pipeline runtime. The hardware and
-conditions will be stated next to each number.
+Measured on a laptop VM: Colima, **2 vCPU / 4 GiB**, on an Apple M4. Each benchmark used the
+default per-key rate limits, with nothing else running in the VM. Method and raw numbers:
+[`docs/benchmarks/README.md`](docs/benchmarks/README.md).
+
+| What | Result |
+|---|---|
+| Risk inference `POST /api/v1/risk/assessments` (features, XGBoost, SHAP), 8 req/s | p50 **22 ms**, p95 **40 ms**, 0 failures in 481 |
+| Deployment event `POST /api/v1/deployments`, 10 req/s | p50 **19 ms**, p95 **30 ms**, 0 failures in 601 |
+| OTLP ingest `POST /v1/traces`, 4,000 spans/s for 20 s | p95 **14.6 ms**. All 80,100 spans persisted, at about 3.7–4.7k spans/s, within ~5 s of the last request. The ceiling was not reached. |
+| Deploy to first verdict (live demo) | REGRESSED with probable origin about **6.3 min** after the deploy: the 5-min early look plus 77 s of compute |
+| Historical pipeline | ingest DAG 23 s cold / 5 s repeat; dbt build ≈ 10 s; model training 383 s |
 
 ## Known limitations
+
+- The risk model and the change-fact extractor are **Java-only**. A repository without Java
+  source gets its size facts reported as unknown, and its score is of limited use. This was
+  seen live on this Python repository.
+- External services (GitHub App, Stripe, Slack, GitHub OAuth) are exercised with signed
+  fixtures and mocks only. The Playwright end-to-end suite is written but has not been run
+  here, because no browsers are installed. The accessibility check was automated (axe-core: 0
+  violations on 25 pages, [`docs/web/ACCESSIBILITY.md`](docs/web/ACCESSIBILITY.md)), not a
+  manual audit.
 
 - TravisTorrent is historical (2012–2016 Travis CI, open source). CI failure is **not** the same
   as a production regression, and transfer to a 2026 team's pipeline is evaluated (cross-project,

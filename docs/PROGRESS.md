@@ -4,39 +4,33 @@
 > `DECISIONS.md`, `BLOCKERS.md`, `git log --oneline -20`; run `make check` to confirm the real
 > state; continue from **Next step**. Tests beat this file if they disagree.
 
-## Current state (2026-10-13 ~09:10 UTC, M12 in progress)
+## Current state (2026-10-13 ~15:30 UTC): all milestones done, see `docs/DONE.md`
 
-- **main = `5cc6bc2`** (pushed). M0–M11 done; M5 and M11 completed after the parallel merge.
-- **Verified on main at `5cc6bc2`:**
-  - ruff, format and mypy clean.
-  - API suite: 497 passed (unit + integration).
-  - Worker suite: 119 passed. One SIGTERM offset assertion was racy under full-suite load; it
-    was fixed to check its own message's partition, then passed 3 of 3 runs.
-  - rl_db suite: 78 passed, including the 5 new RLS tests.
-  - 544 non-integration API, worker and core tests pass.
-- **Live demo, payment scenario (06:06 UTC):** REGRESSED HIGH, probable origin payment (HIGH);
-  see `docs/demo/DEMO_SCRIPT.md`.
-- **M12 done so far:**
-  - MLflow OOM fix: one worker, no job runner, 768 MiB.
-  - Model-loader retries are bounded and can no longer die.
-  - Webhook-delivery purge in housekeeping.
-  - **Postgres RLS (ADR-0023, Q13 resolved).**
-  - Analysis jobs get their own DB timeout, and job timeouts are labelled correctly (seen
-    live).
-  - k6 scripts in `bench/`.
-- **Discarded run:** the control run at 08:12 UTC was discarded, because I ran testcontainers
-  suites in the same 2-CPU VM during its post window. Every service slowed at once, giving
-  REGRESSED with no single origin (LOW confidence). It must be re-run with the VM otherwise
-  idle.
-- **Next steps:**
-  1. Rebuild `rlens/python:dev` at HEAD.
-  2. Restart the core stack (migration 0007 applies).
-  3. Re-run the control, then fraud, live scenarios with nothing else in the VM.
-  4. Run the k6 benchmarks (`bench/run_benchmarks.sh`) and write `docs/benchmarks/README.md`.
-  5. Accessibility check of the web app, final README, `DONE.md`.
-- **Disk:** the VM hit 100% during a rebuild (09:00). It was recovered by removing only my own
-  build-cache records (`docker buildx prune -a --filter id=…`) and our unused
-  `rlens/airflow:dev` image (rebuildable). Host ≈ 5.8 GiB free.
+- **main** at the latest pushed commit.
+  - CI on `2b46976`: security, frontend and data green; backend green on `1082ff1`.
+- **Verified today:**
+  - ruff, format, mypy and bandit (the CI command) clean.
+  - **907 unit tests** pass (`make test`).
+  - Integration suites:
+    - API: 497 (full suite) plus 46 re-run after the OTLP limit.
+    - Worker: 119.
+    - rl_db: 78, including 5 RLS tests.
+  - Web: tsc clean, 353 vitest.
+  - Extractor: 57.
+- **Live runs on the rebuilt stack (`5cc6bc2`, RLS on):**
+  - Control: HEALTHY in all three looks.
+  - Fraud: REGRESSED HIGH, origin fraud (HIGH).
+  - Recorded in `docs/demo/DEMO_SCRIPT.md`.
+- **Benchmarks:** `docs/benchmarks/README.md`.
+- **Accessibility:** `docs/web/ACCESSIBILITY.md`.
+- **Next (owner):** the credentials in `docs/BLOCKERS.md` (GitHub App, Stripe test keys, Slack,
+  GitHub OAuth), then a run on a real repository's history.
+- **Next (engineering):**
+  1. Run the Playwright suite where browsers can be installed.
+  2. Trivy *image* scans: CI scans the filesystem.
+  3. A non-Java extractor, if tenants need one.
+- **Disk:** the VM is at about 97%; `docs/QUESTIONS_FOR_OWNER.md` Q15 describes what was
+  removed (only our own objects).
 
 ## Verification commands (current)
 

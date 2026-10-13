@@ -65,6 +65,10 @@ lint: ## Ruff lint + format check
 	$(UV) run ruff check .
 	$(UV) run ruff format --check .
 
+.PHONY: sast
+sast: ## bandit, exactly as the security workflow runs it (medium severity and up fails)
+	$(UV)x --python 3.12 bandit==1.9.4 -q -r packages services data -x '*/tests/*' -ll
+
 .PHONY: fmt
 fmt: ## Auto-format Python code
 	$(UV) run ruff check --fix .
@@ -83,7 +87,7 @@ test-integration: doctor ## Integration tests (testcontainers: Postgres, Kafka, 
 	$(TC_ENV) $(UV) run pytest -m integration packages services data demo ml
 
 .PHONY: check
-check: lint typecheck test ## Lint + typecheck + unit tests
+check: lint sast typecheck test ## Lint + bandit + typecheck + unit tests
 
 # ------------------------------------------------------------------ web
 .PHONY: web-check

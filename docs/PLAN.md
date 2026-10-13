@@ -20,7 +20,7 @@
 | M9 | Graph + triage | ✅ done | payment HIGH 30/30, fraud HIGH 30/30 seeds |
 | M10 | SaaS layer | ✅ done | 374 tests incl. 231-case cross-tenant/RBAC matrix; ADR-0019..0021; RLS deferred to M12 (Q13) |
 | M11 | Frontend | ✅ done | every page on real APIs; 353 vitest tests; Playwright suite written but not yet run (no browsers installed: disk; docs/web/E2E.md) |
-| M12 | Hardening & launch | ⏳ in progress | RLS (ADR-0023) ✅; model-loader hardening ✅; k6 benchmarks, control/fraud live runs, DONE.md next |
+| M12 | Hardening & launch | ✅ done | RLS on 21 tables (ADR-0023); k6 benchmarks (`docs/benchmarks/`); live control HEALTHY + fraud origin fraud (HIGH); axe 0 violations on 25 pages; OTLP per-key limit; bandit in `make check`; `docs/DONE.md` |
 
 Legend: ⬜ not started · ⏳ in progress · ✅ done (acceptance demonstrated by commands in `PROGRESS.md`) · ⛔ blocked (see `BLOCKERS.md`)
 
