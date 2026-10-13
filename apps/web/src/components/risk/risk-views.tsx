@@ -156,7 +156,7 @@ function ShapTable({ a }: { a: RiskAssessmentDetail }) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">The model returned no SHAP vector for this assessment.</p>;
   const max = Math.max(1e-9, ...rows.map((r) => Math.abs(r.contribution)));
   return (
-    <div className="max-h-[28rem] overflow-auto">
+    <div className="max-h-[28rem] overflow-auto rounded-sm" tabIndex={0} role="region" aria-label="All feature contributions">
       <table className="w-full text-sm">
         <caption className="sr-only">Every feature&apos;s value and SHAP contribution, largest first</caption>
         <thead>

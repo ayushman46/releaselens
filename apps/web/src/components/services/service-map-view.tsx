@@ -249,7 +249,8 @@ export function ServiceMapView() {
         {map.data?.analysis ? (
           <p className="text-xs text-muted-foreground">
             Health from the latest analysis:{" "}
-            <Link href={`/app/deployments/${map.data.analysis.deployment_id}`} className="text-brand-text hover:underline">
+            {/* Inside a sentence, so colour alone may not mark it as a link (WCAG 1.4.1): always underlined. */}
+            <Link href={`/app/deployments/${map.data.analysis.deployment_id}`} className="text-brand-text underline underline-offset-2">
               {map.data.analysis.deployed_service} deploy, {KIND_LABEL[map.data.analysis.kind].toLowerCase()}, {formatRelativeTime(map.data.analysis.analysed_at)}
             </Link>
           </p>

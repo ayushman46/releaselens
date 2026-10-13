@@ -10,9 +10,9 @@ import { AppTopbar } from "@/components/shell/app-topbar";
 export function AppShell({ banner, children }: { banner?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex min-h-dvh">
-      <div className="sticky top-0 hidden h-dvh w-56 shrink-0 border-r bg-panel lg:block">
+      <aside aria-label="Sidebar" className="sticky top-0 hidden h-dvh w-56 shrink-0 border-r bg-panel lg:block">
         <AppSidebar />
-      </div>
+      </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopbar />
         {banner}

@@ -72,7 +72,8 @@ export function BeforeAfterTable({
         </p>
       ) : null}
 
-      <div className="overflow-x-auto">
+      {/* Scrolls sideways on narrow screens, so it must be reachable by keyboard (WCAG 2.1.1). */}
+      <div className="overflow-x-auto rounded-sm" tabIndex={0} role="region" aria-label={`${selected.service}: before and after metrics`}>
         <table className="w-full min-w-[40rem] text-sm">
           <caption className="sr-only">
             {selected.service}: metrics before and after the deployment, with the change, its interval and sample sizes
