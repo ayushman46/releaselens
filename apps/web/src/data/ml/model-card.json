@@ -1,0 +1,13 @@
+{
+  "source": "docs/ml/MODEL_CARD.md",
+  "version": "release_risk_ci/3",
+  "persistence": "Overall PR-AUC is 2.91× the base rate, but after a passing build it is 2.61× (ROC-AUC 0.743, moderate) and with no history 1.72× (ROC-AUC 0.724, moderate). Much of the score reflects the project's recent build outcomes (a broken build tends to stay broken) rather than the risk of the change itself.",
+  "ci_failure_not_outage": "The label is a Travis CI build failing or erroring. It says nothing about production incidents, deployment regressions or user impact.",
+  "travis_transfer": "Training data are open-source Java projects on Travis CI, 2011–2015. Modern CI (GitHub Actions), other languages, private codebases, monorepos and today's tooling may behave differently; performance on a tenant's repositories is unknown until measured on their history.",
+  "explanations": "are SHAP attributions of the model's score, not causes of failure.",
+  "intended_use": [
+    "Rank incoming builds / pull requests by risk of CI build failure, from historical patterns, at the moment the build is triggered, so reviewers can prioritise attention.",
+    "Shown next to (never instead of) the actual CI result.",
+    "Not for: predicting production outages or incidents, judging or ranking people, automatically blocking merges without human review, or any decision about an individual contributor."
+  ]
+}

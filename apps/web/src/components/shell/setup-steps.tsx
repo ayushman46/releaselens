@@ -10,10 +10,13 @@ export interface SetupStep {
   href: string;
   cta: string;
   icon: LucideIcon;
-  milestone: string;
+  /** Shown as a badge while the feature is still being built. */
+  milestone?: string;
+  /** True once data from this source has arrived. */
+  connected?: boolean;
 }
 
-/** A connection checklist. Every step starts as "Not connected": nothing is connected yet. */
+/** A connection checklist. A step reads "Connected" only once its data has actually arrived. */
 export function SetupSteps({ steps, title }: { steps: SetupStep[]; title: string }) {
   return (
     <section aria-labelledby="setup-title" className="rounded-xl border bg-panel shadow-panel">
@@ -21,7 +24,9 @@ export function SetupSteps({ steps, title }: { steps: SetupStep[]; title: string
         <h2 id="setup-title" className="text-sm font-semibold">
           {title}
         </h2>
-        <span className="text-xs text-muted-foreground">0 of {steps.length} connected</span>
+        <span className="text-xs text-muted-foreground">
+          {steps.filter((s) => s.connected).length} of {steps.length} connected
+        </span>
       </div>
       <ol className="divide-y">
         {steps.map((step, index) => {
@@ -38,13 +43,13 @@ export function SetupSteps({ steps, title }: { steps: SetupStep[]; title: string
                       <span className="sr-only">Step {index + 1}: </span>
                       {step.title}
                     </h3>
-                    <Badge>Available in {step.milestone}</Badge>
+                    {step.milestone ? <Badge>Available in {step.milestone}</Badge> : null}
                   </div>
                   <p className="mt-0.5 text-sm leading-6 text-muted-foreground">{step.description}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 pl-11 sm:pl-0">
-                <StatusPill tone="unknown" label="Not connected" size="sm" />
+                <StatusPill tone={step.connected ? "healthy" : "unknown"} label={step.connected ? "Connected" : "Not connected"} size="sm" />
                 <Link
                   href={step.href}
                   className="inline-flex items-center gap-1 rounded-sm text-sm font-medium text-brand-text hover:underline"

@@ -1,0 +1,3004 @@
+{
+ "schema": "rl_ml.results/1",
+ "generated_at": "2026-10-13T04:57:51.240686+00:00",
+ "variant": "errored_excluded",
+ "label_definition": "label 1 = failed, 0 = passed; errored, canceled and started builds excluded (ADR-0005 sensitivity analysis)",
+ "data": {
+  "source": "travistorrent_5_3_2016",
+  "synthetic": false,
+  "dataset_md5": "4713d8b73b667a2c375b89c20f531fc0",
+  "features_run_id": "m3-run1",
+  "feature_schema_version": "1.0.0",
+  "notes": [
+   "manifest verified (sha256 + rows)",
+   "errored builds excluded: 15267"
+  ],
+  "mart_files": [
+   {
+    "key": "features/release_features/schema=1.0.0/run_id=m3-run1/part-00000.parquet",
+    "sha256": "384f66b66bde7416957c189aeccd9f55e369bbb7d9acf726492371a1a25569a5",
+    "rows": 128617
+   }
+  ]
+ },
+ "config": {
+  "trials": 30,
+  "seed": 42,
+  "errored_excluded": true,
+  "holdout_fraction": 0.2,
+  "min_project_builds": 30,
+  "bootstrap_resamples": 500,
+  "shap_sample": 5000,
+  "families": [
+   "majority_class",
+   "heuristic_rule",
+   "logistic_regression",
+   "random_forest",
+   "xgboost"
+  ],
+  "variant": "errored_excluded"
+ },
+ "class_balance": {
+  "train": {
+   "rows": 79007,
+   "positives": 15128,
+   "base_rate": 0.1914767045957953,
+   "projects": 373,
+   "started_at_min": "2011-06-20T13:04:06+00:00",
+   "started_at_max": "2015-01-10T07:40:01+00:00",
+   "status_counts": {
+    "failed": 15128,
+    "passed": 63879
+   }
+  },
+  "validation": {
+   "rows": 16793,
+   "positives": 3300,
+   "base_rate": 0.19651045078306437,
+   "projects": 273,
+   "started_at_min": "2015-01-10T08:05:34+00:00",
+   "started_at_max": "2015-04-17T18:31:15+00:00",
+   "status_counts": {
+    "failed": 3300,
+    "passed": 13493
+   }
+  },
+  "test": {
+   "rows": 17550,
+   "positives": 3640,
+   "base_rate": 0.2074074074074074,
+   "projects": 269,
+   "started_at_min": "2015-04-17T18:41:22+00:00",
+   "started_at_max": "2015-08-19T02:52:38+00:00",
+   "status_counts": {
+    "failed": 3640,
+    "passed": 13910
+   }
+  },
+  "all": {
+   "rows": 113350,
+   "positives": 22068,
+   "base_rate": 0.19468901632112925,
+   "projects": 402,
+   "started_at_min": "2011-06-20T13:04:06+00:00",
+   "started_at_max": "2015-08-19T02:52:38+00:00",
+   "status_counts": {
+    "failed": 22068,
+    "passed": 91282
+   }
+  }
+ },
+ "splits": {
+  "chronological": {
+   "train": {
+    "rows": 79007,
+    "start": "2011-06-20T13:04:06+00:00",
+    "end": "2015-01-10T07:40:01+00:00"
+   },
+   "validation": {
+    "rows": 16793,
+    "start": "2015-01-10T08:05:34+00:00",
+    "end": "2015-04-17T18:31:15+00:00"
+   },
+   "test": {
+    "rows": 17550,
+    "start": "2015-04-17T18:41:22+00:00",
+    "end": "2015-08-19T02:52:38+00:00"
+   },
+   "ordered": true
+  }
+ },
+ "leakage_audit": {
+  "rows": 113350,
+  "rows_with_history": 112985,
+  "violations": 0,
+  "forbidden_in_features": [],
+  "min_gap_seconds": 1.0
+ },
+ "feature_coverage": {
+  "null_rate_train": {
+   "src_churn": 0.0,
+   "test_churn": 0.0,
+   "total_churn": 0.0,
+   "log1p_src_churn": 0.0,
+   "log1p_test_churn": 0.0,
+   "log1p_total_churn": 0.0,
+   "files_added": 0.0,
+   "files_deleted": 0.0,
+   "files_modified": 0.0,
+   "files_touched": 0.0,
+   "src_files": 0.0,
+   "doc_files": 0.0,
+   "other_files": 0.0,
+   "tests_added": 0.0,
+   "tests_deleted": 0.0,
+   "test_churn_ratio": 0.0,
+   "touches_tests": 0.0,
+   "log1p_sloc": 0.0,
+   "test_lines_per_kloc": 0.0,
+   "test_cases_per_kloc": 0.0,
+   "asserts_per_kloc": 0.0,
+   "num_commits_in_push": 1.0,
+   "num_all_built_commits": 0.0,
+   "team_size": 0.0,
+   "by_core_team_member": 0.0,
+   "is_pr": 0.0,
+   "description_complexity": 1.0,
+   "commits_on_files_touched": 0.0,
+   "prev_build_failed": 0.00424013062133735,
+   "fail_rate_last_5": 0.00424013062133735,
+   "fail_rate_last_20": 0.00424013062133735,
+   "builds_since_last_failure": 0.0421987925120559,
+   "hours_since_last_build": 0.003860417431366841,
+   "prev_build_duration": 0.00424013062133735,
+   "prev_duration_zscore_vs_project_last_20": 0.01237864999303859,
+   "history_size": 0.0,
+   "project_age_days": 1.0,
+   "hour_of_week_sin": 0.0,
+   "hour_of_week_cos": 0.0
+  },
+  "always_missing_in_train": [
+   "num_commits_in_push",
+   "description_complexity",
+   "project_age_days"
+  ],
+  "dropped_from_model_inputs": [
+   "num_commits_in_push",
+   "description_complexity",
+   "project_age_days"
+  ],
+  "drop_rule": "features null for every training row are removed from all model inputs"
+ },
+ "candidates": [
+  {
+   "name": "majority_class",
+   "display": "Majority class",
+   "features": 34,
+   "uses_time_features": false,
+   "val_pr_auc": 0.19651045078306437,
+   "val_roc_auc": 0.5,
+   "params": {},
+   "fit_seconds": 0.00875870801974088,
+   "search": []
+  },
+  {
+   "name": "heuristic_rule",
+   "display": "Heuristic rule",
+   "features": 34,
+   "uses_time_features": false,
+   "val_pr_auc": 0.3931395754562111,
+   "val_roc_auc": 0.7651538395891022,
+   "params": {
+    "total_churn_p90_train": 393.0
+   },
+   "fit_seconds": 0.002825708012096584,
+   "search": []
+  },
+  {
+   "name": "logistic_regression",
+   "display": "Logistic regression",
+   "features": 34,
+   "uses_time_features": false,
+   "val_pr_auc": 0.7354474589782599,
+   "val_roc_auc": 0.8771100615582939,
+   "params": {
+    "C": 0.1
+   },
+   "fit_seconds": 0.8969345000223257,
+   "search": [
+    {
+     "C": 0.01,
+     "val_pr_auc": 0.7352949717042051,
+     "fit_seconds": 1.2050217500072904
+    },
+    {
+     "C": 0.1,
+     "val_pr_auc": 0.7354474589782599,
+     "fit_seconds": 0.8969345000223257
+    },
+    {
+     "C": 1.0,
+     "val_pr_auc": 0.7354409922074702,
+     "fit_seconds": 1.0406394579913467
+    }
+   ]
+  },
+  {
+   "name": "random_forest",
+   "display": "Random forest",
+   "features": 34,
+   "uses_time_features": false,
+   "val_pr_auc": 0.7554650610895073,
+   "val_roc_auc": 0.8810230894133658,
+   "params": {
+    "min_samples_leaf": 25
+   },
+   "fit_seconds": 10.798383750021458,
+   "search": [
+    {
+     "min_samples_leaf": 5,
+     "val_pr_auc": 0.7488405180658717,
+     "fit_seconds": 36.46193454100285
+    },
+    {
+     "min_samples_leaf": 25,
+     "val_pr_auc": 0.7554650610895073,
+     "fit_seconds": 10.798383750021458
+    }
+   ]
+  },
+  {
+   "name": "xgboost",
+   "display": "XGBoost",
+   "features": 34,
+   "uses_time_features": false,
+   "val_pr_auc": 0.7643315483512957,
+   "val_roc_auc": 0.8838473933734439,
+   "params": {
+    "max_depth": 4,
+    "learning_rate": 0.013491296057041746,
+    "min_child_weight": 3.1127868485071617,
+    "subsample": 0.7281137984185893,
+    "colsample_bytree": 0.8870486020751119,
+    "reg_lambda": 0.036906950565939574,
+    "reg_alpha": 9.197785967194044,
+    "gamma": 0.48812468663108766,
+    "n_estimators": 1046,
+    "scale_pos_weight": 4.222567424643046
+   },
+   "fit_seconds": 476.04587529203855,
+   "search": [
+    {
+     "trial": 0,
+     "val_pr_auc": 0.7557131555802169,
+     "best_iteration": 37,
+     "max_depth": 5,
+     "learning_rate": 0.2536999076681771,
+     "min_child_weight": 17.524101118128137,
+     "subsample": 0.7993292420985183,
+     "colsample_bytree": 0.4936111842654619,
+     "reg_lambda": 0.004993515273965262,
+     "reg_alpha": 0.0017073967431528124,
+     "gamma": 4.330880728874676
+    },
+    {
+     "trial": 1,
+     "val_pr_auc": 0.7543385705243222,
+     "best_iteration": 15,
+     "max_depth": 7,
+     "learning_rate": 0.11114989443094977,
+     "min_child_weight": 1.0838581269344745,
+     "subsample": 0.9849549260809971,
+     "colsample_bytree": 0.899465584480253,
+     "reg_lambda": 0.00892622738184373,
+     "reg_alpha": 0.005337032762603957,
+     "gamma": 0.9170225492671691
+    },
+    {
+     "trial": 2,
+     "val_pr_auc": 0.7610106322806965,
+     "best_iteration": 136,
+     "max_depth": 5,
+     "learning_rate": 0.05958389350068958,
+     "min_child_weight": 5.4182823195332395,
+     "subsample": 0.645614570099021,
+     "colsample_bytree": 0.7671117368334277,
+     "reg_lambda": 0.004212412845262044,
+     "reg_alpha": 0.01474275315991467,
+     "gamma": 1.8318092164684585
+    },
+    {
+     "trial": 3,
+     "val_pr_auc": 0.7583297456866505,
+     "best_iteration": 31,
+     "max_depth": 6,
+     "learning_rate": 0.14447746112718687,
+     "min_child_weight": 2.1839352923182975,
+     "subsample": 0.7571172192068059,
+     "colsample_bytree": 0.7554487413172255,
+     "reg_lambda": 0.0016142252267366923,
+     "reg_alpha": 0.26926469100861794,
+     "gamma": 0.8526206184364576
+    },
+    {
+     "trial": 4,
+     "val_pr_auc": 0.7625982482192945,
+     "best_iteration": 57,
+     "max_depth": 3,
+     "learning_rate": 0.25212679047779213,
+     "min_child_weight": 43.70990468130503,
+     "subsample": 0.9041986740582306,
+     "colsample_bytree": 0.5827682615040224,
+     "reg_lambda": 0.002737095165771331,
+     "reg_alpha": 0.5456725485601478,
+     "gamma": 2.2007624686980067
+    },
+    {
+     "trial": 5,
+     "val_pr_auc": 0.7626946716087422,
+     "best_iteration": 173,
+     "max_depth": 3,
+     "learning_rate": 0.05388108577817234,
+     "min_child_weight": 1.1439974749291268,
+     "subsample": 0.954660201039391,
+     "colsample_bytree": 0.5552679889600102,
+     "reg_lambda": 0.9251083502214166,
+     "reg_alpha": 0.017654048052495066,
+     "gamma": 2.600340105889054
+    },
+    {
+     "trial": 6,
+     "val_pr_auc": 0.7630513505634983,
+     "best_iteration": 443,
+     "max_depth": 7,
+     "learning_rate": 0.01875220945578641,
+     "min_child_weight": 44.39102767051397,
+     "subsample": 0.8875664116805573,
+     "colsample_bytree": 0.9636993649385135,
+     "reg_lambda": 10.144964926243942,
+     "reg_alpha": 0.24637685958997463,
+     "gamma": 4.609371175115584
+    },
+    {
+     "trial": 7,
+     "val_pr_auc": 0.7638753735225182,
+     "best_iteration": 713,
+     "max_depth": 3,
+     "learning_rate": 0.01947558230629543,
+     "min_child_weight": 1.1935477742481382,
+     "subsample": 0.6626651653816322,
+     "colsample_bytree": 0.6332063738136893,
+     "reg_lambda": 0.016400705022266843,
+     "reg_alpha": 2.065142557895926,
+     "gamma": 1.7837666334679465
+    },
+    {
+     "trial": 8,
+     "val_pr_auc": 0.7615366632607593,
+     "best_iteration": 111,
+     "max_depth": 5,
+     "learning_rate": 0.06333268775321839,
+     "min_child_weight": 1.7355056469855072,
+     "subsample": 0.9010984903770198,
+     "colsample_bytree": 0.44473038620786254,
+     "reg_lambda": 26.20670861087006,
+     "reg_alpha": 1.227380098785297,
+     "gamma": 0.993578407670862
+    },
+    {
+     "trial": 9,
+     "val_pr_auc": 0.7604105255634727,
+     "best_iteration": 95,
+     "max_depth": 3,
+     "learning_rate": 0.16015312171361207,
+     "min_child_weight": 15.882886211970037,
+     "subsample": 0.8645035840204937,
+     "colsample_bytree": 0.8627622080115674,
+     "reg_lambda": 0.002145393122543948,
+     "reg_alpha": 0.02715581955282941,
+     "gamma": 0.5793452976256486
+    },
+    {
+     "trial": 10,
+     "val_pr_auc": 0.7618682769117354,
+     "best_iteration": 403,
+     "max_depth": 3,
+     "learning_rate": 0.026717779769062353,
+     "min_child_weight": 3.1570074491753513,
+     "subsample": 0.504584501138903,
+     "colsample_bytree": 0.46062671865191473,
+     "reg_lambda": 0.0029690617451646334,
+     "reg_alpha": 1.4348843405075273,
+     "gamma": 1.2925094612305128
+    },
+    {
+     "trial": 11,
+     "val_pr_auc": 0.7638220156607649,
+     "best_iteration": 981,
+     "max_depth": 3,
+     "learning_rate": 0.016864685873744043,
+     "min_child_weight": 30.934311982693252,
+     "subsample": 0.9622168191152808,
+     "colsample_bytree": 0.9752819290816075,
+     "reg_lambda": 3.649103083345331,
+     "reg_alpha": 0.11643099840005625,
+     "gamma": 4.561395804520705
+    },
+    {
+     "trial": 12,
+     "val_pr_auc": 0.7632221388769203,
+     "best_iteration": 317,
+     "max_depth": 4,
+     "learning_rate": 0.0200958102788402,
+     "min_child_weight": 3.124819818328598,
+     "subsample": 0.647038816122227,
+     "colsample_bytree": 0.9111354062922744,
+     "reg_lambda": 0.011334919673746575,
+     "reg_alpha": 0.29009309525349547,
+     "gamma": 0.39286348350385314
+    },
+    {
+     "trial": 13,
+     "val_pr_auc": 0.7624421396821175,
+     "best_iteration": 494,
+     "max_depth": 3,
+     "learning_rate": 0.020487441670060166,
+     "min_child_weight": 1.8004587462564157,
+     "subsample": 0.5180441540186675,
+     "colsample_bytree": 0.8300213283252074,
+     "reg_lambda": 0.0035763436292869178,
+     "reg_alpha": 0.5447283790183791,
+     "gamma": 2.139459495228653
+    },
+    {
+     "trial": 14,
+     "val_pr_auc": 0.7489225190358215,
+     "best_iteration": 52,
+     "max_depth": 4,
+     "learning_rate": 0.010207338723314804,
+     "min_child_weight": 12.408813995720061,
+     "subsample": 0.9032124867732491,
+     "colsample_bytree": 0.9570823761435316,
+     "reg_lambda": 5.391470975660544,
+     "reg_alpha": 0.17282928472363118,
+     "gamma": 3.1053162280566298
+    },
+    {
+     "trial": 15,
+     "val_pr_auc": 0.7629776244381467,
+     "best_iteration": 866,
+     "max_depth": 3,
+     "learning_rate": 0.01320493155982948,
+     "min_child_weight": 2.328525625547687,
+     "subsample": 0.7318931073513606,
+     "colsample_bytree": 0.5175915198877001,
+     "reg_lambda": 0.058781797373138045,
+     "reg_alpha": 1.5927099802510905,
+     "gamma": 4.37250213998724
+    },
+    {
+     "trial": 16,
+     "val_pr_auc": 0.7626614450261143,
+     "best_iteration": 382,
+     "max_depth": 4,
+     "learning_rate": 0.029844566547396978,
+     "min_child_weight": 8.64473879303987,
+     "subsample": 0.7575646530852959,
+     "colsample_bytree": 0.6096829919263054,
+     "reg_lambda": 6.695200172700958,
+     "reg_alpha": 0.3899041994806954,
+     "gamma": 4.6855387508697595
+    },
+    {
+     "trial": 17,
+     "val_pr_auc": 0.7628239436393135,
+     "best_iteration": 380,
+     "max_depth": 4,
+     "learning_rate": 0.020114331520947104,
+     "min_child_weight": 6.198172821714222,
+     "subsample": 0.8582365623251451,
+     "colsample_bytree": 0.8783234771539709,
+     "reg_lambda": 0.011249890537036705,
+     "reg_alpha": 0.21380542498039024,
+     "gamma": 4.3651106159440225
+    },
+    {
+     "trial": 18,
+     "val_pr_auc": 0.764024470704119,
+     "best_iteration": 672,
+     "max_depth": 3,
+     "learning_rate": 0.01918997372105175,
+     "min_child_weight": 2.5363541437399477,
+     "subsample": 0.7786388905072668,
+     "colsample_bytree": 0.9782985568825662,
+     "reg_lambda": 0.02181878455228828,
+     "reg_alpha": 2.38780176093,
+     "gamma": 1.20375517186932
+    },
+    {
+     "trial": 19,
+     "val_pr_auc": 0.7643315483512957,
+     "best_iteration": 1045,
+     "max_depth": 4,
+     "learning_rate": 0.013491296057041746,
+     "min_child_weight": 3.1127868485071617,
+     "subsample": 0.7281137984185893,
+     "colsample_bytree": 0.8870486020751119,
+     "reg_lambda": 0.036906950565939574,
+     "reg_alpha": 9.197785967194044,
+     "gamma": 0.48812468663108766
+    },
+    {
+     "trial": 20,
+     "val_pr_auc": 0.7611794401673323,
+     "best_iteration": 698,
+     "max_depth": 5,
+     "learning_rate": 0.010774853076986172,
+     "min_child_weight": 1.663129235353816,
+     "subsample": 0.7512662515451276,
+     "colsample_bytree": 0.9049738122735785,
+     "reg_lambda": 0.014902128970179724,
+     "reg_alpha": 2.6020674947040963,
+     "gamma": 0.892652569843694
+    },
+    {
+     "trial": 21,
+     "val_pr_auc": 0.7635829500666842,
+     "best_iteration": 333,
+     "max_depth": 4,
+     "learning_rate": 0.02661807213548641,
+     "min_child_weight": 2.6013203771292495,
+     "subsample": 0.7985984534903778,
+     "colsample_bytree": 0.8855026888162206,
+     "reg_lambda": 0.13151221779394665,
+     "reg_alpha": 3.4429224668656975,
+     "gamma": 1.469287731640516
+    },
+    {
+     "trial": 22,
+     "val_pr_auc": 0.7629054008727701,
+     "best_iteration": 778,
+     "max_depth": 3,
+     "learning_rate": 0.014443876191126512,
+     "min_child_weight": 2.9049836789873473,
+     "subsample": 0.6096141995538626,
+     "colsample_bytree": 0.9569993916538779,
+     "reg_lambda": 0.05057714009053192,
+     "reg_alpha": 3.773444369820253,
+     "gamma": 1.7275701443131004
+    },
+    {
+     "trial": 23,
+     "val_pr_auc": 0.7642158533594761,
+     "best_iteration": 381,
+     "max_depth": 4,
+     "learning_rate": 0.030064501469729214,
+     "min_child_weight": 1.144493477726423,
+     "subsample": 0.7220306499020238,
+     "colsample_bytree": 0.9914693230792743,
+     "reg_lambda": 0.02657146019977875,
+     "reg_alpha": 9.024483429391518,
+     "gamma": 1.9974125907519682
+    },
+    {
+     "trial": 24,
+     "val_pr_auc": 0.7631992014562241,
+     "best_iteration": 167,
+     "max_depth": 4,
+     "learning_rate": 0.047798727083314424,
+     "min_child_weight": 1.0662235403524456,
+     "subsample": 0.6479012896749969,
+     "colsample_bytree": 0.8577426992291528,
+     "reg_lambda": 0.00559823254823005,
+     "reg_alpha": 6.603779198372154,
+     "gamma": 1.7756707152989464
+    },
+    {
+     "trial": 25,
+     "val_pr_auc": 0.7626970270088029,
+     "best_iteration": 397,
+     "max_depth": 3,
+     "learning_rate": 0.02114996546957877,
+     "min_child_weight": 1.407705893398041,
+     "subsample": 0.7179242242020984,
+     "colsample_bytree": 0.9523438864129091,
+     "reg_lambda": 0.05612554786839223,
+     "reg_alpha": 9.973516834704306,
+     "gamma": 0.6613433551300287
+    },
+    {
+     "trial": 26,
+     "val_pr_auc": 0.7615315766227353,
+     "best_iteration": 165,
+     "max_depth": 5,
+     "learning_rate": 0.037880172607493615,
+     "min_child_weight": 1.6469729032535583,
+     "subsample": 0.7776045626121969,
+     "colsample_bytree": 0.9797458705400068,
+     "reg_lambda": 0.0016416409190413142,
+     "reg_alpha": 4.263002631560831,
+     "gamma": 1.0927883731480819
+    },
+    {
+     "trial": 27,
+     "val_pr_auc": 0.7637583162761818,
+     "best_iteration": 614,
+     "max_depth": 3,
+     "learning_rate": 0.020180946613378895,
+     "min_child_weight": 3.2940253894245366,
+     "subsample": 0.811256320680709,
+     "colsample_bytree": 0.8535432419074408,
+     "reg_lambda": 0.0076446334320148706,
+     "reg_alpha": 2.800608895956753,
+     "gamma": 0.2239270945552847
+    },
+    {
+     "trial": 28,
+     "val_pr_auc": 0.7634512561622956,
+     "best_iteration": 669,
+     "max_depth": 4,
+     "learning_rate": 0.013825012697598515,
+     "min_child_weight": 2.8459510703520037,
+     "subsample": 0.7238106160387048,
+     "colsample_bytree": 0.9963094481625411,
+     "reg_lambda": 0.10052479525512674,
+     "reg_alpha": 2.122992524814254,
+     "gamma": 0.29841486303676446
+    },
+    {
+     "trial": 29,
+     "val_pr_auc": 0.7635467905758333,
+     "best_iteration": 667,
+     "max_depth": 3,
+     "learning_rate": 0.01802514476150912,
+     "min_child_weight": 4.684617054246728,
+     "subsample": 0.6172565431184833,
+     "colsample_bytree": 0.9715174497456629,
+     "reg_lambda": 0.01877147777143451,
+     "reg_alpha": 4.341237159801637,
+     "gamma": 0.5612919969156825
+    }
+   ]
+  },
+  {
+   "name": "xgboost_time",
+   "display": "XGBoost + time features",
+   "features": 36,
+   "uses_time_features": true,
+   "val_pr_auc": 0.7636216898020043,
+   "val_roc_auc": 0.8833603394801793,
+   "params": {
+    "max_depth": 5,
+    "learning_rate": 0.044669871217165404,
+    "min_child_weight": 6.8587761456634455,
+    "subsample": 0.5777399159630429,
+    "colsample_bytree": 0.6467478359126022,
+    "reg_lambda": 0.007366202664584153,
+    "reg_alpha": 2.58236744822492,
+    "gamma": 1.5430452306099143,
+    "n_estimators": 224,
+    "scale_pos_weight": 4.222567424643046
+   },
+   "fit_seconds": 211.3805099160527,
+   "search": [
+    {
+     "trial": 0,
+     "val_pr_auc": 0.7516123819290693,
+     "best_iteration": 31,
+     "max_depth": 5,
+     "learning_rate": 0.2536999076681771,
+     "min_child_weight": 17.524101118128137,
+     "subsample": 0.7993292420985183,
+     "colsample_bytree": 0.4936111842654619,
+     "reg_lambda": 0.004993515273965262,
+     "reg_alpha": 0.0017073967431528124,
+     "gamma": 4.330880728874676
+    },
+    {
+     "trial": 1,
+     "val_pr_auc": 0.7517251233824012,
+     "best_iteration": 15,
+     "max_depth": 7,
+     "learning_rate": 0.11114989443094977,
+     "min_child_weight": 1.0838581269344745,
+     "subsample": 0.9849549260809971,
+     "colsample_bytree": 0.899465584480253,
+     "reg_lambda": 0.00892622738184373,
+     "reg_alpha": 0.005337032762603957,
+     "gamma": 0.9170225492671691
+    },
+    {
+     "trial": 2,
+     "val_pr_auc": 0.7626559629598086,
+     "best_iteration": 160,
+     "max_depth": 5,
+     "learning_rate": 0.05958389350068958,
+     "min_child_weight": 5.4182823195332395,
+     "subsample": 0.645614570099021,
+     "colsample_bytree": 0.7671117368334277,
+     "reg_lambda": 0.004212412845262044,
+     "reg_alpha": 0.01474275315991467,
+     "gamma": 1.8318092164684585
+    },
+    {
+     "trial": 3,
+     "val_pr_auc": 0.7515716439292335,
+     "best_iteration": 45,
+     "max_depth": 6,
+     "learning_rate": 0.14447746112718687,
+     "min_child_weight": 2.1839352923182975,
+     "subsample": 0.7571172192068059,
+     "colsample_bytree": 0.7554487413172255,
+     "reg_lambda": 0.0016142252267366923,
+     "reg_alpha": 0.26926469100861794,
+     "gamma": 0.8526206184364576
+    },
+    {
+     "trial": 4,
+     "val_pr_auc": 0.7606289266306985,
+     "best_iteration": 53,
+     "max_depth": 3,
+     "learning_rate": 0.25212679047779213,
+     "min_child_weight": 43.70990468130503,
+     "subsample": 0.9041986740582306,
+     "colsample_bytree": 0.5827682615040224,
+     "reg_lambda": 0.002737095165771331,
+     "reg_alpha": 0.5456725485601478,
+     "gamma": 2.2007624686980067
+    },
+    {
+     "trial": 5,
+     "val_pr_auc": 0.7603876280307226,
+     "best_iteration": 206,
+     "max_depth": 3,
+     "learning_rate": 0.05388108577817234,
+     "min_child_weight": 1.1439974749291268,
+     "subsample": 0.954660201039391,
+     "colsample_bytree": 0.5552679889600102,
+     "reg_lambda": 0.9251083502214166,
+     "reg_alpha": 0.017654048052495066,
+     "gamma": 2.600340105889054
+    },
+    {
+     "trial": 6,
+     "val_pr_auc": 0.7604824794108694,
+     "best_iteration": 192,
+     "max_depth": 7,
+     "learning_rate": 0.01875220945578641,
+     "min_child_weight": 44.39102767051397,
+     "subsample": 0.8875664116805573,
+     "colsample_bytree": 0.9636993649385135,
+     "reg_lambda": 10.144964926243942,
+     "reg_alpha": 0.24637685958997463,
+     "gamma": 4.609371175115584
+    },
+    {
+     "trial": 7,
+     "val_pr_auc": 0.7630714766104458,
+     "best_iteration": 621,
+     "max_depth": 3,
+     "learning_rate": 0.01947558230629543,
+     "min_child_weight": 1.1935477742481382,
+     "subsample": 0.6626651653816322,
+     "colsample_bytree": 0.6332063738136893,
+     "reg_lambda": 0.016400705022266843,
+     "reg_alpha": 2.065142557895926,
+     "gamma": 1.7837666334679465
+    },
+    {
+     "trial": 8,
+     "val_pr_auc": 0.7618931468123576,
+     "best_iteration": 201,
+     "max_depth": 5,
+     "learning_rate": 0.06333268775321839,
+     "min_child_weight": 1.7355056469855072,
+     "subsample": 0.9010984903770198,
+     "colsample_bytree": 0.44473038620786254,
+     "reg_lambda": 26.20670861087006,
+     "reg_alpha": 1.227380098785297,
+     "gamma": 0.993578407670862
+    },
+    {
+     "trial": 9,
+     "val_pr_auc": 0.7626335791125302,
+     "best_iteration": 125,
+     "max_depth": 3,
+     "learning_rate": 0.16015312171361207,
+     "min_child_weight": 15.882886211970037,
+     "subsample": 0.8645035840204937,
+     "colsample_bytree": 0.8627622080115674,
+     "reg_lambda": 0.002145393122543948,
+     "reg_alpha": 0.02715581955282941,
+     "gamma": 0.5793452976256486
+    },
+    {
+     "trial": 10,
+     "val_pr_auc": 0.7628334053037057,
+     "best_iteration": 398,
+     "max_depth": 3,
+     "learning_rate": 0.026717779769062353,
+     "min_child_weight": 3.1570074491753513,
+     "subsample": 0.504584501138903,
+     "colsample_bytree": 0.46062671865191473,
+     "reg_lambda": 0.0029690617451646334,
+     "reg_alpha": 1.4348843405075273,
+     "gamma": 1.2925094612305128
+    },
+    {
+     "trial": 11,
+     "val_pr_auc": 0.7619094905042889,
+     "best_iteration": 358,
+     "max_depth": 4,
+     "learning_rate": 0.0252919719900688,
+     "min_child_weight": 1.1049348486567865,
+     "subsample": 0.6702050167072668,
+     "colsample_bytree": 0.6762414194290757,
+     "reg_lambda": 0.02636331293319001,
+     "reg_alpha": 4.016249407369133,
+     "gamma": 1.5366333367757172
+    },
+    {
+     "trial": 12,
+     "val_pr_auc": 0.7625145158720136,
+     "best_iteration": 83,
+     "max_depth": 4,
+     "learning_rate": 0.06606472087273405,
+     "min_child_weight": 2.918275104335254,
+     "subsample": 0.5242874253617684,
+     "colsample_bytree": 0.42120127349811204,
+     "reg_lambda": 0.0022746452643523747,
+     "reg_alpha": 1.7525194940887696,
+     "gamma": 2.1065632325577557
+    },
+    {
+     "trial": 13,
+     "val_pr_auc": 0.7626694900681927,
+     "best_iteration": 237,
+     "max_depth": 4,
+     "learning_rate": 0.04226594953062399,
+     "min_child_weight": 5.731680276344427,
+     "subsample": 0.5428489817223996,
+     "colsample_bytree": 0.751708559886487,
+     "reg_lambda": 0.033239728133373815,
+     "reg_alpha": 0.5549002691870782,
+     "gamma": 0.8660294396138541
+    },
+    {
+     "trial": 14,
+     "val_pr_auc": 0.7633162056749492,
+     "best_iteration": 625,
+     "max_depth": 3,
+     "learning_rate": 0.029449629470275338,
+     "min_child_weight": 7.676202063183059,
+     "subsample": 0.621886942881205,
+     "colsample_bytree": 0.5171671117363258,
+     "reg_lambda": 0.0056278940730243605,
+     "reg_alpha": 6.746672223704789,
+     "gamma": 1.2112787862319316
+    },
+    {
+     "trial": 15,
+     "val_pr_auc": 0.762620727520332,
+     "best_iteration": 396,
+     "max_depth": 3,
+     "learning_rate": 0.05033539484898507,
+     "min_child_weight": 6.544181798527279,
+     "subsample": 0.5461559730836636,
+     "colsample_bytree": 0.5578696217631999,
+     "reg_lambda": 0.00886007422118857,
+     "reg_alpha": 8.432194790015624,
+     "gamma": 2.436833196692965
+    },
+    {
+     "trial": 16,
+     "val_pr_auc": 0.7620185775772724,
+     "best_iteration": 608,
+     "max_depth": 4,
+     "learning_rate": 0.016052177023692108,
+     "min_child_weight": 1.1054172180225799,
+     "subsample": 0.7073538494410749,
+     "colsample_bytree": 0.5223196503406685,
+     "reg_lambda": 0.037572074110470546,
+     "reg_alpha": 2.3438991151540147,
+     "gamma": 3.208851306587258
+    },
+    {
+     "trial": 17,
+     "val_pr_auc": 0.7632519036524602,
+     "best_iteration": 405,
+     "max_depth": 5,
+     "learning_rate": 0.023293886681453328,
+     "min_child_weight": 14.75874109929015,
+     "subsample": 0.5437642077229161,
+     "colsample_bytree": 0.7171840480312055,
+     "reg_lambda": 0.0021205435295970918,
+     "reg_alpha": 5.281506234411807,
+     "gamma": 1.869359697543256
+    },
+    {
+     "trial": 18,
+     "val_pr_auc": 0.7566918929051532,
+     "best_iteration": 10,
+     "max_depth": 5,
+     "learning_rate": 0.01396210815370115,
+     "min_child_weight": 6.9207033247573095,
+     "subsample": 0.5248741723115963,
+     "colsample_bytree": 0.7533088543492649,
+     "reg_lambda": 0.002984878539094655,
+     "reg_alpha": 6.589920105536996,
+     "gamma": 2.898569843992571
+    },
+    {
+     "trial": 19,
+     "val_pr_auc": 0.7635688591330684,
+     "best_iteration": 791,
+     "max_depth": 5,
+     "learning_rate": 0.014436851020139372,
+     "min_child_weight": 12.939129465356435,
+     "subsample": 0.5704979160106085,
+     "colsample_bytree": 0.814868316200229,
+     "reg_lambda": 0.008789443107850271,
+     "reg_alpha": 9.417730000133194,
+     "gamma": 0.8011760173425375
+    },
+    {
+     "trial": 20,
+     "val_pr_auc": 0.7542686550371142,
+     "best_iteration": 9,
+     "max_depth": 4,
+     "learning_rate": 0.01961360216868575,
+     "min_child_weight": 5.0544855827799156,
+     "subsample": 0.5502532473173836,
+     "colsample_bytree": 0.8852407438504828,
+     "reg_lambda": 0.007220712310948419,
+     "reg_alpha": 6.609377577262109,
+     "gamma": 0.9588368013048945
+    },
+    {
+     "trial": 21,
+     "val_pr_auc": 0.7627926682142823,
+     "best_iteration": 385,
+     "max_depth": 4,
+     "learning_rate": 0.03311834010551631,
+     "min_child_weight": 7.312774335110937,
+     "subsample": 0.6880125631116477,
+     "colsample_bytree": 0.4097743828505883,
+     "reg_lambda": 0.00405723979352249,
+     "reg_alpha": 5.299493059446214,
+     "gamma": 0.908614739976433
+    },
+    {
+     "trial": 22,
+     "val_pr_auc": 0.7571305540968833,
+     "best_iteration": 41,
+     "max_depth": 5,
+     "learning_rate": 0.014509652507131283,
+     "min_child_weight": 9.702341353340534,
+     "subsample": 0.5513850788139195,
+     "colsample_bytree": 0.7354255881909275,
+     "reg_lambda": 0.0010612309353415729,
+     "reg_alpha": 3.206581474418015,
+     "gamma": 0.2611575164603547
+    },
+    {
+     "trial": 23,
+     "val_pr_auc": 0.7631516028744375,
+     "best_iteration": 729,
+     "max_depth": 5,
+     "learning_rate": 0.013810633932058688,
+     "min_child_weight": 10.860198808500725,
+     "subsample": 0.5492929079313134,
+     "colsample_bytree": 0.564151333454758,
+     "reg_lambda": 0.0017125727972018777,
+     "reg_alpha": 5.273284600771354,
+     "gamma": 1.9008854425074941
+    },
+    {
+     "trial": 24,
+     "val_pr_auc": 0.7636216898020043,
+     "best_iteration": 223,
+     "max_depth": 5,
+     "learning_rate": 0.044669871217165404,
+     "min_child_weight": 6.8587761456634455,
+     "subsample": 0.5777399159630429,
+     "colsample_bytree": 0.6467478359126022,
+     "reg_lambda": 0.007366202664584153,
+     "reg_alpha": 2.58236744822492,
+     "gamma": 1.5430452306099143
+    },
+    {
+     "trial": 25,
+     "val_pr_auc": 0.7619856162557614,
+     "best_iteration": 361,
+     "max_depth": 5,
+     "learning_rate": 0.02554486016685847,
+     "min_child_weight": 6.02094820959432,
+     "subsample": 0.5802635520129734,
+     "colsample_bytree": 0.46517268578345133,
+     "reg_lambda": 0.01682551779841251,
+     "reg_alpha": 4.537233898595833,
+     "gamma": 1.5355572819610368
+    },
+    {
+     "trial": 26,
+     "val_pr_auc": 0.7631428351914507,
+     "best_iteration": 698,
+     "max_depth": 3,
+     "learning_rate": 0.024611549163426484,
+     "min_child_weight": 11.388625240540133,
+     "subsample": 0.6251515051036962,
+     "colsample_bytree": 0.5778972087631382,
+     "reg_lambda": 0.0018641622715666645,
+     "reg_alpha": 3.4542346659961742,
+     "gamma": 1.9949888167338077
+    },
+    {
+     "trial": 27,
+     "val_pr_auc": 0.7615355456736075,
+     "best_iteration": 380,
+     "max_depth": 4,
+     "learning_rate": 0.026490060679966728,
+     "min_child_weight": 8.142127638348288,
+     "subsample": 0.6732387373464077,
+     "colsample_bytree": 0.5786736500111507,
+     "reg_lambda": 0.0022699429837716614,
+     "reg_alpha": 1.4798302370320011,
+     "gamma": 1.068723953084271
+    },
+    {
+     "trial": 28,
+     "val_pr_auc": 0.7621861472584519,
+     "best_iteration": 330,
+     "max_depth": 4,
+     "learning_rate": 0.0316509272458273,
+     "min_child_weight": 9.484025357969667,
+     "subsample": 0.5866847222085559,
+     "colsample_bytree": 0.6720546671819903,
+     "reg_lambda": 0.004721397604606517,
+     "reg_alpha": 3.313294510688227,
+     "gamma": 0.9076054923635316
+    },
+    {
+     "trial": 29,
+     "val_pr_auc": 0.7630781510280948,
+     "best_iteration": 598,
+     "max_depth": 4,
+     "learning_rate": 0.02574223281594786,
+     "min_child_weight": 21.12123718236879,
+     "subsample": 0.6681186543461491,
+     "colsample_bytree": 0.61919763862845,
+     "reg_lambda": 0.019920836466789264,
+     "reg_alpha": 7.580562528773144,
+     "gamma": 0.8463472902248309
+    }
+   ]
+  }
+ ],
+ "time_features": {
+  "rule": "keep time features only if validation PR-AUC improves",
+  "val_pr_auc_without": 0.7643315483512957,
+  "val_pr_auc_with": 0.7636216898020043,
+  "delta": -0.0007098585492913978,
+  "time_features_used": false,
+  "trials_each": 30
+ },
+ "selection": {
+  "final_model": "xgboost",
+  "display": "XGBoost",
+  "rule": "highest validation PR-AUC among eligible candidates",
+  "eligible": [
+   "majority_class",
+   "heuristic_rule",
+   "logistic_regression",
+   "random_forest",
+   "xgboost"
+  ],
+  "val_pr_auc": 0.7643315483512957,
+  "locked_at": "2026-10-13T04:57:38.017005+00:00",
+  "features": [
+   "src_churn",
+   "test_churn",
+   "total_churn",
+   "log1p_src_churn",
+   "log1p_test_churn",
+   "log1p_total_churn",
+   "files_added",
+   "files_deleted",
+   "files_modified",
+   "files_touched",
+   "src_files",
+   "doc_files",
+   "other_files",
+   "tests_added",
+   "tests_deleted",
+   "test_churn_ratio",
+   "touches_tests",
+   "log1p_sloc",
+   "test_lines_per_kloc",
+   "test_cases_per_kloc",
+   "asserts_per_kloc",
+   "num_all_built_commits",
+   "team_size",
+   "by_core_team_member",
+   "is_pr",
+   "commits_on_files_touched",
+   "prev_build_failed",
+   "fail_rate_last_5",
+   "fail_rate_last_20",
+   "builds_since_last_failure",
+   "hours_since_last_build",
+   "prev_build_duration",
+   "prev_duration_zscore_vs_project_last_20",
+   "history_size"
+  ]
+ },
+ "validation": {
+  "final": {
+   "n": 16793,
+   "positives": 3300,
+   "base_rate": 0.19651045078306437,
+   "pr_auc": 0.7643315483512957,
+   "roc_auc": 0.8838473933734439,
+   "precision_at_top_10pct": 0.9071428571428571,
+   "lift_at_top_10pct": 4.616257575757576,
+   "pr_auc_over_base_rate": 3.889521118625245,
+   "at_threshold": {
+    "threshold": 0.6836821436882019,
+    "precision": 0.7309573724668065,
+    "recall": 0.6339393939393939,
+    "f1": 0.6790003245699447,
+    "flagged_share": 0.17042815458822128,
+    "confusion_matrix": {
+     "tp": 2092,
+     "fp": 770,
+     "fn": 1208,
+     "tn": 12723
+    }
+   }
+  },
+  "threshold_rule": "raw-score threshold maximising F1 on validation",
+  "bands": {
+   "at_or_above": {
+    "MEDIUM": {
+     "flagged_share": 0.31519085333174535,
+     "precision": 0.49877196296996035,
+     "recall": 0.8
+    },
+    "HIGH": {
+     "flagged_share": 0.1115941165962008,
+     "precision": 0.880469583778015,
+     "recall": 0.5
+    },
+    "CRITICAL": {
+     "flagged_share": 0.03989757637110701,
+     "precision": 0.9850746268656716,
+     "recall": 0.2
+    }
+   },
+   "exclusive": {
+    "LOW": {
+     "share": 0.6848091466682547,
+     "n": 11500,
+     "failure_rate": 0.057391304347826085
+    },
+    "MEDIUM": {
+     "share": 0.20359673673554457,
+     "n": 3419,
+     "failure_rate": 0.2895583503948523
+    },
+    "HIGH": {
+     "share": 0.0716965402250938,
+     "n": 1204,
+     "failure_rate": 0.8222591362126246
+    },
+    "CRITICAL": {
+     "share": 0.03989757637110701,
+     "n": 670,
+     "failure_rate": 0.9850746268656716
+    }
+   },
+   "base_rate": 0.19651045078306437
+  },
+  "calibration_method_selection": {
+   "selected": "isotonic",
+   "cv_brier": {
+    "isotonic": 0.0858355872926724,
+    "platt": 0.0858633368001619
+   },
+   "folds": 5,
+   "seed": 42
+  },
+  "calibrated_brier": {
+   "isotonic": 0.08504298208790774,
+   "platt": 0.08583842259873455
+  },
+  "by_previous_outcome": {
+   "previous_passed": {
+    "n": 12858,
+    "positives": 983,
+    "base_rate": 0.07645045885829833,
+    "pr_auc": 0.22204911702854857,
+    "roc_auc": 0.7367489853830915,
+    "precision_at_top_10pct": 0.24416796267496113,
+    "lift_at_top_10pct": 3.1938063724055445,
+    "pr_auc_over_base_rate": 2.9044837708576576,
+    "share_of_rows": 0.7656761745965581,
+    "reference_pr_auc": {
+     "majority_class": 0.07645045885829833,
+     "heuristic_rule": 0.07976013836422785,
+     "logistic_regression": 0.20649833522046235
+    }
+   },
+   "previous_failed": {
+    "n": 3914,
+    "positives": 2310,
+    "base_rate": 0.5901890648952478,
+    "pr_auc": 0.9062534676340803,
+    "roc_auc": 0.8524795964633869,
+    "precision_at_top_10pct": 1.0,
+    "lift_at_top_10pct": 1.6943722943722945,
+    "pr_auc_over_base_rate": 1.5355307672380045,
+    "share_of_rows": 0.23307330435300422,
+    "reference_pr_auc": {
+     "majority_class": 0.5901890648952478,
+     "heuristic_rule": 0.5901890648952478,
+     "logistic_regression": 0.8712437899565236
+    }
+   },
+   "no_finished_history": {
+    "n": 21,
+    "positives": 7,
+    "base_rate": 0.3333333333333333,
+    "pr_auc": 0.31549953314659196,
+    "roc_auc": 0.3979591836734694,
+    "precision_at_top_10pct": 0.3333333333333333,
+    "lift_at_top_10pct": 1.0,
+    "pr_auc_over_base_rate": 0.9464985994397759,
+    "share_of_rows": 0.0012505210504376823,
+    "reference_pr_auc": {
+     "majority_class": 0.3333333333333333,
+     "heuristic_rule": 0.3333333333333333,
+     "logistic_regression": 0.44387755102040816
+    }
+   }
+  }
+ },
+ "test": {
+  "evaluations": 1,
+  "access_log": [
+   {
+    "purpose": "final evaluation of xgboost (selection locked 2026-10-13T04:57:38.017005+00:00)",
+    "at": "2026-10-13T04:57:40.001902+00:00"
+   }
+  ],
+  "rows": 17550,
+  "final": {
+   "n": 17550,
+   "positives": 3640,
+   "base_rate": 0.2074074074074074,
+   "pr_auc": 0.7832768989906674,
+   "roc_auc": 0.8893213930210695,
+   "precision_at_top_10pct": 0.9390313390313391,
+   "lift_at_top_10pct": 4.527472527472527,
+   "pr_auc_over_base_rate": 3.776513620133575,
+   "at_threshold": {
+    "threshold": 0.6836821436882019,
+    "precision": 0.7348603702541575,
+    "recall": 0.6434065934065935,
+    "f1": 0.686099311557053,
+    "flagged_share": 0.1815954415954416,
+    "confusion_matrix": {
+     "tp": 2342,
+     "fp": 845,
+     "fn": 1298,
+     "tn": 13065
+    }
+   },
+   "pr_auc_ci95_project_bootstrap": {
+    "low": 0.5638816411436876,
+    "high": 0.9034889993384475,
+    "confidence": 0.95,
+    "n_resamples": 500,
+    "seed": 42
+   },
+   "roc_auc_ci95_project_bootstrap": {
+    "low": 0.8315843672664961,
+    "high": 0.9341281461877498,
+    "confidence": 0.95,
+    "n_resamples": 500,
+    "seed": 42
+   }
+  },
+  "per_project": {
+   "summary": {
+    "min_builds": 30,
+    "projects_eligible": 98,
+    "projects_total": 269,
+    "pr_auc_median": 0.24306982878664962,
+    "pr_auc_p25": 0.09097223109086852,
+    "pr_auc_p75": 0.43049434257888597,
+    "lift_median": 1.7094477134604529,
+    "share_above_base_rate": 0.9489795918367347
+   },
+   "projects": [
+    {
+     "project": "SonarSource/sonarqube",
+     "n": 908,
+     "positives": 139,
+     "base_rate": 0.15308370044052863,
+     "pr_auc": 0.28272231115087637,
+     "lift": 1.8468479030575233
+    },
+    {
+     "project": "checkstyle/checkstyle",
+     "n": 665,
+     "positives": 29,
+     "base_rate": 0.04360902255639098,
+     "pr_auc": 0.5279578433148039,
+     "lift": 12.10661951049464
+    },
+    {
+     "project": "apache/jackrabbit-oak",
+     "n": 500,
+     "positives": 218,
+     "base_rate": 0.436,
+     "pr_auc": 0.5941912343703173,
+     "lift": 1.3628239320420121
+    },
+    {
+     "project": "tananaev/traccar",
+     "n": 460,
+     "positives": 9,
+     "base_rate": 0.01956521739130435,
+     "pr_auc": 0.037596055042827564,
+     "lift": 1.9215761466334087
+    },
+    {
+     "project": "facebook/presto",
+     "n": 434,
+     "positives": 75,
+     "base_rate": 0.1728110599078341,
+     "pr_auc": 0.2731076630834398,
+     "lift": 1.5803830103761718
+    },
+    {
+     "project": "apache/flink",
+     "n": 377,
+     "positives": 167,
+     "base_rate": 0.44297082228116713,
+     "pr_auc": 0.538749319451204,
+     "lift": 1.2162185235515204
+    },
+    {
+     "project": "ForgeEssentials/ForgeEssentialsMain",
+     "n": 343,
+     "positives": 12,
+     "base_rate": 0.03498542274052478,
+     "pr_auc": 0.034148429451800445,
+     "lift": 0.9760759418306294
+    },
+    {
+     "project": "Graylog2/graylog2-server",
+     "n": 332,
+     "positives": 8,
+     "base_rate": 0.024096385542168676,
+     "pr_auc": 0.09116165163620134,
+     "lift": 3.783208542902355
+    },
+    {
+     "project": "HubSpot/Singularity",
+     "n": 327,
+     "positives": 26,
+     "base_rate": 0.07951070336391437,
+     "pr_auc": 0.10880609136164585,
+     "lift": 1.3684458413560843
+    },
+    {
+     "project": "BuildCraft/BuildCraft",
+     "n": 299,
+     "positives": 155,
+     "base_rate": 0.5183946488294314,
+     "pr_auc": 0.7719885219334437,
+     "lift": 1.4891907616651592
+    },
+    {
+     "project": "Unidata/thredds",
+     "n": 299,
+     "positives": 124,
+     "base_rate": 0.41471571906354515,
+     "pr_auc": 0.6110168320817031,
+     "lift": 1.4733389741324938
+    },
+    {
+     "project": "gradle/gradle",
+     "n": 295,
+     "positives": 28,
+     "base_rate": 0.09491525423728814,
+     "pr_auc": 0.18262784060901743,
+     "lift": 1.9241147492735764
+    },
+    {
+     "project": "grpc/grpc-java",
+     "n": 246,
+     "positives": 26,
+     "base_rate": 0.10569105691056911,
+     "pr_auc": 0.257185775199487,
+     "lift": 2.4333731038105304
+    },
+    {
+     "project": "perfectsense/brightspot-cms",
+     "n": 239,
+     "positives": 33,
+     "base_rate": 0.13807531380753138,
+     "pr_auc": 0.43320239419034157,
+     "lift": 3.1374355215603527
+    },
+    {
+     "project": "go-lang-plugin-org/go-lang-idea-plugin",
+     "n": 234,
+     "positives": 16,
+     "base_rate": 0.06837606837606838,
+     "pr_auc": 0.2178016383860067,
+     "lift": 3.1853489613953476
+    },
+    {
+     "project": "datastax/java-driver",
+     "n": 228,
+     "positives": 3,
+     "base_rate": 0.013157894736842105,
+     "pr_auc": 0.011950156270999362,
+     "lift": 0.9082118765959516
+    },
+    {
+     "project": "querydsl/querydsl",
+     "n": 222,
+     "positives": 2,
+     "base_rate": 0.009009009009009009,
+     "pr_auc": 0.017379679144385027,
+     "lift": 1.929144385026738
+    },
+    {
+     "project": "embulk/embulk",
+     "n": 209,
+     "positives": 14,
+     "base_rate": 0.06698564593301436,
+     "pr_auc": 0.11071368579735327,
+     "lift": 1.6527971665462025
+    },
+    {
+     "project": "SpongePowered/SpongeAPI",
+     "n": 200,
+     "positives": 17,
+     "base_rate": 0.085,
+     "pr_auc": 0.22473721360736468,
+     "lift": 2.6439672189101726
+    },
+    {
+     "project": "brettwooldridge/HikariCP",
+     "n": 176,
+     "positives": 14,
+     "base_rate": 0.07954545454545454,
+     "pr_auc": 0.12791320542203044,
+     "lift": 1.6080517253055255
+    },
+    {
+     "project": "apache/tajo",
+     "n": 172,
+     "positives": 40,
+     "base_rate": 0.23255813953488372,
+     "pr_auc": 0.2594727031862658,
+     "lift": 1.115732623700943
+    },
+    {
+     "project": "structr/structr",
+     "n": 157,
+     "positives": 88,
+     "base_rate": 0.5605095541401274,
+     "pr_auc": 0.6518045473560169,
+     "lift": 1.1628785674419848
+    },
+    {
+     "project": "yegor256/rultor",
+     "n": 157,
+     "positives": 14,
+     "base_rate": 0.08917197452229299,
+     "pr_auc": 0.14586701932235824,
+     "lift": 1.6357944309721604
+    },
+    {
+     "project": "SpongePowered/Sponge",
+     "n": 155,
+     "positives": 20,
+     "base_rate": 0.12903225806451613,
+     "pr_auc": 0.17142463820392834,
+     "lift": 1.3285409460804447
+    },
+    {
+     "project": "puniverse/quasar",
+     "n": 148,
+     "positives": 34,
+     "base_rate": 0.22972972972972974,
+     "pr_auc": 0.39709689299220197,
+     "lift": 1.7285394165542909
+    },
+    {
+     "project": "killbill/killbill",
+     "n": 141,
+     "positives": 53,
+     "base_rate": 0.375886524822695,
+     "pr_auc": 0.719297171694933,
+     "lift": 1.913601909603501
+    },
+    {
+     "project": "square/keywhiz",
+     "n": 135,
+     "positives": 1,
+     "base_rate": 0.007407407407407408,
+     "pr_auc": 0.009615384615384616,
+     "lift": 1.2980769230769231
+    },
+    {
+     "project": "electronicarts/orbit",
+     "n": 134,
+     "positives": 7,
+     "base_rate": 0.05223880597014925,
+     "pr_auc": 0.10686933541513421,
+     "lift": 2.0457844208039977
+    },
+    {
+     "project": "bitcoinj/bitcoinj",
+     "n": 128,
+     "positives": 15,
+     "base_rate": 0.1171875,
+     "pr_auc": 0.37197444310702277,
+     "lift": 3.174181914513261
+    },
+    {
+     "project": "geoserver/geoserver",
+     "n": 128,
+     "positives": 45,
+     "base_rate": 0.3515625,
+     "pr_auc": 0.43904067521242446,
+     "lift": 1.2488268094931185
+    },
+    {
+     "project": "jphp-compiler/jphp",
+     "n": 127,
+     "positives": 25,
+     "base_rate": 0.1968503937007874,
+     "pr_auc": 0.5738894269521857,
+     "lift": 2.915358288917103
+    },
+    {
+     "project": "maxcom/lorsource",
+     "n": 126,
+     "positives": 4,
+     "base_rate": 0.031746031746031744,
+     "pr_auc": 0.32887840670859536,
+     "lift": 10.359669811320755
+    },
+    {
+     "project": "google/closure-compiler",
+     "n": 125,
+     "positives": 2,
+     "base_rate": 0.016,
+     "pr_auc": 0.04574275362318841,
+     "lift": 2.8589221014492754
+    },
+    {
+     "project": "cloudfoundry/uaa",
+     "n": 123,
+     "positives": 6,
+     "base_rate": 0.04878048780487805,
+     "pr_auc": 0.05269908481143017,
+     "lift": 1.0803312386343185
+    },
+    {
+     "project": "nutzam/nutz",
+     "n": 118,
+     "positives": 56,
+     "base_rate": 0.4745762711864407,
+     "pr_auc": 0.4913414389501556,
+     "lift": 1.0353266035021136
+    },
+    {
+     "project": "FasterXML/jackson-databind",
+     "n": 117,
+     "positives": 2,
+     "base_rate": 0.017094017094017096,
+     "pr_auc": 0.01695402298850575,
+     "lift": 0.9918103448275862
+    },
+    {
+     "project": "Jasig/cas",
+     "n": 114,
+     "positives": 58,
+     "base_rate": 0.5087719298245614,
+     "pr_auc": 0.5979850560024098,
+     "lift": 1.1753499376599088
+    },
+    {
+     "project": "restlet/restlet-framework-java",
+     "n": 113,
+     "positives": 28,
+     "base_rate": 0.24778761061946902,
+     "pr_auc": 0.41884927690500184,
+     "lift": 1.6903560103666146
+    },
+    {
+     "project": "dreamhead/moco",
+     "n": 110,
+     "positives": 5,
+     "base_rate": 0.045454545454545456,
+     "pr_auc": 0.24298489566853737,
+     "lift": 5.345667704707822
+    },
+    {
+     "project": "graphhopper/graphhopper",
+     "n": 109,
+     "positives": 8,
+     "base_rate": 0.07339449541284404,
+     "pr_auc": 0.24509413645153894,
+     "lift": 3.339407609152218
+    },
+    {
+     "project": "apache/storm",
+     "n": 106,
+     "positives": 77,
+     "base_rate": 0.7264150943396226,
+     "pr_auc": 0.8681791299058614,
+     "lift": 1.195155685324952
+    },
+    {
+     "project": "cbeust/testng",
+     "n": 105,
+     "positives": 11,
+     "base_rate": 0.10476190476190476,
+     "pr_auc": 0.4223701877445193,
+     "lift": 4.031715428470411
+    },
+    {
+     "project": "DSpace/DSpace",
+     "n": 104,
+     "positives": 4,
+     "base_rate": 0.038461538461538464,
+     "pr_auc": 0.07394688644688645,
+     "lift": 1.9226190476190474
+    },
+    {
+     "project": "square/okhttp",
+     "n": 99,
+     "positives": 11,
+     "base_rate": 0.1111111111111111,
+     "pr_auc": 0.144174957139153,
+     "lift": 1.297574614252377
+    },
+    {
+     "project": "davidmoten/rxjava-jdbc",
+     "n": 96,
+     "positives": 2,
+     "base_rate": 0.020833333333333332,
+     "pr_auc": 0.07125000000000001,
+     "lift": 3.4200000000000004
+    },
+    {
+     "project": "druid-io/druid",
+     "n": 96,
+     "positives": 5,
+     "base_rate": 0.052083333333333336,
+     "pr_auc": 0.040488787766064446,
+     "lift": 0.7773847251084374
+    },
+    {
+     "project": "xetorthio/jedis",
+     "n": 96,
+     "positives": 13,
+     "base_rate": 0.13541666666666666,
+     "pr_auc": 0.26969668978065625,
+     "lift": 1.9916063245340772
+    },
+    {
+     "project": "laurentpetit/ccw",
+     "n": 92,
+     "positives": 72,
+     "base_rate": 0.782608695652174,
+     "pr_auc": 0.9474854850974456,
+     "lift": 1.2106758976245138
+    },
+    {
+     "project": "owlcs/owlapi",
+     "n": 85,
+     "positives": 15,
+     "base_rate": 0.17647058823529413,
+     "pr_auc": 0.2784973492874936,
+     "lift": 1.5781516459624636
+    },
+    {
+     "project": "broadinstitute/picard",
+     "n": 83,
+     "positives": 1,
+     "base_rate": 0.012048192771084338,
+     "pr_auc": 0.02631578947368421,
+     "lift": 2.1842105263157894
+    },
+    {
+     "project": "jamesagnew/hapi-fhir",
+     "n": 83,
+     "positives": 33,
+     "base_rate": 0.39759036144578314,
+     "pr_auc": 0.6190141083271931,
+     "lift": 1.5569142724593037
+    },
+    {
+     "project": "brooklyncentral/clocker",
+     "n": 79,
+     "positives": 1,
+     "base_rate": 0.012658227848101266,
+     "pr_auc": 0.016129032258064516,
+     "lift": 1.2741935483870968
+    },
+    {
+     "project": "square/retrofit",
+     "n": 79,
+     "positives": 1,
+     "base_rate": 0.012658227848101266,
+     "pr_auc": 0.045454545454545456,
+     "lift": 3.5909090909090913
+    },
+    {
+     "project": "dropwizard/dropwizard",
+     "n": 73,
+     "positives": 6,
+     "base_rate": 0.0821917808219178,
+     "pr_auc": 0.15005760368663595,
+     "lift": 1.8257008448540708
+    },
+    {
+     "project": "ReactiveX/RxJava",
+     "n": 70,
+     "positives": 3,
+     "base_rate": 0.04285714285714286,
+     "pr_auc": 0.06057347670250896,
+     "lift": 1.4133811230585425
+    },
+    {
+     "project": "L2J/L2J_Server",
+     "n": 69,
+     "positives": 1,
+     "base_rate": 0.014492753623188406,
+     "pr_auc": 0.02631578947368421,
+     "lift": 1.8157894736842104
+    },
+    {
+     "project": "dita-ot/dita-ot",
+     "n": 69,
+     "positives": 7,
+     "base_rate": 0.10144927536231885,
+     "pr_auc": 0.5996460746460746,
+     "lift": 5.910797021511306
+    },
+    {
+     "project": "OryxProject/oryx",
+     "n": 68,
+     "positives": 10,
+     "base_rate": 0.14705882352941177,
+     "pr_auc": 0.23958940475488172,
+     "lift": 1.6292079523331957
+    },
+    {
+     "project": "RS485/LogisticsPipes",
+     "n": 68,
+     "positives": 1,
+     "base_rate": 0.014705882352941176,
+     "pr_auc": 0.029411764705882353,
+     "lift": 2.0
+    },
+    {
+     "project": "bruno-medeiros/DDT",
+     "n": 66,
+     "positives": 24,
+     "base_rate": 0.36363636363636365,
+     "pr_auc": 0.7349944759594159,
+     "lift": 2.021234808888394
+    },
+    {
+     "project": "rackerlabs/blueflood",
+     "n": 64,
+     "positives": 19,
+     "base_rate": 0.296875,
+     "pr_auc": 0.3721720064888246,
+     "lift": 1.2536320218570933
+    },
+    {
+     "project": "biojava/biojava",
+     "n": 63,
+     "positives": 5,
+     "base_rate": 0.07936507936507936,
+     "pr_auc": 0.17354320723037903,
+     "lift": 2.1866444111027756
+    },
+    {
+     "project": "exteso/alf.io",
+     "n": 63,
+     "positives": 4,
+     "base_rate": 0.06349206349206349,
+     "pr_auc": 0.1307879072681704,
+     "lift": 2.059909539473684
+    },
+    {
+     "project": "jOOQ/jOOQ",
+     "n": 56,
+     "positives": 1,
+     "base_rate": 0.017857142857142856,
+     "pr_auc": 0.05,
+     "lift": 2.8000000000000003
+    },
+    {
+     "project": "jcabi/jcabi-github",
+     "n": 56,
+     "positives": 14,
+     "base_rate": 0.25,
+     "pr_auc": 0.7604802440972779,
+     "lift": 3.0419209763891115
+    },
+    {
+     "project": "GoClipse/goclipse",
+     "n": 55,
+     "positives": 6,
+     "base_rate": 0.10909090909090909,
+     "pr_auc": 0.14324108639898114,
+     "lift": 1.3130432919906605
+    },
+    {
+     "project": "iluwatar/java-design-patterns",
+     "n": 55,
+     "positives": 1,
+     "base_rate": 0.01818181818181818,
+     "pr_auc": 0.058823529411764705,
+     "lift": 3.235294117647059
+    },
+    {
+     "project": "SomMeri/less4j",
+     "n": 54,
+     "positives": 9,
+     "base_rate": 0.16666666666666666,
+     "pr_auc": 0.46257866988822266,
+     "lift": 2.775472019329336
+    },
+    {
+     "project": "xtreemfs/xtreemfs",
+     "n": 54,
+     "positives": 13,
+     "base_rate": 0.24074074074074073,
+     "pr_auc": 0.4502408694362172,
+     "lift": 1.8702313038119793
+    },
+    {
+     "project": "mongodb/morphia",
+     "n": 53,
+     "positives": 4,
+     "base_rate": 0.07547169811320754,
+     "pr_auc": 0.18869949494949495,
+     "lift": 2.500268308080808
+    },
+    {
+     "project": "griffon/griffon",
+     "n": 52,
+     "positives": 18,
+     "base_rate": 0.34615384615384615,
+     "pr_auc": 0.6066959338511063,
+     "lift": 1.7526771422365295
+    },
+    {
+     "project": "kongchen/swagger-maven-plugin",
+     "n": 52,
+     "positives": 6,
+     "base_rate": 0.11538461538461539,
+     "pr_auc": 0.24495341614906832,
+     "lift": 2.1229296066252585
+    },
+    {
+     "project": "jayway/rest-assured",
+     "n": 51,
+     "positives": 2,
+     "base_rate": 0.0392156862745098,
+     "pr_auc": 0.2916666666666667,
+     "lift": 7.437500000000001
+    },
+    {
+     "project": "jbachorik/btrace",
+     "n": 50,
+     "positives": 2,
+     "base_rate": 0.04,
+     "pr_auc": 0.05606060606060606,
+     "lift": 1.4015151515151514
+    },
+    {
+     "project": "l0rdn1kk0n/wicket-bootstrap",
+     "n": 49,
+     "positives": 38,
+     "base_rate": 0.7755102040816326,
+     "pr_auc": 0.8560414039259036,
+     "lift": 1.1038428629570862
+    },
+    {
+     "project": "kelemen/netbeans-gradle-project",
+     "n": 48,
+     "positives": 6,
+     "base_rate": 0.125,
+     "pr_auc": 0.37322954822954824,
+     "lift": 2.985836385836386
+    },
+    {
+     "project": "lemire/RoaringBitmap",
+     "n": 48,
+     "positives": 3,
+     "base_rate": 0.0625,
+     "pr_auc": 0.0648098633392751,
+     "lift": 1.0369578134284017
+    },
+    {
+     "project": "spring-cloud/spring-cloud-config",
+     "n": 47,
+     "positives": 14,
+     "base_rate": 0.2978723404255319,
+     "pr_auc": 0.4164252072015683,
+     "lift": 1.3979989098909793
+    },
+    {
+     "project": "lenskit/lenskit",
+     "n": 46,
+     "positives": 2,
+     "base_rate": 0.043478260869565216,
+     "pr_auc": 0.03737373737373738,
+     "lift": 0.8595959595959597
+    },
+    {
+     "project": "google/guava",
+     "n": 45,
+     "positives": 2,
+     "base_rate": 0.044444444444444446,
+     "pr_auc": 0.14835164835164835,
+     "lift": 3.3379120879120876
+    },
+    {
+     "project": "spring-projects/spring-data-examples",
+     "n": 45,
+     "positives": 10,
+     "base_rate": 0.2222222222222222,
+     "pr_auc": 0.3866855921855922,
+     "lift": 1.740085164835165
+    },
+    {
+     "project": "relayrides/pushy",
+     "n": 44,
+     "positives": 5,
+     "base_rate": 0.11363636363636363,
+     "pr_auc": 0.12110275689223057,
+     "lift": 1.0657042606516292
+    },
+    {
+     "project": "openMF/mifosx",
+     "n": 43,
+     "positives": 5,
+     "base_rate": 0.11627906976744186,
+     "pr_auc": 0.28335403726708075,
+     "lift": 2.4368447204968944
+    },
+    {
+     "project": "sanity/quickml",
+     "n": 41,
+     "positives": 8,
+     "base_rate": 0.1951219512195122,
+     "pr_auc": 0.283206443827385,
+     "lift": 1.4514330246153482
+    },
+    {
+     "project": "aws/aws-sdk-java",
+     "n": 40,
+     "positives": 10,
+     "base_rate": 0.25,
+     "pr_auc": 0.36000953159041393,
+     "lift": 1.4400381263616557
+    },
+    {
+     "project": "syncany/syncany",
+     "n": 40,
+     "positives": 1,
+     "base_rate": 0.025,
+     "pr_auc": 0.09090909090909091,
+     "lift": 3.6363636363636362
+    },
+    {
+     "project": "validator/validator",
+     "n": 40,
+     "positives": 4,
+     "base_rate": 0.1,
+     "pr_auc": 0.1167223707664884,
+     "lift": 1.167223707664884
+    },
+    {
+     "project": "searchbox-io/Jest",
+     "n": 39,
+     "positives": 6,
+     "base_rate": 0.15384615384615385,
+     "pr_auc": 0.2431547619047619,
+     "lift": 1.5805059523809524
+    },
+    {
+     "project": "timmolter/XChange",
+     "n": 39,
+     "positives": 1,
+     "base_rate": 0.02564102564102564,
+     "pr_auc": 0.02631578947368421,
+     "lift": 1.0263157894736843
+    },
+    {
+     "project": "OpenTSDB/opentsdb",
+     "n": 38,
+     "positives": 3,
+     "base_rate": 0.07894736842105263,
+     "pr_auc": 0.1065934065934066,
+     "lift": 1.3501831501831505
+    },
+    {
+     "project": "jsprit/jsprit",
+     "n": 35,
+     "positives": 6,
+     "base_rate": 0.17142857142857143,
+     "pr_auc": 0.2668109668109668,
+     "lift": 1.5563973063973062
+    },
+    {
+     "project": "igniterealtime/Openfire",
+     "n": 34,
+     "positives": 2,
+     "base_rate": 0.058823529411764705,
+     "pr_auc": 0.75,
+     "lift": 12.75
+    },
+    {
+     "project": "recruit-tech/redpen",
+     "n": 34,
+     "positives": 4,
+     "base_rate": 0.11764705882352941,
+     "pr_auc": 0.24242424242424243,
+     "lift": 2.0606060606060606
+    },
+    {
+     "project": "Frege/frege",
+     "n": 32,
+     "positives": 1,
+     "base_rate": 0.03125,
+     "pr_auc": 0.045454545454545456,
+     "lift": 1.4545454545454546
+    },
+    {
+     "project": "dropwizard/metrics",
+     "n": 30,
+     "positives": 8,
+     "base_rate": 0.26666666666666666,
+     "pr_auc": 0.44099261246000376,
+     "lift": 1.653722296725014
+    },
+    {
+     "project": "jcabi/jcabi-http",
+     "n": 30,
+     "positives": 7,
+     "base_rate": 0.23333333333333334,
+     "pr_auc": 0.25421064977715224,
+     "lift": 1.0894742133306525
+    },
+    {
+     "project": "kuujo/copycat",
+     "n": 30,
+     "positives": 6,
+     "base_rate": 0.2,
+     "pr_auc": 0.8357142857142856,
+     "lift": 4.178571428571428
+    },
+    {
+     "project": "mockito/mockito",
+     "n": 30,
+     "positives": 4,
+     "base_rate": 0.13333333333333333,
+     "pr_auc": 0.2201923076923077,
+     "lift": 1.6514423076923077
+    }
+   ]
+  },
+  "cold_start": {
+   "n": 17550,
+   "positives": 3640,
+   "base_rate": 0.2074074074074074,
+   "pr_auc": 0.4720437845527138,
+   "roc_auc": 0.7313568683293701,
+   "precision_at_top_10pct": 0.607977207977208,
+   "lift_at_top_10pct": 2.9313186813186816,
+   "pr_auc_over_base_rate": 2.2759253898077274,
+   "masked_features": [
+    "prev_build_failed",
+    "fail_rate_last_5",
+    "fail_rate_last_20",
+    "builds_since_last_failure",
+    "hours_since_last_build",
+    "prev_build_duration",
+    "prev_duration_zscore_vs_project_last_20",
+    "history_size"
+   ]
+  },
+  "cold_start_no_history_model": {
+   "n": 17550,
+   "positives": 3640,
+   "base_rate": 0.2074074074074074,
+   "pr_auc": 0.5368521408711451,
+   "roc_auc": 0.7247702163041847,
+   "precision_at_top_10pct": 0.6581196581196581,
+   "lift_at_top_10pct": 3.1730769230769234,
+   "pr_auc_over_base_rate": 2.588394250628735,
+   "features": 26,
+   "val_pr_auc": 0.5201279553733051,
+   "note": "same family + hyper-parameters, trained without history features"
+  },
+  "calibration": {
+   "selected_method": "isotonic",
+   "selected_on": "validation (5-fold CV Brier inside the validation split)",
+   "gate": {
+    "ece_10_equal_mass": 0.008586125548069546,
+    "brier": 0.08740315995644517,
+    "brier_skill_score": 0.468316892454535,
+    "calibration_slope": 1.0226217822419554,
+    "calibration_intercept": 0.008915688743936667,
+    "checks": {
+     "ece_le_0.05": true,
+     "brier_skill_gt_0": true,
+     "slope_in_0.8_1.2": true
+    },
+    "passed": true,
+    "thresholds": {
+     "ece_max": 0.05,
+     "bss_min_exclusive": 0.0,
+     "slope_range": [
+      0.8,
+      1.2
+     ]
+    },
+    "reliability": [
+     {
+      "p_mean": 0.014363146000604034,
+      "observed_rate": 0.014245014245014245,
+      "n": 1755,
+      "p_min": 0.0,
+      "p_max": 0.02485207100591716
+     },
+     {
+      "p_mean": 0.03055406423315046,
+      "observed_rate": 0.02792022792022792,
+      "n": 1755,
+      "p_min": 0.02485207100591716,
+      "p_max": 0.04100529100529102
+     },
+     {
+      "p_mean": 0.04255301879145423,
+      "observed_rate": 0.040455840455840456,
+      "n": 1755,
+      "p_min": 0.04100529100529102,
+      "p_max": 0.048582995951417005
+     },
+     {
+      "p_mean": 0.052511295205038215,
+      "observed_rate": 0.046153846153846156,
+      "n": 1755,
+      "p_min": 0.048582995951417005,
+      "p_max": 0.06578947368421052
+     },
+     {
+      "p_mean": 0.06977918745208148,
+      "observed_rate": 0.07464387464387465,
+      "n": 1755,
+      "p_min": 0.06578947368421052,
+      "p_max": 0.0704370179948586
+     },
+     {
+      "p_mean": 0.09455249931635572,
+      "observed_rate": 0.08319088319088319,
+      "n": 1755,
+      "p_min": 0.0704370179948586,
+      "p_max": 0.11560044893378227
+     },
+     {
+      "p_mean": 0.1602753332344694,
+      "observed_rate": 0.14985754985754987,
+      "n": 1755,
+      "p_min": 0.11560044893378227,
+      "p_max": 0.20710059171597633
+     },
+     {
+      "p_mean": 0.2378053560934833,
+      "observed_rate": 0.25584045584045584,
+      "n": 1755,
+      "p_min": 0.20710059171597633,
+      "p_max": 0.2783505154639175
+     },
+     {
+      "p_mean": 0.4611983690089892,
+      "observed_rate": 0.4427350427350427,
+      "n": 1755,
+      "p_min": 0.2783505154639175,
+      "p_max": 0.73125
+     },
+     {
+      "p_mean": 0.927519191721066,
+      "observed_rate": 0.9390313390313391,
+      "n": 1755,
+      "p_min": 0.73125,
+      "p_max": 1.0
+     }
+    ],
+    "brier_skill_score_vs_validation_rate": 0.46870066636158036
+   },
+   "other_method_informational": {
+    "platt": {
+     "ece_10_equal_mass": 0.008497070186424163,
+     "brier": 0.08707696306685156,
+     "brier_skill_score": 0.4703011842812518,
+     "calibration_slope": 1.0267559672469837,
+     "calibration_intercept": 0.004771095391135345,
+     "checks": {
+      "ece_le_0.05": true,
+      "brier_skill_gt_0": true,
+      "slope_in_0.8_1.2": true
+     },
+     "passed": true,
+     "thresholds": {
+      "ece_max": 0.05,
+      "bss_min_exclusive": 0.0,
+      "slope_range": [
+       0.8,
+       1.2
+      ]
+     },
+     "reliability": [
+      {
+       "p_mean": 0.017938751473949088,
+       "observed_rate": 0.013105413105413105,
+       "n": 1755,
+       "p_min": 0.0054010758840642836,
+       "p_max": 0.024142804588562723
+      },
+      {
+       "p_mean": 0.028743335160094037,
+       "observed_rate": 0.0245014245014245,
+       "n": 1755,
+       "p_min": 0.024145318645679432,
+       "p_max": 0.033258788937962115
+      },
+      {
+       "p_mean": 0.03825199114839649,
+       "observed_rate": 0.042165242165242166,
+       "n": 1755,
+       "p_min": 0.03326165944515819,
+       "p_max": 0.04347297471681163
+      },
+      {
+       "p_mean": 0.049420105642694834,
+       "observed_rate": 0.05242165242165242,
+       "n": 1755,
+       "p_min": 0.043481181113302576,
+       "p_max": 0.056430546216099
+      },
+      {
+       "p_mean": 0.06624645756324961,
+       "observed_rate": 0.06951566951566951,
+       "n": 1755,
+       "p_min": 0.05643219462594064,
+       "p_max": 0.0780525182445516
+      },
+      {
+       "p_mean": 0.09455607679902531,
+       "observed_rate": 0.07977207977207977,
+       "n": 1755,
+       "p_min": 0.07806388687846474,
+       "p_max": 0.11492131729720526
+      },
+      {
+       "p_mean": 0.15051312683837234,
+       "observed_rate": 0.15669515669515668,
+       "n": 1755,
+       "p_min": 0.11493132712627935,
+       "p_max": 0.19340490915499647
+      },
+      {
+       "p_mean": 0.247599141443377,
+       "observed_rate": 0.24615384615384617,
+       "n": 1755,
+       "p_min": 0.19342776061626266,
+       "p_max": 0.32002638676524797
+      },
+      {
+       "p_mean": 0.47996831050223554,
+       "observed_rate": 0.45071225071225074,
+       "n": 1755,
+       "p_min": 0.3200540201113743,
+       "p_max": 0.7101548446217464
+      },
+      {
+       "p_mean": 0.9249872779057716,
+       "observed_rate": 0.9390313390313391,
+       "n": 1755,
+       "p_min": 0.7110437755970075,
+       "p_max": 0.9854870259363827
+      }
+     ],
+     "brier_skill_score_vs_validation_rate": 0.4706835259076467
+    }
+   }
+  },
+  "probability_exposed": true,
+  "bands": {
+   "at_or_above": {
+    "MEDIUM": {
+     "flagged_share": 0.3427920227920228,
+     "precision": 0.5001662234042553,
+     "recall": 0.8266483516483516
+    },
+    "HIGH": {
+     "flagged_share": 0.11908831908831909,
+     "precision": 0.8803827751196173,
+     "recall": 0.5054945054945055
+    },
+    "CRITICAL": {
+     "flagged_share": 0.07150997150997151,
+     "precision": 0.9960159362549801,
+     "recall": 0.3434065934065934
+    }
+   },
+   "exclusive": {
+    "LOW": {
+     "share": 0.6572079772079772,
+     "n": 11534,
+     "failure_rate": 0.054707820357204784
+    },
+    "MEDIUM": {
+     "share": 0.2237037037037037,
+     "n": 3926,
+     "failure_rate": 0.29775853285787063
+    },
+    "HIGH": {
+     "share": 0.04757834757834758,
+     "n": 835,
+     "failure_rate": 0.7065868263473054
+    },
+    "CRITICAL": {
+     "share": 0.07150997150997151,
+     "n": 1255,
+     "failure_rate": 0.9960159362549801
+    }
+   },
+   "base_rate": 0.2074074074074074
+  },
+  "reference_candidates": {
+   "majority_class": {
+    "n": 17550,
+    "positives": 3640,
+    "base_rate": 0.2074074074074074,
+    "pr_auc": 0.2074074074074074,
+    "roc_auc": 0.5,
+    "precision_at_top_10pct": 0.21082621082621084,
+    "lift_at_top_10pct": 1.0164835164835166,
+    "pr_auc_over_base_rate": 1.0
+   },
+   "heuristic_rule": {
+    "n": 17550,
+    "positives": 3640,
+    "base_rate": 0.2074074074074074,
+    "pr_auc": 0.4047606700495512,
+    "roc_auc": 0.7633870802095102,
+    "precision_at_top_10pct": 0.42735042735042733,
+    "lift_at_top_10pct": 2.0604395604395602,
+    "pr_auc_over_base_rate": 1.951524659167479
+   },
+   "logistic_regression": {
+    "n": 17550,
+    "positives": 3640,
+    "base_rate": 0.2074074074074074,
+    "pr_auc": 0.762402232323519,
+    "roc_auc": 0.8882022775930036,
+    "precision_at_top_10pct": 0.9179487179487179,
+    "lift_at_top_10pct": 4.425824175824176,
+    "pr_auc_over_base_rate": 3.6758679058455384
+   },
+   "random_forest": {
+    "n": 17550,
+    "positives": 3640,
+    "base_rate": 0.2074074074074074,
+    "pr_auc": 0.7818428497523607,
+    "roc_auc": 0.887100413964181,
+    "precision_at_top_10pct": 0.9390313390313391,
+    "lift_at_top_10pct": 4.527472527472527,
+    "pr_auc_over_base_rate": 3.769599454163168
+   },
+   "xgboost": {
+    "n": 17550,
+    "positives": 3640,
+    "base_rate": 0.2074074074074074,
+    "pr_auc": 0.7832768989906674,
+    "roc_auc": 0.8893213930210695,
+    "precision_at_top_10pct": 0.9390313390313391,
+    "lift_at_top_10pct": 4.527472527472527,
+    "pr_auc_over_base_rate": 3.776513620133575
+   },
+   "xgboost_time": {
+    "n": 17550,
+    "positives": 3640,
+    "base_rate": 0.2074074074074074,
+    "pr_auc": 0.7830151807562213,
+    "roc_auc": 0.8883330634139404,
+    "precision_at_top_10pct": 0.9396011396011396,
+    "lift_at_top_10pct": 4.53021978021978,
+    "pr_auc_over_base_rate": 3.775251764360353
+   }
+  },
+  "by_previous_outcome": {
+   "previous_passed": {
+    "n": 13377,
+    "positives": 1096,
+    "base_rate": 0.08193167376840846,
+    "pr_auc": 0.24255071405202763,
+    "roc_auc": 0.7520444687271359,
+    "precision_at_top_10pct": 0.2787742899850523,
+    "lift_at_top_10pct": 3.402521603220844,
+    "pr_auc_over_base_rate": 2.960402282731728,
+    "share_of_rows": 0.7622222222222222,
+    "reference_pr_auc": {
+     "majority_class": 0.08193167376840846,
+     "heuristic_rule": 0.08561856010940506,
+     "logistic_regression": 0.23841312554863356
+    }
+   },
+   "previous_failed": {
+    "n": 4164,
+    "positives": 2540,
+    "base_rate": 0.6099903938520653,
+    "pr_auc": 0.9228715081808906,
+    "roc_auc": 0.863558919359218,
+    "precision_at_top_10pct": 0.9976019184652278,
+    "lift_at_top_10pct": 1.6354387356256728,
+    "pr_auc_over_base_rate": 1.5129279370335544,
+    "share_of_rows": 0.23726495726495728,
+    "reference_pr_auc": {
+     "majority_class": 0.6099903938520653,
+     "heuristic_rule": 0.6099903938520653,
+     "logistic_regression": 0.8984631979378381
+    }
+   },
+   "no_finished_history": {
+    "n": 9,
+    "positives": 4,
+    "base_rate": 0.4444444444444444,
+    "pr_auc": 0.9166666666666666,
+    "roc_auc": 0.9,
+    "precision_at_top_10pct": 1.0,
+    "lift_at_top_10pct": 2.25,
+    "pr_auc_over_base_rate": 2.0625,
+    "share_of_rows": 0.0005128205128205128,
+    "reference_pr_auc": {
+     "majority_class": 0.4444444444444444,
+     "heuristic_rule": 0.5555555555555556,
+     "logistic_regression": 0.95
+    }
+   }
+  },
+  "reference_note": "computed in the same single test pass, after the final model was locked on validation; never used for selection"
+ },
+ "bands": {
+  "raw": {
+   "MEDIUM": 0.4184647798538208,
+   "HIGH": 0.8464354872703552,
+   "CRITICAL": 0.9834946990013123
+  },
+  "recall_targets_on_validation": {
+   "MEDIUM": 0.8,
+   "HIGH": 0.5,
+   "CRITICAL": 0.2
+  },
+  "rule": "band = highest level whose raw-score cut the score reaches (score >= cut)",
+  "risk_score": {
+   "MEDIUM": 68,
+   "HIGH": 89,
+   "CRITICAL": 96
+  }
+ },
+ "cross_project": {
+  "held_out_projects": 80,
+  "total_projects": 402,
+  "fraction": 0.2,
+  "selection": "first 80 projects ranked by sha256('42:<project>')",
+  "train_rows": 64825,
+  "validation_rows": 13499,
+  "model": "xgboost",
+  "model_params": {
+   "max_depth": 4,
+   "learning_rate": 0.013491296057041746,
+   "min_child_weight": 3.1127868485071617,
+   "subsample": 0.7281137984185893,
+   "colsample_bytree": 0.8870486020751119,
+   "reg_lambda": 0.036906950565939574,
+   "reg_alpha": 9.197785967194044,
+   "gamma": 0.48812468663108766,
+   "n_estimators": 208,
+   "scale_pos_weight": 4.064848816313774
+  },
+  "val_pr_auc": 0.8014019862827153,
+  "results": {
+   "unseen_projects_test_window": {
+    "n": 2820,
+    "positives": 628,
+    "base_rate": 0.2226950354609929,
+    "pr_auc": 0.8110738986972026,
+    "roc_auc": 0.8909566199032962,
+    "precision_at_top_10pct": 0.9929078014184397,
+    "lift_at_top_10pct": 4.45859872611465,
+    "pr_auc_over_base_rate": 3.6420834304555916,
+    "projects": 53,
+    "heuristic_rule_pr_auc": 0.433992383447576
+   },
+   "unseen_projects_all_rows": {
+    "n": 20296,
+    "positives": 3388,
+    "base_rate": 0.16692944422546316,
+    "pr_auc": 0.6454120355670073,
+    "roc_auc": 0.8449401864077811,
+    "precision_at_top_10pct": 0.7201970443349753,
+    "lift_at_top_10pct": 4.314379932651316,
+    "pr_auc_over_base_rate": 3.8663762319563104,
+    "projects": 80,
+    "heuristic_rule_pr_auc": 0.3102043234472289
+   },
+   "seen_projects_test_window": {
+    "n": 14730,
+    "positives": 3012,
+    "base_rate": 0.2044806517311609,
+    "pr_auc": 0.776808263667286,
+    "roc_auc": 0.8875344330138059,
+    "precision_at_top_10pct": 0.9226069246435845,
+    "lift_at_top_10pct": 4.51195219123506,
+    "pr_auc_over_base_rate": 3.79893284323344,
+    "projects": 216,
+    "heuristic_rule_pr_auc": 0.39810306084046215
+   }
+  },
+  "access_log": [
+   {
+    "purpose": "cross-project evaluation of refit xgboost",
+    "at": "2026-10-13T04:57:49.139660+00:00"
+   }
+  ]
+ },
+ "explainability": {
+  "global": [
+   {
+    "feature": "prev_build_failed",
+    "label": "Previous finished build failed",
+    "mean_abs_shap": 0.5498184561729431
+   },
+   {
+    "feature": "fail_rate_last_5",
+    "label": "Failure rate of the last 5 finished builds",
+    "mean_abs_shap": 0.47722870111465454
+   },
+   {
+    "feature": "fail_rate_last_20",
+    "label": "Failure rate of the last 20 finished builds",
+    "mean_abs_shap": 0.39516010880470276
+   },
+   {
+    "feature": "builds_since_last_failure",
+    "label": "Builds since the last failure",
+    "mean_abs_shap": 0.25751596689224243
+   },
+   {
+    "feature": "test_cases_per_kloc",
+    "label": "Test cases per 1,000 lines of code",
+    "mean_abs_shap": 0.097686268389225
+   },
+   {
+    "feature": "prev_build_duration",
+    "label": "Duration of the previous finished build",
+    "mean_abs_shap": 0.09737047553062439
+   },
+   {
+    "feature": "asserts_per_kloc",
+    "label": "Assertions per 1,000 lines of code",
+    "mean_abs_shap": 0.08493712544441223
+   },
+   {
+    "feature": "test_lines_per_kloc",
+    "label": "Test lines per 1,000 lines of code",
+    "mean_abs_shap": 0.0827285423874855
+   },
+   {
+    "feature": "log1p_sloc",
+    "label": "Codebase size (lines of code)",
+    "mean_abs_shap": 0.07975577563047409
+   },
+   {
+    "feature": "tests_deleted",
+    "label": "Test cases deleted",
+    "mean_abs_shap": 0.07024964690208435
+   },
+   {
+    "feature": "history_size",
+    "label": "Finished builds in the project history",
+    "mean_abs_shap": 0.06493727117776871
+   },
+   {
+    "feature": "team_size",
+    "label": "Active team size (last 3 months)",
+    "mean_abs_shap": 0.06315439939498901
+   },
+   {
+    "feature": "total_churn",
+    "label": "Total lines changed",
+    "mean_abs_shap": 0.05686836689710617
+   },
+   {
+    "feature": "hours_since_last_build",
+    "label": "Hours since the previous build started",
+    "mean_abs_shap": 0.04936562851071358
+   },
+   {
+    "feature": "commits_on_files_touched",
+    "label": "Recent commits on the touched files (file hotness)",
+    "mean_abs_shap": 0.04247171804308891
+   },
+   {
+    "feature": "touches_tests",
+    "label": "Change touches tests",
+    "mean_abs_shap": 0.025552036240696907
+   },
+   {
+    "feature": "num_all_built_commits",
+    "label": "Commits since the previous built commit",
+    "mean_abs_shap": 0.02462608553469181
+   },
+   {
+    "feature": "src_files",
+    "label": "Source files touched",
+    "mean_abs_shap": 0.021437419578433037
+   },
+   {
+    "feature": "is_pr",
+    "label": "Pull-request build",
+    "mean_abs_shap": 0.01766987517476082
+   },
+   {
+    "feature": "prev_duration_zscore_vs_project_last_20",
+    "label": "Previous build duration vs. recent norm",
+    "mean_abs_shap": 0.015275240875780582
+   },
+   {
+    "feature": "by_core_team_member",
+    "label": "Authored by a core team member",
+    "mean_abs_shap": 0.01067374087870121
+   },
+   {
+    "feature": "files_added",
+    "label": "Files added",
+    "mean_abs_shap": 0.010239594615995884
+   },
+   {
+    "feature": "files_modified",
+    "label": "Files modified",
+    "mean_abs_shap": 0.010127090848982334
+   },
+   {
+    "feature": "log1p_total_churn",
+    "label": "Total lines changed",
+    "mean_abs_shap": 0.008991539478302002
+   },
+   {
+    "feature": "src_churn",
+    "label": "Source lines changed",
+    "mean_abs_shap": 0.00826677680015564
+   },
+   {
+    "feature": "files_touched",
+    "label": "Files touched",
+    "mean_abs_shap": 0.006160085089504719
+   },
+   {
+    "feature": "test_churn_ratio",
+    "label": "Share of the change that is test code",
+    "mean_abs_shap": 0.005978490225970745
+   },
+   {
+    "feature": "test_churn",
+    "label": "Test lines changed",
+    "mean_abs_shap": 0.004478913266211748
+   },
+   {
+    "feature": "doc_files",
+    "label": "Documentation files touched",
+    "mean_abs_shap": 0.0035810444969683886
+   },
+   {
+    "feature": "other_files",
+    "label": "Other files touched",
+    "mean_abs_shap": 0.0034568472765386105
+   },
+   {
+    "feature": "files_deleted",
+    "label": "Files deleted",
+    "mean_abs_shap": 0.002932011615484953
+   },
+   {
+    "feature": "log1p_src_churn",
+    "label": "Source lines changed",
+    "mean_abs_shap": 0.001190914073958993
+   },
+   {
+    "feature": "log1p_test_churn",
+    "label": "Test lines changed",
+    "mean_abs_shap": 0.0006309411255642772
+   },
+   {
+    "feature": "tests_added",
+    "label": "Test cases added",
+    "mean_abs_shap": 0.0001549130247440189
+   }
+  ],
+  "examples_validation": [
+   {
+    "kind": "highest_score",
+    "build_id": 46990002,
+    "project": "apache/sling",
+    "risk_score": 100,
+    "risk_band": "CRITICAL",
+    "top_increasing": [
+     {
+      "feature": "fail_rate_last_20",
+      "features": [
+       "fail_rate_last_20"
+      ],
+      "label": "Failure rate of the last 20 finished builds",
+      "value": 1.0,
+      "contribution": 1.6202313899993896,
+      "text": "Failure rate of the last 20 finished builds is in the top 7% of builds in the training data"
+     },
+     {
+      "feature": "fail_rate_last_5",
+      "features": [
+       "fail_rate_last_5"
+      ],
+      "label": "Failure rate of the last 5 finished builds",
+      "value": 1.0,
+      "contribution": 1.5204778909683228,
+      "text": "Failure rate of the last 5 finished builds is in the top 10% of builds in the training data"
+     },
+     {
+      "feature": "prev_build_failed",
+      "features": [
+       "prev_build_failed"
+      ],
+      "label": "Previous finished build failed",
+      "value": 1.0,
+      "contribution": 0.7901702523231506,
+      "text": "Previous finished build failed: yes"
+     }
+    ],
+    "top_reducing": [
+     {
+      "feature": "test_cases_per_kloc",
+      "features": [
+       "test_cases_per_kloc"
+      ],
+      "label": "Test cases per 1,000 lines of code",
+      "value": 9.80994056560643,
+      "contribution": -0.02188032865524292,
+      "text": "Test cases per 1,000 lines of code is in the bottom 48% of builds in the training data"
+     },
+     {
+      "feature": "tests_deleted",
+      "features": [
+       "tests_deleted"
+      ],
+      "label": "Test cases deleted",
+      "value": 0.0,
+      "contribution": -0.0211158599704504,
+      "text": "Test cases deleted is typical of builds in the training data"
+     },
+     {
+      "feature": "test_churn",
+      "features": [
+       "test_churn",
+       "log1p_test_churn"
+      ],
+      "label": "Test lines changed",
+      "value": 33.0,
+      "contribution": -0.013588394969701767,
+      "text": "Test lines changed is in the top 15% of builds in the training data"
+     }
+    ]
+   },
+   {
+    "kind": "median_score",
+    "build_id": 54869614,
+    "project": "broadinstitute/picard",
+    "risk_score": 50,
+    "risk_band": "LOW",
+    "top_increasing": [
+     {
+      "feature": "asserts_per_kloc",
+      "features": [
+       "asserts_per_kloc"
+      ],
+      "label": "Assertions per 1,000 lines of code",
+      "value": 47.5842155919153,
+      "contribution": 0.08438875526189804,
+      "text": "Assertions per 1,000 lines of code is in the top 43% of builds in the training data"
+     },
+     {
+      "feature": "test_lines_per_kloc",
+      "features": [
+       "test_lines_per_kloc"
+      ],
+      "label": "Test lines per 1,000 lines of code",
+      "value": 462.945139557267,
+      "contribution": 0.08302117139101028,
+      "text": "Test lines per 1,000 lines of code is in the top 40% of builds in the training data"
+     },
+     {
+      "feature": "hours_since_last_build",
+      "features": [
+       "hours_since_last_build"
+      ],
+      "label": "Hours since the previous build started",
+      "value": 39.18666666666667,
+      "contribution": 0.030565977096557617,
+      "text": "Hours since the previous build started is in the top 16% of builds in the training data"
+     }
+    ],
+    "top_reducing": [
+     {
+      "feature": "prev_build_failed",
+      "features": [
+       "prev_build_failed"
+      ],
+      "label": "Previous finished build failed",
+      "value": 0.0,
+      "contribution": -0.47862279415130615,
+      "text": "Previous finished build failed: no"
+     },
+     {
+      "feature": "fail_rate_last_20",
+      "features": [
+       "fail_rate_last_20"
+      ],
+      "label": "Failure rate of the last 20 finished builds",
+      "value": 0.1,
+      "contribution": -0.3553835153579712,
+      "text": "Failure rate of the last 20 finished builds is in the bottom 49% of builds in the training data"
+     },
+     {
+      "feature": "fail_rate_last_5",
+      "features": [
+       "fail_rate_last_5"
+      ],
+      "label": "Failure rate of the last 5 finished builds",
+      "value": 0.2,
+      "contribution": -0.3292093575000763,
+      "text": "Failure rate of the last 5 finished builds is in the top 47% of builds in the training data"
+     }
+    ]
+   },
+   {
+    "kind": "lowest_score",
+    "build_id": 55232626,
+    "project": "igniterealtime/Openfire",
+    "risk_score": 0,
+    "risk_band": "LOW",
+    "top_increasing": [
+     {
+      "feature": "test_cases_per_kloc",
+      "features": [
+       "test_cases_per_kloc"
+      ],
+      "label": "Test cases per 1,000 lines of code",
+      "value": 0.468077139112526,
+      "contribution": 0.17159822583198547,
+      "text": "Test cases per 1,000 lines of code is in the bottom 18% of builds in the training data"
+     },
+     {
+      "feature": "team_size",
+      "features": [
+       "team_size"
+      ],
+      "label": "Active team size (last 3 months)",
+      "value": 8.0,
+      "contribution": 0.0710994228720665,
+      "text": "Active team size (last 3 months) is in the top 40% of builds in the training data"
+     },
+     {
+      "feature": "is_pr",
+      "features": [
+       "is_pr"
+      ],
+      "label": "Pull-request build",
+      "value": 0.0,
+      "contribution": 0.016414999961853027,
+      "text": "Pull-request build: no"
+     }
+    ],
+    "top_reducing": [
+     {
+      "feature": "builds_since_last_failure",
+      "features": [
+       "builds_since_last_failure"
+      ],
+      "label": "Builds since the last failure",
+      "value": 104.0,
+      "contribution": -0.9420558214187622,
+      "text": "Builds since the last failure is in the top 2% of builds in the training data"
+     },
+     {
+      "feature": "prev_build_failed",
+      "features": [
+       "prev_build_failed"
+      ],
+      "label": "Previous finished build failed",
+      "value": 0.0,
+      "contribution": -0.5694772601127625,
+      "text": "Previous finished build failed: no"
+     },
+     {
+      "feature": "fail_rate_last_20",
+      "features": [
+       "fail_rate_last_20"
+      ],
+      "label": "Failure rate of the last 20 finished builds",
+      "value": 0.0,
+      "contribution": -0.5161636471748352,
+      "text": "Failure rate of the last 20 finished builds is in the bottom 24% of builds in the training data"
+     }
+    ]
+   }
+  ],
+  "global_sample": {
+   "split": "validation",
+   "rows": 5000,
+   "seed": 42
+  },
+  "global_method": "shap.TreeExplainer, log-odds"
+ },
+ "git": {
+  "sha": "8750d965e668492e32601416dd71b0e1030cffd4",
+  "dirty": false
+ },
+ "environment": {
+  "python": "3.12.11",
+  "platform": "macOS-26.3-arm64-arm-64bit",
+  "numpy": "2.5.4",
+  "pandas": "3.0.6",
+  "scikit_learn": "1.9.1",
+  "xgboost": "3.4.1",
+  "shap": "0.53.0",
+  "optuna": "5.0.0"
+ },
+ "registry": {
+  "tracking_uri": "http://127.0.0.1:25000",
+  "experiment": "release_risk_ci",
+  "run_id": "4239c4af40774e559370044ebbf2199e",
+  "model_uri": "models:/m-13b7015e71f8481c87a30c434a7a388a"
+ },
+ "timings_seconds": {
+  "load_and_audit": 1.2,
+  "train_candidates": 740.44,
+  "validation_artifacts": 0.19,
+  "no_history_model": 1.79,
+  "test_evaluation": 5.3,
+  "cross_project": 3.95,
+  "explanations": 1.99,
+  "total": 755.04
+ }
+}

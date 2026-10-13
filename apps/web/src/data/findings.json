@@ -1,0 +1,2662 @@
+{
+  "report": "releaselens-historical-ci-analytics",
+  "schema_version": "1.0.0",
+  "run_id": "m3-run1",
+  "generated_by": "python -m rl_analysis report --run-id m3-run1 --duckdb-path data/lake/dbt/releaselens.duckdb",
+  "dataset": {
+    "key": "travistorrent-5-3-2016",
+    "version": "4713d8b73b667a2c375b89c20f531fc0",
+    "subset": "gh_lang = 'java', one row per tr_build_id (ADR-0017)",
+    "source": "TravisTorrent travistorrent_5_3_2016 (Figshare 10.6084/m9.figshare.19314170, CC BY 4.0; Beller, Gousios & Zaidman, MSR 2017)",
+    "first_started_at": "2011-06-20T13:04:06Z",
+    "last_started_at": "2015-08-19T02:52:38Z"
+  },
+  "inputs": {
+    "root": "s3://releaselens-data",
+    "run_id": "m3-run1",
+    "feature_schema_version": "1.0.0",
+    "files": {
+      "fct_builds": {
+        "location": "s3://releaselens-data/marts/fct_builds/run_id=m3-run1/part-00000.parquet",
+        "bytes": 3016347,
+        "sha256": "24c1856820051fc41fb9bd6704e7293b1bdd430793d8e28c82ef7632b5e89299",
+        "rows": 128819
+      },
+      "mart_build_features": {
+        "location": "s3://releaselens-data/features/release_features/schema=1.0.0/run_id=m3-run1/part-00000.parquet",
+        "bytes": 7362393,
+        "sha256": "384f66b66bde7416957c189aeccd9f55e369bbb7d9acf726492371a1a25569a5",
+        "rows": 128617
+      },
+      "mart_build_reliability": {
+        "location": "s3://releaselens-data/marts/mart_build_reliability/run_id=m3-run1/part-00000.parquet",
+        "bytes": 81445,
+        "sha256": "929d59961d388696cffd75cfe341158fc821909531f71a54a7c7b9c155b78f28",
+        "rows": 6010
+      },
+      "mart_change_risk": {
+        "location": "s3://releaselens-data/marts/mart_change_risk/run_id=m3-run1/part-00000.parquet",
+        "bytes": 2361,
+        "sha256": "5ce9ee01ddadc9b16c0947fb5745575eaa5d587cdcdd4639548359e0c5b03b7c",
+        "rows": 12
+      }
+    },
+    "feature_manifest": {
+      "location": "s3://releaselens-data/features/release_features/schema=1.0.0/run_id=m3-run1/_manifest.json",
+      "dataset": "travistorrent-5-3-2016",
+      "dataset_version": "4713d8b73b667a2c375b89c20f531fc0",
+      "label_rate": 0.29028,
+      "cutpoints": {
+        "first_started_at": "2011-06-20T13:04:06Z",
+        "last_started_at": "2015-08-19T02:52:38Z",
+        "n_labelled_builds": 128617,
+        "n_test": 19293,
+        "n_train": 90031,
+        "n_validation": 19293,
+        "test_start_at": "2015-04-17T18:41:22Z",
+        "validation_start_at": "2015-01-10T08:05:34Z"
+      }
+    }
+  },
+  "environment": {
+    "rl_analysis": "0.1.0",
+    "feature_schema_version": "1.0.0",
+    "duckdb": "1.5.6",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "statsmodels": "0.15.0",
+    "polars": "1.44.2"
+  },
+  "config": {
+    "min_project_builds": 200,
+    "min_month_builds": 100,
+    "top_n": 10,
+    "bootstrap_resamples": 1000,
+    "bootstrap_seed": 0,
+    "confidence": 0.95
+  },
+  "checks": {
+    "cross_checks": {
+      "change_size_buckets_disagreeing_with_mart_change_risk": 0,
+      "builds_whose_churn_bucket_disagrees_with_fct_builds": 0,
+      "builds_whose_total_churn_is_not_src_plus_test": 0,
+      "feature_rows_without_build": 0,
+      "feature_rows_whose_label_differs": 0,
+      "feature_rows_minus_labelled_builds": 0,
+      "months_disagreeing_with_mart_build_reliability": 0
+    },
+    "naive_link_vs_int_build_history": {
+      "status": "ok",
+      "compared_with": "int_build_history",
+      "duckdb_file": "releaselens.duckdb",
+      "rows": 128819,
+      "missing_rows": 0,
+      "mismatched_rows": 0
+    }
+  },
+  "population": {
+    "builds": 128819,
+    "status_counts": {
+      "canceled": 199,
+      "errored": 15267,
+      "failed": 22068,
+      "passed": 91282,
+      "started": 3
+    },
+    "labelled_builds": 128617,
+    "excluded_without_outcome": 202,
+    "projects": 402,
+    "first_started_at": "2011-06-20T13:04:06Z",
+    "last_started_at": "2015-08-19T02:52:38Z",
+    "failure": {
+      "n": 128617,
+      "failures": 37335,
+      "rate": 0.290280445042,
+      "ci95_low": 0.287806169532,
+      "ci95_high": 0.292767247745
+    },
+    "label_rule": "label 1 = failed or errored, 0 = passed; canceled/started excluded"
+  },
+  "findings": [
+    {
+      "key": "change_size",
+      "spec_ref": "7.5.1",
+      "title": "Failure rate by change size",
+      "question": "Do builds with more changed lines (source + test) fail more often?",
+      "population": {
+        "description": "labelled builds; total churn = src_churn + test_churn lines",
+        "n": 128617
+      },
+      "series": {
+        "buckets": [
+          {
+            "key": "0-100",
+            "label": "0–100",
+            "lower": 0,
+            "upper": 100,
+            "n": 94546,
+            "failures": 26557,
+            "rate": 0.280889725636,
+            "ci95_low": 0.278033886221,
+            "ci95_high": 0.283763369483
+          },
+          {
+            "key": "101-500",
+            "label": "101–500",
+            "lower": 101,
+            "upper": 500,
+            "n": 22760,
+            "failures": 6910,
+            "rate": 0.303602811951,
+            "ci95_low": 0.297662667261,
+            "ci95_high": 0.309609241737
+          },
+          {
+            "key": "501-1000",
+            "label": "501–1,000",
+            "lower": 501,
+            "upper": 1000,
+            "n": 5338,
+            "failures": 1725,
+            "rate": 0.323154739603,
+            "ci95_low": 0.310739680193,
+            "ci95_high": 0.335824147177
+          },
+          {
+            "key": "1001-5000",
+            "label": "1,001–5,000",
+            "lower": 1001,
+            "upper": 5000,
+            "n": 4932,
+            "failures": 1765,
+            "rate": 0.357866991079,
+            "ci95_low": 0.344603784226,
+            "ci95_high": 0.371351436035
+          },
+          {
+            "key": "5001+",
+            "label": ">5,000",
+            "lower": 5001,
+            "upper": null,
+            "n": 1041,
+            "failures": 378,
+            "rate": 0.363112391931,
+            "ci95_low": 0.334452181491,
+            "ci95_high": 0.392779162945
+          }
+        ]
+      },
+      "effects": {
+        "comparison": ">5,000 vs 0–100 lines",
+        "risk_difference": {
+          "value": 0.0822226662946,
+          "ci95_low": 0.0534187517795,
+          "ci95_high": 0.112026577467,
+          "method": "newcombe_hybrid_score"
+        },
+        "risk_ratio": {
+          "value": 1.29272222794,
+          "ci95_low": 1.19202668801,
+          "ci95_high": 1.40192394635,
+          "method": "katz_log"
+        },
+        "monotonic_increase": true
+      },
+      "tests": [
+        "change_size"
+      ],
+      "headline": {
+        "test_key": "change_size",
+        "test": "pearson_chi_square",
+        "effect_name": "cramers_v",
+        "effect_value": 0.041754754087,
+        "effect_ci95_low": null,
+        "effect_ci95_high": null,
+        "effect_magnitude": "negligible",
+        "cramers_v": 0.041754754087,
+        "p_value": 2.2948730624e-47,
+        "p_value_holm": 1.83589844992e-46
+      },
+      "summary": "Failure rate is 28.09% (95% CI 27.80–28.38%, n=94,546) for 0–100 changed lines and 36.31% (33.45–39.28%, n=1,041) for >5,000 lines: a difference of +8.22 pp (95% CI +5.34 to +11.20 pp), risk ratio 1.29 (95% CI 1.19–1.40). Rates rise monotonically across the 5 buckets. Pearson χ² = 224.2 (dof 4, n=128,617), p = 2.29e-47; effect size Cramér's V = 0.042 (negligible).",
+      "caveats": [
+        "Association, not causation: observational data with no controlled assignment; project, period, author and change type are not held fixed. Large changes may concentrate in particular projects, periods or change types (merges, refactors, dependency updates).",
+        "With n in the tens of thousands even negligible differences reach tiny p-values: read the effect size and its interval, not the p-value.",
+        "Churn counts lines in source and test files only (TravisTorrent definitions, docs/data/FEATURE_DEFINITIONS.md); documentation and other files add no lines."
+      ]
+    },
+    {
+      "key": "src_test_churn",
+      "spec_ref": "7.5.2",
+      "title": "Source churn vs test churn vs failure",
+      "question": "How do source-change size and test changes relate to failure, jointly?",
+      "population": {
+        "description": "labelled builds; quartiles of src_churn; tests changed = test_churn > 0; test-change ratio = test_churn / (src_churn + test_churn)",
+        "n": 128617
+      },
+      "src_churn_cutpoints": {
+        "q25": 0.0,
+        "q50": 10.0,
+        "q75": 77.0,
+        "method": "linear",
+        "share_zero": 0.321885909328
+      },
+      "series": {
+        "cells": [
+          {
+            "key": "Q1|no_test_change",
+            "quartile": "Q1",
+            "quartile_label": "src churn ≤ 0",
+            "tests_changed": false,
+            "n": 34413,
+            "failures": 9539,
+            "rate": 0.277191758928,
+            "ci95_low": 0.272487617131,
+            "ci95_high": 0.281945638508
+          },
+          {
+            "key": "Q1|tests_changed",
+            "quartile": "Q1",
+            "quartile_label": "src churn ≤ 0",
+            "tests_changed": true,
+            "n": 6987,
+            "failures": 2396,
+            "rate": 0.342922570488,
+            "ci95_low": 0.331881252725,
+            "ci95_high": 0.354136515962
+          },
+          {
+            "key": "Q2|no_test_change",
+            "quartile": "Q2",
+            "quartile_label": "0 < src churn ≤ 10",
+            "tests_changed": false,
+            "n": 19644,
+            "failures": 5273,
+            "rate": 0.268428018733,
+            "ci95_low": 0.262276819447,
+            "ci95_high": 0.274669769873
+          },
+          {
+            "key": "Q2|tests_changed",
+            "quartile": "Q2",
+            "quartile_label": "0 < src churn ≤ 10",
+            "tests_changed": true,
+            "n": 4294,
+            "failures": 1239,
+            "rate": 0.28854215184,
+            "ci95_low": 0.275184116036,
+            "ci95_high": 0.302278194428
+          },
+          {
+            "key": "Q3|no_test_change",
+            "quartile": "Q3",
+            "quartile_label": "10 < src churn ≤ 77",
+            "tests_changed": false,
+            "n": 21241,
+            "failures": 5921,
+            "rate": 0.278753354362,
+            "ci95_low": 0.272763838201,
+            "ci95_high": 0.284822881464
+          },
+          {
+            "key": "Q3|tests_changed",
+            "quartile": "Q3",
+            "quartile_label": "10 < src churn ≤ 77",
+            "tests_changed": true,
+            "n": 9953,
+            "failures": 2860,
+            "rate": 0.287350547574,
+            "ci95_low": 0.27854365392,
+            "ci95_high": 0.296321526217
+          },
+          {
+            "key": "Q4|no_test_change",
+            "quartile": "Q4",
+            "quartile_label": "src churn > 77",
+            "tests_changed": false,
+            "n": 15612,
+            "failures": 4741,
+            "rate": 0.30367665898,
+            "ci95_low": 0.296512445928,
+            "ci95_high": 0.310937462156
+          },
+          {
+            "key": "Q4|tests_changed",
+            "quartile": "Q4",
+            "quartile_label": "src churn > 77",
+            "tests_changed": true,
+            "n": 16473,
+            "failures": 5366,
+            "rate": 0.325745158745,
+            "ci95_low": 0.318629804826,
+            "ci95_high": 0.332941765226
+          }
+        ],
+        "by_quartile": [
+          {
+            "key": "Q1",
+            "label": "src churn ≤ 0",
+            "n": 41400,
+            "failures": 11935,
+            "rate": 0.288285024155,
+            "ci95_low": 0.28394155607,
+            "ci95_high": 0.292667778176
+          },
+          {
+            "key": "Q2",
+            "label": "0 < src churn ≤ 10",
+            "n": 23938,
+            "failures": 6512,
+            "rate": 0.272036093241,
+            "ci95_low": 0.266435687976,
+            "ci95_high": 0.27770965194
+          },
+          {
+            "key": "Q3",
+            "label": "10 < src churn ≤ 77",
+            "n": 31194,
+            "failures": 8781,
+            "rate": 0.281496441623,
+            "ci95_low": 0.276532858104,
+            "ci95_high": 0.28651383479
+          },
+          {
+            "key": "Q4",
+            "label": "src churn > 77",
+            "n": 32085,
+            "failures": 10107,
+            "rate": 0.315007012623,
+            "ci95_low": 0.309946647244,
+            "ci95_high": 0.320111670217
+          }
+        ],
+        "by_tests_changed": [
+          {
+            "key": "no_test_change",
+            "label": "test churn = 0",
+            "tests_changed": false,
+            "n": 90910,
+            "failures": 25474,
+            "rate": 0.280211197888,
+            "ci95_low": 0.277301172418,
+            "ci95_high": 0.283139797199
+          },
+          {
+            "key": "tests_changed",
+            "label": "test churn > 0",
+            "tests_changed": true,
+            "n": 37707,
+            "failures": 11861,
+            "rate": 0.31455697881,
+            "ci95_low": 0.309889312763,
+            "ci95_high": 0.319262425597
+          }
+        ],
+        "test_change_ratio": [
+          {
+            "key": "no_line_churn",
+            "label": "no line churn (ratio undefined)",
+            "in_test": false,
+            "n": 34413,
+            "failures": 9539,
+            "rate": 0.277191758928,
+            "ci95_low": 0.272487617131,
+            "ci95_high": 0.281945638508
+          },
+          {
+            "key": "0",
+            "label": "0 (source only)",
+            "in_test": true,
+            "n": 56497,
+            "failures": 15935,
+            "rate": 0.282050374356,
+            "ci95_low": 0.278354675642,
+            "ci95_high": 0.285775709602
+          },
+          {
+            "key": "0-0.1",
+            "label": "(0, 0.1]",
+            "in_test": true,
+            "n": 5949,
+            "failures": 1933,
+            "rate": 0.324928559422,
+            "ci95_low": 0.313143525871,
+            "ci95_high": 0.336939545481
+          },
+          {
+            "key": "0.1-0.3",
+            "label": "(0.1, 0.3]",
+            "in_test": true,
+            "n": 7384,
+            "failures": 2393,
+            "rate": 0.324079089924,
+            "ci95_low": 0.313497755376,
+            "ci95_high": 0.334843371802
+          },
+          {
+            "key": "0.3-1",
+            "label": "(0.3, 1]",
+            "in_test": true,
+            "n": 24374,
+            "failures": 7535,
+            "rate": 0.309140887831,
+            "ci95_low": 0.303369610654,
+            "ci95_high": 0.314972316144
+          }
+        ]
+      },
+      "effects": {
+        "tests_changed_vs_not": {
+          "value": 0.0343457809223,
+          "ci95_low": 0.028835445156,
+          "ci95_high": 0.0398783641974,
+          "method": "newcombe_hybrid_score"
+        },
+        "tests_changed_vs_not_ratio": {
+          "value": 1.12257105063,
+          "ci95_low": 1.10234626093,
+          "ci95_high": 1.14316690532,
+          "method": "katz_log"
+        },
+        "within_quartile": [
+          {
+            "quartile": "Q1",
+            "risk_difference": {
+              "value": 0.0657308115597,
+              "ci95_low": 0.0537095774716,
+              "ci95_high": 0.077891466276,
+              "method": "newcombe_hybrid_score"
+            },
+            "test": "tests_changed_within_q1"
+          },
+          {
+            "quartile": "Q2",
+            "risk_difference": {
+              "value": 0.0201141331063,
+              "ci95_low": 0.00536975865994,
+              "ci95_high": 0.0351645855463,
+              "method": "newcombe_hybrid_score"
+            },
+            "test": "tests_changed_within_q2"
+          },
+          {
+            "quartile": "Q3",
+            "risk_difference": {
+              "value": 0.00859719321175,
+              "ci95_low": -0.00209862536689,
+              "ci95_high": 0.0193838869435,
+              "method": "newcombe_hybrid_score"
+            },
+            "test": "tests_changed_within_q3"
+          },
+          {
+            "quartile": "Q4",
+            "risk_difference": {
+              "value": 0.0220684997643,
+              "ci95_low": 0.0119025013308,
+              "ci95_high": 0.0322231584739,
+              "method": "newcombe_hybrid_score"
+            },
+            "test": "tests_changed_within_q4"
+          }
+        ],
+        "tests_changed_within_projects": {
+          "key": "tests_changed_within_projects",
+          "finding": "src_test_churn",
+          "description": "tests changed vs not, stratified by project",
+          "strata": 361,
+          "strata_dropped": 41,
+          "n": 124774,
+          "status": "ok",
+          "pooled_odds_ratio": 1.10388405789,
+          "ci95_low": 1.06723960825,
+          "ci95_high": 1.14178672141,
+          "cmh_statistic": 33.3771996109,
+          "p_value": 7.5908700672e-09,
+          "method": "mantel_haenszel",
+          "crude_odds_ratio": {
+            "value": 1.17305033822,
+            "ci95_low": 1.14261954183,
+            "ci95_high": 1.2042915823,
+            "method": "woolf_log"
+          },
+          "crude_odds_ratio_all_projects": {
+            "value": 1.17882018904,
+            "ci95_low": 1.14843350204,
+            "ci95_high": 1.21001088494,
+            "method": "woolf_log"
+          },
+          "p_value_holm": 2.27726102016e-08
+        }
+      },
+      "tests": [
+        "src_quartile_x_tests_changed",
+        "src_churn_quartile",
+        "tests_changed",
+        "tests_changed_within_q1",
+        "tests_changed_within_q2",
+        "tests_changed_within_q3",
+        "tests_changed_within_q4",
+        "test_change_ratio"
+      ],
+      "headline": {
+        "test_key": "src_quartile_x_tests_changed",
+        "test": "pearson_chi_square",
+        "effect_name": "cramers_v",
+        "effect_value": 0.0480116731975,
+        "effect_ci95_low": null,
+        "effect_ci95_high": null,
+        "effect_magnitude": "negligible",
+        "cramers_v": 0.0480116731975,
+        "p_value": 3.41858935082e-60,
+        "p_value_holm": 3.07673041574e-59
+      },
+      "summary": "Source-churn quartile cut points (labelled builds, linear interpolation): 0 / 10 / 77 lines. Builds that change tests (test churn > 0) fail at 31.46% vs 28.02% without (+3.43 pp, 95% CI +2.88 to +3.99 pp). Within source-churn quartiles the tests-changed minus no-test-change difference is: Q1 +6.57 pp (+5.37 to +7.79 pp); Q2 +2.01 pp (+0.54 to +3.52 pp); Q3 +0.86 pp (-0.21 to +1.94 pp); Q4 +2.21 pp (+1.19 to +3.22 pp). By test-change ratio the highest rate is (0, 0.1] (32.49%, n=5,949) and the lowest 0 (source only) (28.21%, n=56,497). The 8-cell table: Pearson χ² = 296.5 (dof 7, n=128,617), p = 3.42e-60; effect size Cramér's V = 0.048 (negligible). Tests changed vs not: Within projects (Mantel-Haenszel over 361 projects with both groups, n=124,774): pooled odds ratio 1.10 (95% CI 1.07–1.14), CMH p = 7.59e-09; crude odds ratio on the same builds 1.17 (95% CI 1.14–1.20) (1.18 over all labelled builds, incl. projects with one group only); the association persists within projects but is weaker than the crude one.",
+      "caveats": [
+        "Association, not causation: observational data with no controlled assignment; project, period, author and change type are not held fixed. Changing tests may go together with larger or riskier changes.",
+        "With n in the tens of thousands even negligible differences reach tiny p-values: read the effect size and its interval, not the p-value.",
+        "Ties: 32.19% of these builds have src_churn = 0, so the quartile groups are cut-point groups of unequal size, not equal quarters."
+      ]
+    },
+    {
+      "key": "previous_build",
+      "spec_ref": "7.5.3",
+      "title": "Previous build outcome → next build outcome",
+      "question": "Does a failed previous build go with a failing next build?",
+      "population": {
+        "description": "labelled builds with a previous build that has an outcome",
+        "n": 128169,
+        "excluded": {
+          "leakage_safe_no_finished_previous_build": 448,
+          "naive_first_build_of_project": 402,
+          "naive_previous_build_without_outcome": 168
+        }
+      },
+      "leakage_safe": {
+        "definition": "the project's build with an outcome whose finish is the latest one strictly before this build started (finish = started_at + duration, an upper bound): rl_core.features.history, feature prev_build_failed",
+        "p_fail_given_prev_failed": {
+          "n": 36790,
+          "failures": 26098,
+          "rate": 0.709377548247,
+          "ci95_low": 0.704716215255,
+          "ci95_high": 0.713995161138
+        },
+        "p_fail_given_prev_passed": {
+          "n": 91379,
+          "failures": 11033,
+          "rate": 0.120738900623,
+          "ci95_low": 0.118642275756,
+          "ci95_high": 0.122867411473
+        },
+        "risk_difference": {
+          "value": 0.588638647624,
+          "ci95_low": 0.583514334626,
+          "ci95_high": 0.593709957577,
+          "method": "newcombe_hybrid_score"
+        },
+        "risk_ratio": {
+          "value": 5.87530236393,
+          "ci95_low": 5.76657419827,
+          "ci95_high": 5.98608058801,
+          "method": "katz_log"
+        },
+        "test": "prev_build_leakage_safe",
+        "within_projects": {
+          "key": "prev_build_leakage_safe_within_projects",
+          "finding": "previous_build",
+          "description": "previous FINISHED build failed vs passed, stratified by project",
+          "strata": 382,
+          "strata_dropped": 20,
+          "n": 123014,
+          "status": "ok",
+          "pooled_odds_ratio": 7.38195504897,
+          "ci95_low": 7.14377731641,
+          "ci95_high": 7.62807376706,
+          "cmh_statistic": 16891.2457588,
+          "p_value": 0.0,
+          "method": "mantel_haenszel",
+          "crude_odds_ratio": {
+            "value": 14.5569758602,
+            "ci95_low": 14.1188120871,
+            "ci95_high": 15.0087376251,
+            "method": "woolf_log"
+          },
+          "crude_odds_ratio_all_projects": {
+            "value": 17.7753810296,
+            "ci95_low": 17.2493302143,
+            "ci95_high": 18.3174747555,
+            "method": "woolf_log"
+          },
+          "p_value_holm": 0.0
+        }
+      },
+      "naive": {
+        "definition": "the project's build that STARTED just before (started_at, build_id), finished or not: int_build_history.naive_prev_label",
+        "pairs": 128047,
+        "overlapping_pairs": 28090,
+        "overlapping_share": 0.219372574133,
+        "by_overlap": {
+          "finished_before_start": {
+            "n": 99948,
+            "p_fail_given_prev_failed": {
+              "n": 27972,
+              "failures": 19661,
+              "rate": 0.702881452881,
+              "ci95_low": 0.697498485572,
+              "ci95_high": 0.708208703493
+            },
+            "p_fail_given_prev_passed": {
+              "n": 71976,
+              "failures": 8205,
+              "rate": 0.113996332111,
+              "ci95_low": 0.111695142529,
+              "ci95_high": 0.116338722594
+            },
+            "risk_difference": {
+              "value": 0.588885120771,
+              "ci95_low": 0.583014590111,
+              "ci95_high": 0.59468814348,
+              "method": "newcombe_hybrid_score"
+            }
+          },
+          "overlapping": {
+            "n": 28090,
+            "p_fail_given_prev_failed": {
+              "n": 9202,
+              "failures": 7211,
+              "rate": 0.78363399261,
+              "ci95_low": 0.775103419109,
+              "ci95_high": 0.791927853736
+            },
+            "p_fail_given_prev_passed": {
+              "n": 18888,
+              "failures": 2019,
+              "rate": 0.106893265565,
+              "ci95_low": 0.102566542585,
+              "ci95_high": 0.111379856851
+            },
+            "risk_difference": {
+              "value": 0.676740727045,
+              "ci95_low": 0.667102252807,
+              "ci95_high": 0.686095333617,
+              "method": "newcombe_hybrid_score"
+            }
+          },
+          "unknown_finish": {
+            "n": 9,
+            "p_fail_given_prev_failed": {
+              "n": 9,
+              "failures": 4,
+              "rate": 0.444444444444,
+              "ci95_low": 0.188778521098,
+              "ci95_high": 0.733348706505
+            },
+            "p_fail_given_prev_passed": {
+              "n": 0,
+              "failures": 0,
+              "rate": null,
+              "ci95_low": null,
+              "ci95_high": null
+            },
+            "risk_difference": null
+          }
+        },
+        "p_fail_given_prev_failed": {
+          "n": 37183,
+          "failures": 26876,
+          "rate": 0.722803431676,
+          "ci95_low": 0.718230922429,
+          "ci95_high": 0.727329909037
+        },
+        "p_fail_given_prev_passed": {
+          "n": 90864,
+          "failures": 10224,
+          "rate": 0.112519809826,
+          "ci95_low": 0.110481480256,
+          "ci95_high": 0.114590901023
+        },
+        "risk_difference": {
+          "value": 0.61028362185,
+          "ci95_low": 0.605263934653,
+          "ci95_high": 0.615247872523,
+          "method": "newcombe_hybrid_score"
+        },
+        "risk_ratio": {
+          "value": 6.42378824489,
+          "ci95_low": 6.3009027447,
+          "ci95_high": 6.54907036138,
+          "method": "katz_log"
+        },
+        "test": "prev_build_naive",
+        "within_projects": {
+          "key": "prev_build_naive_within_projects",
+          "finding": "previous_build",
+          "description": "previous STARTED build failed vs passed, stratified by project",
+          "strata": 382,
+          "strata_dropped": 19,
+          "n": 122890,
+          "status": "ok",
+          "pooled_odds_ratio": 8.73768170252,
+          "ci95_low": 8.45303120319,
+          "ci95_high": 9.03191762805,
+          "cmh_statistic": 19901.4298004,
+          "p_value": 0.0,
+          "method": "mantel_haenszel",
+          "crude_odds_ratio": {
+            "value": 16.9468241458,
+            "ci95_low": 16.4275182677,
+            "ci95_high": 17.4825462952,
+            "method": "woolf_log"
+          },
+          "crude_odds_ratio_all_projects": {
+            "value": 20.5665778898,
+            "ci95_low": 19.9459111212,
+            "ci95_high": 21.2065582527,
+            "method": "woolf_log"
+          },
+          "p_value_holm": 0.0
+        }
+      },
+      "agreement": {
+        "compared": 128001,
+        "same_previous_outcome": 122245,
+        "different_previous_outcome": 5756
+      },
+      "series": {
+        "bars": [
+          {
+            "key": "leakage_safe|prev_failed",
+            "n": 36790,
+            "failures": 26098,
+            "rate": 0.709377548247,
+            "ci95_low": 0.704716215255,
+            "ci95_high": 0.713995161138
+          },
+          {
+            "key": "leakage_safe|prev_passed",
+            "n": 91379,
+            "failures": 11033,
+            "rate": 0.120738900623,
+            "ci95_low": 0.118642275756,
+            "ci95_high": 0.122867411473
+          },
+          {
+            "key": "naive|prev_failed",
+            "n": 37183,
+            "failures": 26876,
+            "rate": 0.722803431676,
+            "ci95_low": 0.718230922429,
+            "ci95_high": 0.727329909037
+          },
+          {
+            "key": "naive|prev_passed",
+            "n": 90864,
+            "failures": 10224,
+            "rate": 0.112519809826,
+            "ci95_low": 0.110481480256,
+            "ci95_high": 0.114590901023
+          }
+        ]
+      },
+      "tests": [
+        "prev_build_leakage_safe",
+        "prev_build_naive"
+      ],
+      "headline": {
+        "test_key": "prev_build_leakage_safe",
+        "test": "pearson_chi_square",
+        "effect_name": "risk_difference",
+        "effect_value": 0.588638647624,
+        "effect_ci95_low": 0.583514334626,
+        "effect_ci95_high": 0.593709957577,
+        "effect_magnitude": "large",
+        "cramers_v": 0.58702580157,
+        "p_value": 0.0,
+        "p_value_holm": 0.0
+      },
+      "summary": "Leakage-safe (previous FINISHED build, rl_core feature prev_build_failed): P(fail | previous failed) = 70.94% (70.47–71.40%, n=36,790) vs P(fail | previous passed) = 12.07% (11.86–12.29%, n=91,379), a difference of +58.86 pp (95% CI +58.35 to +59.37 pp). Naive (previous STARTED build): 72.28% (n=37,183) vs 11.25% (n=90,864), +61.03 pp (95% CI +60.53 to +61.52 pp), larger than the leakage-safe difference. For 28,090 of 128,047 naive pairs (21.94%) the naive predecessor is not known to have finished when the build started (its upper-bound finish, start + summed job time, is not before the build's start), so its outcome may not have existed at prediction time; on those overlapping pairs the difference is +67.67 pp vs +58.89 pp on pairs whose predecessor had finished. The two links give the same previous outcome for 122,245 of 128,001 builds (95.50%). Leakage-safe: Within projects (Mantel-Haenszel over 382 projects with both groups, n=123,014): pooled odds ratio 7.38 (95% CI 7.14–7.63), CMH p = < 1e-300; crude odds ratio on the same builds 14.56 (95% CI 14.12–15.01) (17.78 over all labelled builds, incl. projects with one group only); the association persists within projects but is weaker than the crude one.",
+      "caveats": [
+        "Association, not causation: observational data with no controlled assignment; project, period, author and change type are not held fixed. Consecutive builds share the project, branch state, contributors and infrastructure, so a failure followed by a failure can reflect a broken state that persisted; the association does not show that one build's outcome affects the next.",
+        "Only the leakage-safe association is usable at prediction time (ADR-0006); the naive link uses, for overlapping builds, outcomes that may not yet have been known.",
+        "Finish times are upper bounds (started_at + summed job time), so the leakage-safe rule discards some builds that had in fact finished (conservative)."
+      ]
+    },
+    {
+      "key": "duration",
+      "spec_ref": "7.5.4",
+      "title": "CI duration: passed vs failed builds",
+      "question": "Do failed builds run longer or shorter than passed builds?",
+      "population": {
+        "description": "labelled builds with a duration (tr_duration = summed job time)",
+        "n": 128608,
+        "excluded": {
+          "no_duration": 9
+        }
+      },
+      "groups": {
+        "passed": {
+          "n": 91282,
+          "median_s": 420.0,
+          "q25_s": 205.0,
+          "q75_s": 1104.0,
+          "iqr_s": 899.0
+        },
+        "failed": {
+          "n": 37326,
+          "median_s": 570.0,
+          "q25_s": 185.0,
+          "q75_s": 1692.0,
+          "iqr_s": 1507.0
+        }
+      },
+      "series": {
+        "by_status": [
+          {
+            "key": "errored",
+            "n": 15258,
+            "median_s": 623.0,
+            "q25_s": 144.0,
+            "q75_s": 2137.5,
+            "iqr_s": 1993.5
+          },
+          {
+            "key": "failed",
+            "n": 22068,
+            "median_s": 549.0,
+            "q25_s": 213.0,
+            "q75_s": 1523.0,
+            "iqr_s": 1310.0
+          },
+          {
+            "key": "passed",
+            "n": 91282,
+            "median_s": 420.0,
+            "q25_s": 205.0,
+            "q75_s": 1104.0,
+            "iqr_s": 899.0
+          }
+        ]
+      },
+      "effects": {
+        "median_difference_s": {
+          "value": 150.0,
+          "ci95_low": 134.0,
+          "ci95_high": 165.5125,
+          "method": "percentile_bootstrap",
+          "n_resamples": 1000,
+          "seed": 0
+        }
+      },
+      "mann_whitney": {
+        "test": "mann_whitney_u",
+        "x": "failed",
+        "y": "passed",
+        "u": 1836777278.5,
+        "p_value": 1.20676727702e-107,
+        "n_x": 37326,
+        "n_y": 91282,
+        "cliffs_delta": 0.0781765836255,
+        "magnitude": "negligible"
+      },
+      "tests": [],
+      "headline": {
+        "test_key": null,
+        "test": "mann_whitney_u",
+        "effect_name": "cliffs_delta",
+        "effect_value": 0.0781765836255,
+        "effect_ci95_low": null,
+        "effect_ci95_high": null,
+        "effect_magnitude": "negligible",
+        "p_value": 1.20676727702e-107,
+        "p_value_holm": null
+      },
+      "summary": "Median summed job time: failed 570 s (IQR 185 s–1,692 s, n=37,326) vs passed 420 s (IQR 205 s–1,104 s, n=91,282); median difference 150 s (95% bootstrap CI 134 s to 165.5 s). Mann-Whitney U = 1,836,777,278.5, p = 1.21e-107; Cliff's delta = 0.078 (negligible): P(failed longer) - P(passed longer). Failed builds are more spread out: a lower 25th and a higher 75th percentile than passed builds (consistent with some failures stopping early and others running longer).",
+      "caveats": [
+        "Association, not causation: observational data with no controlled assignment; project, period, author and change type are not held fixed.",
+        "Duration is Travis' tr_duration, the SUM of job times, not wall-clock: builds with more jobs (a larger matrix) are longer by construction.",
+        "Failures may stop early (fail-fast, a broken compile) or run until a time-out, and errored builds often break during setup; durations of failed builds mix these, so the difference need not say anything about the change itself.",
+        "Duration is a post-build observation: never a model input for the current build."
+      ]
+    },
+    {
+      "key": "projects",
+      "spec_ref": "7.5.5",
+      "title": "Failure rate by project",
+      "question": "How much do failure rates differ between projects?",
+      "population": {
+        "description": "labelled builds of projects with ≥ 200 labelled builds",
+        "n": 105512,
+        "projects": 161,
+        "min_labelled_builds": 200,
+        "excluded": {
+          "projects_below_threshold": 241,
+          "builds_of_projects_below_threshold": 23105
+        }
+      },
+      "rate_distribution": {
+        "min": 0.0182186234818,
+        "q25": 0.0996015936255,
+        "median": 0.170833333333,
+        "q75": 0.342995169082,
+        "max": 1.0
+      },
+      "always_failing": [
+        {
+          "key": "apache/drill",
+          "n": 419
+        },
+        {
+          "key": "apache/sling",
+          "n": 3797
+        }
+      ],
+      "never_failing": [],
+      "series": {
+        "top": [
+          {
+            "key": "apache/drill",
+            "n": 419,
+            "failures": 419,
+            "rate": 1.0,
+            "ci95_low": 0.990915132042,
+            "ci95_high": 1.0
+          },
+          {
+            "key": "apache/sling",
+            "n": 3797,
+            "failures": 3797,
+            "rate": 1.0,
+            "ci95_low": 0.998989313587,
+            "ci95_high": 1.0
+          },
+          {
+            "key": "deeplearning4j/deeplearning4j",
+            "n": 1666,
+            "failures": 1441,
+            "rate": 0.864945978391,
+            "ci95_low": 0.847691927394,
+            "ci95_high": 0.88052091795
+          },
+          {
+            "key": "twitter/commons",
+            "n": 521,
+            "failures": 408,
+            "rate": 0.78310940499,
+            "ci95_low": 0.745717767683,
+            "ci95_high": 0.816356731277
+          },
+          {
+            "key": "thinkaurelius/titan",
+            "n": 270,
+            "failures": 206,
+            "rate": 0.762962962963,
+            "ci95_low": 0.708770788008,
+            "ci95_high": 0.809777428218
+          },
+          {
+            "key": "geoserver/geoserver",
+            "n": 958,
+            "failures": 653,
+            "rate": 0.681628392484,
+            "ci95_low": 0.651454090014,
+            "ci95_high": 0.710351898706
+          },
+          {
+            "key": "Unidata/thredds",
+            "n": 1646,
+            "failures": 1049,
+            "rate": 0.63730255164,
+            "ci95_low": 0.613781506919,
+            "ci95_high": 0.66018421117
+          },
+          {
+            "key": "stephanenicolas/robospice",
+            "n": 359,
+            "failures": 225,
+            "rate": 0.626740947075,
+            "ci95_low": 0.575614334387,
+            "ci95_high": 0.675183907622
+          },
+          {
+            "key": "zhangkaitao/es",
+            "n": 220,
+            "failures": 134,
+            "rate": 0.609090909091,
+            "ci95_low": 0.5432683893,
+            "ci95_high": 0.671169098075
+          },
+          {
+            "key": "simpligility/android-maven-plugin",
+            "n": 349,
+            "failures": 210,
+            "rate": 0.601719197708,
+            "ci95_low": 0.549519871449,
+            "ci95_high": 0.651703647571
+          }
+        ],
+        "bottom": [
+          {
+            "key": "tananaev/traccar",
+            "n": 494,
+            "failures": 9,
+            "rate": 0.0182186234818,
+            "ci95_low": 0.00961390320653,
+            "ci95_high": 0.0342584148451
+          },
+          {
+            "key": "iluwatar/java-design-patterns",
+            "n": 208,
+            "failures": 5,
+            "rate": 0.0240384615385,
+            "ci95_low": 0.0103105054418,
+            "ci95_high": 0.0550282573185
+          },
+          {
+            "key": "rhuss/docker-maven-plugin",
+            "n": 310,
+            "failures": 8,
+            "rate": 0.0258064516129,
+            "ci95_low": 0.013133323854,
+            "ci95_high": 0.0500879563913
+          },
+          {
+            "key": "albertlatacz/java-repl",
+            "n": 207,
+            "failures": 6,
+            "rate": 0.0289855072464,
+            "ci95_low": 0.013350613024,
+            "ci95_high": 0.0617838453947
+          },
+          {
+            "key": "square/wire",
+            "n": 366,
+            "failures": 11,
+            "rate": 0.0300546448087,
+            "ci95_low": 0.0168633721142,
+            "ci95_high": 0.0530083477927
+          },
+          {
+            "key": "recruit-tech/redpen",
+            "n": 423,
+            "failures": 13,
+            "rate": 0.0307328605201,
+            "ci95_low": 0.0180468732758,
+            "ci95_high": 0.0518654049344
+          },
+          {
+            "key": "exteso/alf.io",
+            "n": 267,
+            "failures": 9,
+            "rate": 0.0337078651685,
+            "ci95_low": 0.0178333233312,
+            "ci95_high": 0.0628096436495
+          },
+          {
+            "key": "google/closure-compiler",
+            "n": 537,
+            "failures": 20,
+            "rate": 0.0372439478585,
+            "ci95_low": 0.0242370675742,
+            "ci95_high": 0.0568245043628
+          },
+          {
+            "key": "twilio/twilio-java",
+            "n": 211,
+            "failures": 8,
+            "rate": 0.0379146919431,
+            "ci95_low": 0.019334977304,
+            "ci95_high": 0.0730189795608
+          },
+          {
+            "key": "square/javapoet",
+            "n": 224,
+            "failures": 9,
+            "rate": 0.0401785714286,
+            "ci95_low": 0.0212796921115,
+            "ci95_high": 0.0745828384996
+          }
+        ]
+      },
+      "tests": [
+        "projects"
+      ],
+      "headline": {
+        "test_key": "projects",
+        "test": "pearson_chi_square",
+        "effect_name": "cramers_v",
+        "effect_value": 0.53873345619,
+        "effect_ci95_low": null,
+        "effect_ci95_high": null,
+        "effect_magnitude": "large",
+        "cramers_v": 0.53873345619,
+        "p_value": 0.0,
+        "p_value_holm": 0.0
+      },
+      "summary": "161 of 402 projects have ≥ 200 labelled builds (105,512 of 128,617 builds). Their failure rates range from 1.82% to 100.00% (median 17.08%, IQR 9.96%–34.30%). Highest: apache/drill 100.00%, apache/sling 100.00%, deeplearning4j/deeplearning4j 86.49%. Lowest: tananaev/traccar 1.82%, iluwatar/java-design-patterns 2.40%, rhuss/docker-maven-plugin 2.58%. 2 of these projects never passed a build (apache/drill (n=419), apache/sling (n=3,797)); 0 never failed. Project vs failure: Pearson χ² = 30,623.1 (dof 160, n=105,512), p = < 1e-300; effect size Cramér's V = 0.539 (large).",
+      "caveats": [
+        "Association, not causation: observational data with no controlled assignment; project, period, author and change type are not held fixed. Projects differ in size, language tooling, test suites, CI configuration and activity period.",
+        "A project that never passes more plausibly has a CI configuration that never worked (or a data artefact) than only risky changes; its builds add only failed → failed pairs, which inflates pooled (crude) associations such as previous-build → next-build.",
+        "A project's rate pools its whole observed history (2011-2015)."
+      ]
+    },
+    {
+      "key": "monthly_trend",
+      "spec_ref": "7.5.5",
+      "title": "Monthly reliability trend",
+      "question": "How does the failure rate move over calendar time?",
+      "population": {
+        "description": "labelled builds by UTC month of started_at",
+        "n": 128617,
+        "months": 50,
+        "low_volume_months": 9,
+        "low_volume_threshold": 100
+      },
+      "series": {
+        "months": [
+          {
+            "key": "2011-06",
+            "projects": 1,
+            "low_volume": true,
+            "n": 1,
+            "failures": 0,
+            "rate": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.793450685623
+          },
+          {
+            "key": "2011-08",
+            "projects": 1,
+            "low_volume": true,
+            "n": 4,
+            "failures": 3,
+            "rate": 0.75,
+            "ci95_low": 0.300641842582,
+            "ci95_high": 0.95441273919
+          },
+          {
+            "key": "2011-09",
+            "projects": 1,
+            "low_volume": true,
+            "n": 3,
+            "failures": 3,
+            "rate": 1.0,
+            "ci95_low": 0.438502968245,
+            "ci95_high": 1.0
+          },
+          {
+            "key": "2011-10",
+            "projects": 1,
+            "low_volume": true,
+            "n": 3,
+            "failures": 0,
+            "rate": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.561497031755
+          },
+          {
+            "key": "2011-11",
+            "projects": 1,
+            "low_volume": true,
+            "n": 5,
+            "failures": 0,
+            "rate": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.434482464783
+          },
+          {
+            "key": "2011-12",
+            "projects": 3,
+            "low_volume": true,
+            "n": 20,
+            "failures": 8,
+            "rate": 0.4,
+            "ci95_low": 0.218806532373,
+            "ci95_high": 0.613418499238
+          },
+          {
+            "key": "2012-01",
+            "projects": 4,
+            "low_volume": true,
+            "n": 12,
+            "failures": 7,
+            "rate": 0.583333333333,
+            "ci95_low": 0.31951131255,
+            "ci95_high": 0.806739686341
+          },
+          {
+            "key": "2012-02",
+            "projects": 4,
+            "low_volume": true,
+            "n": 16,
+            "failures": 4,
+            "rate": 0.25,
+            "ci95_low": 0.101820674912,
+            "ci95_high": 0.494983165355
+          },
+          {
+            "key": "2012-03",
+            "projects": 8,
+            "low_volume": true,
+            "n": 71,
+            "failures": 48,
+            "rate": 0.676056338028,
+            "ci95_low": 0.560611570558,
+            "ci95_high": 0.773427882894
+          },
+          {
+            "key": "2012-04",
+            "projects": 9,
+            "low_volume": false,
+            "n": 114,
+            "failures": 28,
+            "rate": 0.245614035088,
+            "ci95_low": 0.175747336656,
+            "ci95_high": 0.332065952653
+          },
+          {
+            "key": "2012-05",
+            "projects": 13,
+            "low_volume": false,
+            "n": 225,
+            "failures": 44,
+            "rate": 0.195555555556,
+            "ci95_low": 0.149024377327,
+            "ci95_high": 0.252307878175
+          },
+          {
+            "key": "2012-06",
+            "projects": 22,
+            "low_volume": false,
+            "n": 310,
+            "failures": 90,
+            "rate": 0.290322580645,
+            "ci95_low": 0.242605008397,
+            "ci95_high": 0.343173108718
+          },
+          {
+            "key": "2012-07",
+            "projects": 22,
+            "low_volume": false,
+            "n": 318,
+            "failures": 110,
+            "rate": 0.345911949686,
+            "ci95_low": 0.2957515492,
+            "ci95_high": 0.39975070101
+          },
+          {
+            "key": "2012-08",
+            "projects": 28,
+            "low_volume": false,
+            "n": 214,
+            "failures": 57,
+            "rate": 0.266355140187,
+            "ci95_low": 0.211629081059,
+            "ci95_high": 0.329321477474
+          },
+          {
+            "key": "2012-09",
+            "projects": 29,
+            "low_volume": false,
+            "n": 241,
+            "failures": 76,
+            "rate": 0.315352697095,
+            "ci95_low": 0.259975755282,
+            "ci95_high": 0.376523714912
+          },
+          {
+            "key": "2012-10",
+            "projects": 40,
+            "low_volume": false,
+            "n": 427,
+            "failures": 66,
+            "rate": 0.154566744731,
+            "ci95_low": 0.123374028584,
+            "ci95_high": 0.191919349153
+          },
+          {
+            "key": "2012-11",
+            "projects": 35,
+            "low_volume": false,
+            "n": 380,
+            "failures": 47,
+            "rate": 0.123684210526,
+            "ci95_low": 0.0943005761423,
+            "ci95_high": 0.160600129793
+          },
+          {
+            "key": "2012-12",
+            "projects": 57,
+            "low_volume": false,
+            "n": 710,
+            "failures": 154,
+            "rate": 0.216901408451,
+            "ci95_low": 0.188153138881,
+            "ci95_high": 0.248696605509
+          },
+          {
+            "key": "2013-01",
+            "projects": 58,
+            "low_volume": false,
+            "n": 1018,
+            "failures": 293,
+            "rate": 0.287819253438,
+            "ci95_low": 0.260845974433,
+            "ci95_high": 0.316387855462
+          },
+          {
+            "key": "2013-02",
+            "projects": 77,
+            "low_volume": false,
+            "n": 1195,
+            "failures": 270,
+            "rate": 0.225941422594,
+            "ci95_low": 0.203130376047,
+            "ci95_high": 0.250508806031
+          },
+          {
+            "key": "2013-03",
+            "projects": 78,
+            "low_volume": false,
+            "n": 1380,
+            "failures": 355,
+            "rate": 0.257246376812,
+            "ci95_low": 0.234879964759,
+            "ci95_high": 0.280960527135
+          },
+          {
+            "key": "2013-04",
+            "projects": 90,
+            "low_volume": false,
+            "n": 2101,
+            "failures": 624,
+            "rate": 0.297001427891,
+            "ci95_low": 0.277847719264,
+            "ci95_high": 0.316896105063
+          },
+          {
+            "key": "2013-05",
+            "projects": 99,
+            "low_volume": false,
+            "n": 2159,
+            "failures": 583,
+            "rate": 0.270032422418,
+            "ci95_low": 0.251725479108,
+            "ci95_high": 0.289156264235
+          },
+          {
+            "key": "2013-06",
+            "projects": 116,
+            "low_volume": false,
+            "n": 2307,
+            "failures": 526,
+            "rate": 0.228001733853,
+            "ci95_low": 0.211342242434,
+            "ci95_high": 0.245565545329
+          },
+          {
+            "key": "2013-07",
+            "projects": 128,
+            "low_volume": false,
+            "n": 2232,
+            "failures": 537,
+            "rate": 0.240591397849,
+            "ci95_low": 0.223313869304,
+            "ci95_high": 0.258760320066
+          },
+          {
+            "key": "2013-08",
+            "projects": 127,
+            "low_volume": false,
+            "n": 2492,
+            "failures": 597,
+            "rate": 0.239566613162,
+            "ci95_low": 0.223217730819,
+            "ci95_high": 0.256717184352
+          },
+          {
+            "key": "2013-09",
+            "projects": 132,
+            "low_volume": false,
+            "n": 2390,
+            "failures": 549,
+            "rate": 0.229707112971,
+            "ci95_low": 0.213284669805,
+            "ci95_high": 0.246997048
+          },
+          {
+            "key": "2013-10",
+            "projects": 155,
+            "low_volume": false,
+            "n": 3027,
+            "failures": 818,
+            "rate": 0.270234555666,
+            "ci95_low": 0.254713211544,
+            "ci95_high": 0.286338335065
+          },
+          {
+            "key": "2013-11",
+            "projects": 154,
+            "low_volume": false,
+            "n": 2803,
+            "failures": 745,
+            "rate": 0.265786657153,
+            "ci95_low": 0.249761620463,
+            "ci95_high": 0.282452785209
+          },
+          {
+            "key": "2013-12",
+            "projects": 149,
+            "low_volume": false,
+            "n": 2515,
+            "failures": 775,
+            "rate": 0.308151093439,
+            "ci95_low": 0.290409669367,
+            "ci95_high": 0.326477691042
+          },
+          {
+            "key": "2014-01",
+            "projects": 176,
+            "low_volume": false,
+            "n": 3435,
+            "failures": 1081,
+            "rate": 0.314701601164,
+            "ci95_low": 0.299385797661,
+            "ci95_high": 0.330431390702
+          },
+          {
+            "key": "2014-02",
+            "projects": 179,
+            "low_volume": false,
+            "n": 3605,
+            "failures": 1242,
+            "rate": 0.34452149792,
+            "ci95_low": 0.32918183576,
+            "ci95_high": 0.360192160634
+          },
+          {
+            "key": "2014-03",
+            "projects": 194,
+            "low_volume": false,
+            "n": 4805,
+            "failures": 1571,
+            "rate": 0.326951092612,
+            "ci95_low": 0.313830164729,
+            "ci95_high": 0.340348494675
+          },
+          {
+            "key": "2014-04",
+            "projects": 205,
+            "low_volume": false,
+            "n": 4484,
+            "failures": 1484,
+            "rate": 0.330954504906,
+            "ci95_low": 0.317331379044,
+            "ci95_high": 0.344867026601
+          },
+          {
+            "key": "2014-05",
+            "projects": 211,
+            "low_volume": false,
+            "n": 4428,
+            "failures": 1355,
+            "rate": 0.306007226739,
+            "ci95_low": 0.292606851643,
+            "ci95_high": 0.319743902335
+          },
+          {
+            "key": "2014-06",
+            "projects": 226,
+            "low_volume": false,
+            "n": 5185,
+            "failures": 1681,
+            "rate": 0.324204435873,
+            "ci95_low": 0.311598006197,
+            "ci95_high": 0.337071159267
+          },
+          {
+            "key": "2014-07",
+            "projects": 233,
+            "low_volume": false,
+            "n": 5346,
+            "failures": 1841,
+            "rate": 0.344369622147,
+            "ci95_low": 0.331748209292,
+            "ci95_high": 0.357214536089
+          },
+          {
+            "key": "2014-08",
+            "projects": 245,
+            "low_volume": false,
+            "n": 5302,
+            "failures": 1547,
+            "rate": 0.291776688042,
+            "ci95_low": 0.279694967666,
+            "ci95_high": 0.304159918098
+          },
+          {
+            "key": "2014-09",
+            "projects": 246,
+            "low_volume": false,
+            "n": 5861,
+            "failures": 1659,
+            "rate": 0.28305749872,
+            "ci95_low": 0.271669512658,
+            "ci95_high": 0.294729678547
+          },
+          {
+            "key": "2014-10",
+            "projects": 264,
+            "low_volume": false,
+            "n": 6551,
+            "failures": 1948,
+            "rate": 0.297359181804,
+            "ci95_low": 0.286411717516,
+            "ci95_high": 0.308544161023
+          },
+          {
+            "key": "2014-11",
+            "projects": 258,
+            "low_volume": false,
+            "n": 5387,
+            "failures": 1514,
+            "rate": 0.281046964916,
+            "ci95_low": 0.269202574557,
+            "ci95_high": 0.293203402688
+          },
+          {
+            "key": "2014-12",
+            "projects": 224,
+            "low_volume": false,
+            "n": 5385,
+            "failures": 1355,
+            "rate": 0.251624883937,
+            "ci95_low": 0.240214497687,
+            "ci95_high": 0.263389380727
+          },
+          {
+            "key": "2015-01",
+            "projects": 222,
+            "low_volume": false,
+            "n": 5882,
+            "failures": 1842,
+            "rate": 0.313158789527,
+            "ci95_low": 0.301431853866,
+            "ci95_high": 0.325129613109
+          },
+          {
+            "key": "2015-02",
+            "projects": 231,
+            "low_volume": false,
+            "n": 5279,
+            "failures": 1619,
+            "rate": 0.306686872514,
+            "ci95_low": 0.29439219634,
+            "ci95_high": 0.319262686944
+          },
+          {
+            "key": "2015-03",
+            "projects": 237,
+            "low_volume": false,
+            "n": 6061,
+            "failures": 1809,
+            "rate": 0.298465599736,
+            "ci95_low": 0.287076322737,
+            "ci95_high": 0.310110179731
+          },
+          {
+            "key": "2015-04",
+            "projects": 233,
+            "low_volume": false,
+            "n": 6110,
+            "failures": 1711,
+            "rate": 0.280032733224,
+            "ci95_low": 0.268914932082,
+            "ci95_high": 0.291426954749
+          },
+          {
+            "key": "2015-05",
+            "projects": 224,
+            "low_volume": false,
+            "n": 5292,
+            "failures": 1341,
+            "rate": 0.253401360544,
+            "ci95_low": 0.241864238302,
+            "ci95_high": 0.265296234629
+          },
+          {
+            "key": "2015-06",
+            "projects": 224,
+            "low_volume": false,
+            "n": 5700,
+            "failures": 1782,
+            "rate": 0.312631578947,
+            "ci95_low": 0.30072683155,
+            "ci95_high": 0.324788706457
+          },
+          {
+            "key": "2015-07",
+            "projects": 195,
+            "low_volume": false,
+            "n": 4336,
+            "failures": 1143,
+            "rate": 0.26360701107,
+            "ci95_low": 0.250706344688,
+            "ci95_high": 0.276926169207
+          },
+          {
+            "key": "2015-08",
+            "projects": 141,
+            "low_volume": false,
+            "n": 1490,
+            "failures": 393,
+            "rate": 0.263758389262,
+            "ci95_low": 0.242011153861,
+            "ci95_high": 0.28672062966
+          }
+        ]
+      },
+      "tests": [
+        "months"
+      ],
+      "headline": {
+        "test_key": "months",
+        "test": "pearson_chi_square",
+        "effect_name": "cramers_v",
+        "effect_value": 0.0739366126138,
+        "effect_ci95_low": null,
+        "effect_ci95_high": null,
+        "effect_magnitude": "negligible",
+        "cramers_v": 0.0739366126138,
+        "p_value": 6.13733116064e-122,
+        "p_value_holm": 7.36479739276e-121
+      },
+      "summary": "50 months (2011-06 to 2015-08); 9 have fewer than 100 labelled builds and are flagged. Among the other 41, the monthly failure rate ranges from 12.37% (2012-11, n=380) to 34.59% (2012-07, n=318). Month vs failure: Pearson χ² = 702.4 (dof 40, n=128,482), p = 6.14e-122; effect size Cramér's V = 0.074 (negligible).",
+      "caveats": [
+        "Association, not causation: observational data with no controlled assignment; project, period, author and change type are not held fixed. The mix of projects changes from month to month (see the projects column), so a monthly rate also reflects which projects were active, not calendar time alone.",
+        "Months with few builds have wide intervals; flagged months are kept in the series but excluded from the chi-square test."
+      ]
+    },
+    {
+      "key": "core_team",
+      "spec_ref": "7.5.6",
+      "title": "Core-team vs non-core contributors",
+      "question": "Do builds of core-team members' commits fail less often?",
+      "population": {
+        "description": "labelled builds",
+        "n": 128617,
+        "excluded": {
+          "group_unknown": 0
+        }
+      },
+      "series": {
+        "groups": [
+          {
+            "key": "core_team",
+            "label": "core team",
+            "n": 100690,
+            "failures": 27740,
+            "rate": 0.27549905651,
+            "ci95_low": 0.27274813476,
+            "ci95_high": 0.278267107632
+          },
+          {
+            "key": "non_core",
+            "label": "non-core",
+            "n": 27927,
+            "failures": 9595,
+            "rate": 0.34357431876,
+            "ci95_low": 0.338026380907,
+            "ci95_high": 0.349165284518
+          }
+        ],
+        "by_pull_request": [
+          {
+            "key": "push|non_core",
+            "pull_request": false,
+            "core_team": false,
+            "n": 25690,
+            "failures": 9033,
+            "rate": 0.351615414558,
+            "ci95_low": 0.34579929141,
+            "ci95_high": 0.357475907348
+          },
+          {
+            "key": "push|core_team",
+            "pull_request": false,
+            "core_team": true,
+            "n": 84800,
+            "failures": 24136,
+            "rate": 0.284622641509,
+            "ci95_low": 0.281595397044,
+            "ci95_high": 0.287669398375
+          },
+          {
+            "key": "pull_request|non_core",
+            "pull_request": true,
+            "core_team": false,
+            "n": 2237,
+            "failures": 562,
+            "rate": 0.251229324989,
+            "ci95_low": 0.233692970018,
+            "ci95_high": 0.269618611612
+          },
+          {
+            "key": "pull_request|core_team",
+            "pull_request": true,
+            "core_team": true,
+            "n": 15890,
+            "failures": 3604,
+            "rate": 0.226809314034,
+            "ci95_low": 0.22036461203,
+            "ci95_high": 0.233386073574
+          }
+        ]
+      },
+      "effects": {
+        "comparison": "core team minus non-core",
+        "risk_difference": {
+          "value": -0.0680752622495,
+          "ci95_low": -0.0743063511264,
+          "ci95_high": -0.0618751234261,
+          "method": "newcombe_hybrid_score"
+        },
+        "risk_ratio": {
+          "value": 0.801861610334,
+          "ci95_low": 0.786725896689,
+          "ci95_high": 0.817288517938,
+          "method": "katz_log"
+        },
+        "within_projects": {
+          "key": "core_team_within_projects",
+          "finding": "core_team",
+          "description": "core team vs non-core, stratified by project",
+          "strata": 337,
+          "strata_dropped": 65,
+          "n": 121067,
+          "status": "ok",
+          "pooled_odds_ratio": 1.01431667216,
+          "ci95_low": 0.969125043576,
+          "ci95_high": 1.06161564829,
+          "cmh_statistic": 0.38178444037,
+          "p_value": 0.536649777952,
+          "method": "mantel_haenszel",
+          "crude_odds_ratio": {
+            "value": 0.741121284844,
+            "ci95_low": 0.719845976399,
+            "ci95_high": 0.763025392733,
+            "method": "woolf_log"
+          },
+          "crude_odds_ratio_all_projects": {
+            "value": 0.726517416649,
+            "ci95_low": 0.706243189006,
+            "ci95_high": 0.747373659543,
+            "method": "woolf_log"
+          },
+          "p_value_holm": 1.0
+        }
+      },
+      "tests": [
+        "core_team"
+      ],
+      "headline": {
+        "test_key": "core_team",
+        "test": "pearson_chi_square",
+        "effect_name": "risk_difference",
+        "effect_value": -0.0680752622495,
+        "effect_ci95_low": -0.0743063511264,
+        "effect_ci95_high": -0.0618751234261,
+        "effect_magnitude": "negligible",
+        "cramers_v": 0.0618363696531,
+        "p_value": 5.79016738302e-109,
+        "p_value_holm": 6.36918412132e-108
+      },
+      "summary": "core team: 27.55% (27.27–27.83%, n=100,690); non-core: 34.36% (33.80–34.92%, n=27,927). Difference -6.81 pp (95% CI -7.43 to -6.19 pp), risk ratio 0.80 (95% CI 0.79–0.82). Pearson χ² = 491.8 (dof 1, n=128,617), p = 5.79e-109; effect size Cramér's V = 0.062 (negligible). Within projects (Mantel-Haenszel over 337 projects with both groups, n=121,067): pooled odds ratio 1.01 (95% CI 0.97–1.06), CMH p = 0.5366; crude odds ratio on the same builds 0.74 (95% CI 0.72–0.76) (0.73 over all labelled builds, incl. projects with one group only); the interval includes 1: no association is detectable within projects.",
+      "caveats": [
+        "Association, not causation: observational data with no controlled assignment; project, period, author and change type are not held fixed. Core team = TravisTorrent's gh_by_core_team_member: the build's commit authors all belong to the developers who committed or merged pull requests in the 3 months before the build (docs/data/FEATURE_DEFINITIONS.md); experience, the kind of change and review all differ between the groups.",
+        "With n in the tens of thousands even negligible differences reach tiny p-values: read the effect size and its interval, not the p-value."
+      ]
+    },
+    {
+      "key": "pull_requests",
+      "spec_ref": "7.5.6",
+      "title": "Pull-request vs push builds",
+      "question": "Do pull-request builds fail more or less often than push builds?",
+      "population": {
+        "description": "labelled builds",
+        "n": 128617,
+        "excluded": {
+          "group_unknown": 0
+        }
+      },
+      "series": {
+        "groups": [
+          {
+            "key": "pull_request",
+            "label": "pull request",
+            "n": 18127,
+            "failures": 4166,
+            "rate": 0.229822916092,
+            "ci95_low": 0.223755950077,
+            "ci95_high": 0.236004369252
+          },
+          {
+            "key": "push",
+            "label": "push",
+            "n": 110490,
+            "failures": 33169,
+            "rate": 0.300199113042,
+            "ci95_low": 0.297503517474,
+            "ci95_high": 0.302908601274
+          }
+        ],
+        "by_core_team": [
+          {
+            "key": "push|non_core",
+            "pull_request": false,
+            "core_team": false,
+            "n": 25690,
+            "failures": 9033,
+            "rate": 0.351615414558,
+            "ci95_low": 0.34579929141,
+            "ci95_high": 0.357475907348
+          },
+          {
+            "key": "push|core_team",
+            "pull_request": false,
+            "core_team": true,
+            "n": 84800,
+            "failures": 24136,
+            "rate": 0.284622641509,
+            "ci95_low": 0.281595397044,
+            "ci95_high": 0.287669398375
+          },
+          {
+            "key": "pull_request|non_core",
+            "pull_request": true,
+            "core_team": false,
+            "n": 2237,
+            "failures": 562,
+            "rate": 0.251229324989,
+            "ci95_low": 0.233692970018,
+            "ci95_high": 0.269618611612
+          },
+          {
+            "key": "pull_request|core_team",
+            "pull_request": true,
+            "core_team": true,
+            "n": 15890,
+            "failures": 3604,
+            "rate": 0.226809314034,
+            "ci95_low": 0.22036461203,
+            "ci95_high": 0.233386073574
+          }
+        ]
+      },
+      "effects": {
+        "comparison": "pull request minus push",
+        "risk_difference": {
+          "value": -0.0703761969499,
+          "ci95_low": -0.0770206986696,
+          "ci95_high": -0.0636325630155,
+          "method": "newcombe_hybrid_score"
+        },
+        "risk_ratio": {
+          "value": 0.765568271549,
+          "ci95_low": 0.744333853258,
+          "ci95_high": 0.787408467097,
+          "method": "katz_log"
+        },
+        "within_projects": {
+          "key": "pull_requests_within_projects",
+          "finding": "pull_requests",
+          "description": "pull request vs push, stratified by project",
+          "strata": 345,
+          "strata_dropped": 57,
+          "n": 107589,
+          "status": "ok",
+          "pooled_odds_ratio": 1.01499249273,
+          "ci95_low": 0.966977038993,
+          "ci95_high": 1.06539216419,
+          "cmh_statistic": 0.368842720231,
+          "p_value": 0.543635761469,
+          "method": "mantel_haenszel",
+          "crude_odds_ratio": {
+            "value": 0.873952571838,
+            "ci95_low": 0.841592631645,
+            "ci95_high": 0.907556778782,
+            "method": "woolf_log"
+          },
+          "crude_odds_ratio_all_projects": {
+            "value": 0.695613212404,
+            "ci95_low": 0.670402529478,
+            "ci95_high": 0.721771950424,
+            "method": "woolf_log"
+          },
+          "p_value_holm": 1.0
+        }
+      },
+      "tests": [
+        "pull_requests"
+      ],
+      "headline": {
+        "test_key": "pull_requests",
+        "test": "pearson_chi_square",
+        "effect_name": "risk_difference",
+        "effect_value": -0.0703761969499,
+        "effect_ci95_low": -0.0770206986696,
+        "effect_ci95_high": -0.0636325630155,
+        "effect_magnitude": "negligible",
+        "cramers_v": 0.0539510122129,
+        "p_value": 2.09592486136e-83,
+        "p_value_holm": 2.09592486136e-82
+      },
+      "summary": "pull request: 22.98% (22.38–23.60%, n=18,127); push: 30.02% (29.75–30.29%, n=110,490). Difference -7.04 pp (95% CI -7.70 to -6.36 pp), risk ratio 0.77 (95% CI 0.74–0.79). Pearson χ² = 374.4 (dof 1, n=128,617), p = 2.10e-83; effect size Cramér's V = 0.054 (negligible). Within projects (Mantel-Haenszel over 345 projects with both groups, n=107,589): pooled odds ratio 1.01 (95% CI 0.97–1.07), CMH p = 0.5436; crude odds ratio on the same builds 0.87 (95% CI 0.84–0.91) (0.70 over all labelled builds, incl. projects with one group only); the interval includes 1: no association is detectable within projects.",
+      "caveats": [
+        "Association, not causation: observational data with no controlled assignment; project, period, author and change type are not held fixed. gh_is_pr: a PR build tests GitHub's merge of the PR into its base; 'push' is every non-PR build. The contributor mix differs between the two (series by_core_team).",
+        "With n in the tens of thousands even negligible differences reach tiny p-values: read the effect size and its interval, not the p-value."
+      ]
+    }
+  ],
+  "chi_square_tests": {
+    "family": "every chi-square test in this report",
+    "adjustment": "holm (statsmodels.stats.multitest.multipletests)",
+    "computed": 15,
+    "not_computable": 0,
+    "tests": [
+      {
+        "key": "change_size",
+        "finding": "change_size",
+        "description": "failure x total-churn bucket (5 buckets)",
+        "groups": [
+          "0-100",
+          "101-500",
+          "501-1000",
+          "1001-5000",
+          "5001+"
+        ],
+        "n": 128617,
+        "status": "ok",
+        "table_shape": [
+          5,
+          2
+        ],
+        "chi2": 224.23852908,
+        "dof": 4,
+        "p_value": 2.2948730624e-47,
+        "cramers_v": 0.041754754087,
+        "magnitude": "negligible",
+        "min_expected_count": 302.181943289,
+        "p_value_holm": 1.83589844992e-46
+      },
+      {
+        "key": "src_quartile_x_tests_changed",
+        "finding": "src_test_churn",
+        "description": "failure x (src-churn quartile x tests changed), 8 cells",
+        "groups": [
+          "Q1|no_test_change",
+          "Q1|tests_changed",
+          "Q2|no_test_change",
+          "Q2|tests_changed",
+          "Q3|no_test_change",
+          "Q3|tests_changed",
+          "Q4|no_test_change",
+          "Q4|tests_changed"
+        ],
+        "n": 128617,
+        "status": "ok",
+        "table_shape": [
+          8,
+          2
+        ],
+        "chi2": 296.477717204,
+        "dof": 7,
+        "p_value": 3.41858935082e-60,
+        "cramers_v": 0.0480116731975,
+        "magnitude": "negligible",
+        "min_expected_count": 1246.46423101,
+        "p_value_holm": 3.07673041574e-59
+      },
+      {
+        "key": "src_churn_quartile",
+        "finding": "src_test_churn",
+        "description": "failure x src-churn quartile",
+        "groups": [
+          "Q1",
+          "Q2",
+          "Q3",
+          "Q4"
+        ],
+        "n": 128617,
+        "status": "ok",
+        "table_shape": [
+          4,
+          2
+        ],
+        "chi2": 146.378277592,
+        "dof": 3,
+        "p_value": 1.5921221147e-31,
+        "cramers_v": 0.0337356535937,
+        "magnitude": "negligible",
+        "min_expected_count": 6948.73329342,
+        "p_value_holm": 9.55273268821e-31
+      },
+      {
+        "key": "tests_changed",
+        "finding": "src_test_churn",
+        "description": "failure x tests changed (test churn > 0)",
+        "groups": [
+          "no_test_change",
+          "tests_changed"
+        ],
+        "n": 128617,
+        "status": "ok",
+        "table_shape": [
+          2,
+          2
+        ],
+        "chi2": 152.60807083,
+        "dof": 1,
+        "p_value": 4.66583252136e-35,
+        "cramers_v": 0.0344460607713,
+        "magnitude": "negligible",
+        "min_expected_count": 10945.6047412,
+        "p_value_holm": 3.26608276495e-34
+      },
+      {
+        "key": "tests_changed_within_q1",
+        "finding": "src_test_churn",
+        "description": "failure x tests changed, within src-churn Q1",
+        "groups": [
+          "no_test_change",
+          "tests_changed"
+        ],
+        "n": 41400,
+        "status": "ok",
+        "table_shape": [
+          2,
+          2
+        ],
+        "chi2": 122.298952964,
+        "dof": 1,
+        "p_value": 1.98548777405e-28,
+        "cramers_v": 0.0543514580252,
+        "magnitude": "negligible",
+        "min_expected_count": 2014.24746377,
+        "p_value_holm": 9.92743887023e-28
+      },
+      {
+        "key": "tests_changed_within_q2",
+        "finding": "src_test_churn",
+        "description": "failure x tests changed, within src-churn Q2",
+        "groups": [
+          "no_test_change",
+          "tests_changed"
+        ],
+        "n": 23938,
+        "status": "ok",
+        "table_shape": [
+          2,
+          2
+        ],
+        "chi2": 7.19897003997,
+        "dof": 1,
+        "p_value": 0.00729454343803,
+        "cramers_v": 0.0173416833415,
+        "magnitude": "negligible",
+        "min_expected_count": 1168.12298438,
+        "p_value_holm": 0.0145890868761
+      },
+      {
+        "key": "tests_changed_within_q3",
+        "finding": "src_test_churn",
+        "description": "failure x tests changed, within src-churn Q3",
+        "groups": [
+          "no_test_change",
+          "tests_changed"
+        ],
+        "n": 31194,
+        "status": "ok",
+        "table_shape": [
+          2,
+          2
+        ],
+        "chi2": 2.47667737475,
+        "dof": 1,
+        "p_value": 0.115546116321,
+        "cramers_v": 0.00891044070408,
+        "magnitude": "negligible",
+        "min_expected_count": 2801.73408348,
+        "p_value_holm": 0.115546116321
+      },
+      {
+        "key": "tests_changed_within_q4",
+        "finding": "src_test_churn",
+        "description": "failure x tests changed, within src-churn Q4",
+        "groups": [
+          "no_test_change",
+          "tests_changed"
+        ],
+        "n": 32085,
+        "status": "ok",
+        "table_shape": [
+          2,
+          2
+        ],
+        "chi2": 18.0912456554,
+        "dof": 1,
+        "p_value": 2.10567332465e-05,
+        "cramers_v": 0.0237456036008,
+        "magnitude": "negligible",
+        "min_expected_count": 4917.88948107,
+        "p_value_holm": 6.31701997395e-05
+      },
+      {
+        "key": "test_change_ratio",
+        "finding": "src_test_churn",
+        "description": "failure x test-change-ratio bucket (4 buckets; builds without line churn excluded)",
+        "groups": [
+          "0",
+          "0-0.1",
+          "0.1-0.3",
+          "0.3-1"
+        ],
+        "n": 94204,
+        "status": "ok",
+        "table_shape": [
+          4,
+          2
+        ],
+        "chi2": 124.616213924,
+        "dof": 3,
+        "p_value": 7.81815635219e-27,
+        "cramers_v": 0.036370779111,
+        "magnitude": "negligible",
+        "min_expected_count": 1755.32253407,
+        "p_value_holm": 3.12726254087e-26
+      },
+      {
+        "key": "prev_build_leakage_safe",
+        "finding": "previous_build",
+        "description": "failure x previous FINISHED build failed (rl_core)",
+        "groups": [
+          "prev_failed",
+          "prev_passed"
+        ],
+        "n": 128169,
+        "status": "ok",
+        "table_shape": [
+          2,
+          2
+        ],
+        "chi2": 44166.946619,
+        "dof": 1,
+        "p_value": 0.0,
+        "cramers_v": 0.58702580157,
+        "magnitude": "large",
+        "min_expected_count": 10658.1894998,
+        "p_value_holm": 0.0
+      },
+      {
+        "key": "prev_build_naive",
+        "finding": "previous_build",
+        "description": "failure x previous STARTED build failed (naive link)",
+        "groups": [
+          "prev_failed",
+          "prev_passed"
+        ],
+        "n": 128047,
+        "status": "ok",
+        "table_shape": [
+          2,
+          2
+        ],
+        "chi2": 47753.6781759,
+        "dof": 1,
+        "p_value": 0.0,
+        "cramers_v": 0.610687049421,
+        "magnitude": "large",
+        "min_expected_count": 10773.3043336,
+        "p_value_holm": 0.0
+      },
+      {
+        "key": "projects",
+        "finding": "projects",
+        "description": "failure x project (projects with >= 200 labelled builds)",
+        "groups": [
+          "AzureAD/azure-activedirectory-library-for-android",
+          "BuildCraft/BuildCraft",
+          "CloudifySource/cloudify",
+          "DSpace/DSpace",
+          "FasterXML/jackson-core",
+          "FasterXML/jackson-databind",
+          "ForgeEssentials/ForgeEssentialsMain",
+          "Graylog2/graylog2-server",
+          "HubSpot/Singularity",
+          "HubSpot/jinjava",
+          "Jasig/cas",
+          "Mashape/unirest-java",
+          "Nodeclipse/nodeclipse-1",
+          "OryxProject/oryx",
+          "Prototik/HoloEverywhere",
+          "RS485/LogisticsPipes",
+          "ReactiveX/RxJava",
+          "SomMeri/less4j",
+          "SonarSource/sonarqube",
+          "SpongePowered/Sponge",
+          "SpongePowered/SpongeAPI",
+          "Unicon/cas-addons",
+          "Unidata/thredds",
+          "abarisain/dmix",
+          "adamfisk/LittleProxy",
+          "airlift/airlift",
+          "albertlatacz/java-repl",
+          "apache/drill",
+          "apache/flink",
+          "apache/jackrabbit-oak",
+          "apache/sling",
+          "apache/tajo",
+          "asciidocfx/AsciidocFX",
+          "aws/aws-sdk-java",
+          "azagniotov/stubby4j",
+          "biojava/biojava",
+          "bitcoinj/bitcoinj",
+          "bitsofproof/supernode",
+          "bndtools/bnd",
+          "brettwooldridge/HikariCP",
+          "broadinstitute/picard",
+          "brooklyncentral/clocker",
+          "caelum/mamute",
+          "caelum/vraptor4",
+          "carymrobbins/intellij-haskforce",
+          "checkstyle/checkstyle",
+          "cloudfoundry/uaa",
+          "code4craft/webmagic",
+          "datastax/java-driver",
+          "deeplearning4j/deeplearning4j",
+          "dianping/cat",
+          "dita-ot/dita-ot",
+          "doanduyhai/Achilles",
+          "dreamhead/moco",
+          "dropwizard/dropwizard",
+          "dropwizard/metrics",
+          "druid-io/druid",
+          "dynjs/dynjs",
+          "eXist-db/exist",
+          "embulk/embulk",
+          "essentials/Essentials",
+          "exteso/alf.io",
+          "facebook/presto",
+          "foursquare/twofishes",
+          "geoserver/geoserver",
+          "getsentry/raven-java",
+          "go-lang-plugin-org/go-lang-idea-plugin",
+          "google/closure-compiler",
+          "gradle/gradle",
+          "grails/grails-core",
+          "graphhopper/graphhopper",
+          "griffon/griffon",
+          "grpc/grpc-java",
+          "haiwen/seadroid",
+          "iluwatar/java-design-patterns",
+          "jMonkeyEngine/jmonkeyengine",
+          "jOOQ/jOOQ",
+          "javaslang/javaslang",
+          "jberkel/sms-backup-plus",
+          "jcabi/jcabi-github",
+          "jmxtrans/jmxtrans",
+          "johncarl81/parceler",
+          "jphp-compiler/jphp",
+          "jsprit/jsprit",
+          "jtwig/jtwig",
+          "julianhyde/optiq",
+          "killbill/killbill",
+          "knightliao/disconf",
+          "l0rdn1kk0n/wicket-bootstrap",
+          "la-team/light-admin",
+          "languagetool-org/languagetool",
+          "laurentpetit/ccw",
+          "lemire/RoaringBitmap",
+          "lenskit/lenskit",
+          "lviggiano/owner",
+          "maxcom/lorsource",
+          "mikera/vectorz",
+          "mockito/mockito",
+          "mongodb/morphia",
+          "mozilla/MozStumbler",
+          "mybatis/mybatis-3",
+          "naver/yobi",
+          "nutzam/nutz",
+          "oblac/jodd",
+          "openMF/mifosx",
+          "orbeon/orbeon-forms",
+          "owlcs/owlapi",
+          "owncloud/android",
+          "p6spy/p6spy",
+          "perfectsense/brightspot-cms",
+          "puniverse/capsule",
+          "puniverse/quasar",
+          "querydsl/querydsl",
+          "rackerlabs/blueflood",
+          "recruit-tech/redpen",
+          "rejasupotaro/Rebuild",
+          "relayrides/pushy",
+          "restlet/restlet-framework-java",
+          "rhuss/docker-maven-plugin",
+          "rundeck/rundeck",
+          "ryantenney/metrics-spring",
+          "sanity/quickml",
+          "sarxos/webcam-capture",
+          "searchbox-io/Jest",
+          "segmentio/analytics-android",
+          "selendroid/selendroid",
+          "sevntu-checkstyle/sevntu.checkstyle",
+          "simpligility/android-maven-plugin",
+          "spotify/cassandra-reaper",
+          "spotify/helios",
+          "spring-cloud/spring-cloud-config",
+          "springside/springside4",
+          "square/dagger",
+          "square/javapoet",
+          "square/keywhiz",
+          "square/okhttp",
+          "square/retrofit",
+          "square/wire",
+          "stanfy/enroscar",
+          "stephanenicolas/robospice",
+          "structr/structr",
+          "syncany/syncany",
+          "tananaev/traccar",
+          "thatJavaNerd/JRAW",
+          "thinkaurelius/titan",
+          "threerings/playn",
+          "timmolter/XChange",
+          "tinkerpop/blueprints",
+          "tinkerpop/rexster",
+          "torakiki/pdfsam",
+          "torquebox/torquebox",
+          "twilio/twilio-java",
+          "twitter/commons",
+          "undera/jmeter-plugins",
+          "validator/validator",
+          "weld/core",
+          "xetorthio/jedis",
+          "xtreemfs/xtreemfs",
+          "yegor256/rultor",
+          "zhangkaitao/es",
+          "zxing/zxing"
+        ],
+        "n": 105512,
+        "status": "ok",
+        "table_shape": [
+          161,
+          2
+        ],
+        "chi2": 30623.1420392,
+        "dof": 160,
+        "p_value": 0.0,
+        "cramers_v": 0.53873345619,
+        "magnitude": "large",
+        "min_expected_count": 60.1712222306,
+        "p_value_holm": 0.0
+      },
+      {
+        "key": "months",
+        "finding": "monthly_trend",
+        "description": "failure x calendar month (months with >= 100 labelled builds)",
+        "groups": [
+          "2012-04",
+          "2012-05",
+          "2012-06",
+          "2012-07",
+          "2012-08",
+          "2012-09",
+          "2012-10",
+          "2012-11",
+          "2012-12",
+          "2013-01",
+          "2013-02",
+          "2013-03",
+          "2013-04",
+          "2013-05",
+          "2013-06",
+          "2013-07",
+          "2013-08",
+          "2013-09",
+          "2013-10",
+          "2013-11",
+          "2013-12",
+          "2014-01",
+          "2014-02",
+          "2014-03",
+          "2014-04",
+          "2014-05",
+          "2014-06",
+          "2014-07",
+          "2014-08",
+          "2014-09",
+          "2014-10",
+          "2014-11",
+          "2014-12",
+          "2015-01",
+          "2015-02",
+          "2015-03",
+          "2015-04",
+          "2015-05",
+          "2015-06",
+          "2015-07",
+          "2015-08"
+        ],
+        "n": 128482,
+        "status": "ok",
+        "table_shape": [
+          41,
+          2
+        ],
+        "chi2": 702.36261579,
+        "dof": 40,
+        "p_value": 6.13733116064e-122,
+        "cramers_v": 0.0739366126138,
+        "magnitude": "negligible",
+        "min_expected_count": 33.0619697701,
+        "p_value_holm": 7.36479739276e-121
+      },
+      {
+        "key": "core_team",
+        "finding": "core_team",
+        "description": "failure x core team vs non-core",
+        "groups": [
+          "core_team",
+          "non_core"
+        ],
+        "n": 128617,
+        "status": "ok",
+        "table_shape": [
+          2,
+          2
+        ],
+        "chi2": 491.79753181,
+        "dof": 1,
+        "p_value": 5.79016738302e-109,
+        "cramers_v": 0.0618363696531,
+        "magnitude": "negligible",
+        "min_expected_count": 8106.6619887,
+        "p_value_holm": 6.36918412132e-108
+      },
+      {
+        "key": "pull_requests",
+        "finding": "pull_requests",
+        "description": "failure x pull request vs push",
+        "groups": [
+          "pull_request",
+          "push"
+        ],
+        "n": 128617,
+        "status": "ok",
+        "table_shape": [
+          2,
+          2
+        ],
+        "chi2": 374.367009137,
+        "dof": 1,
+        "p_value": 2.09592486136e-83,
+        "cramers_v": 0.0539510122129,
+        "magnitude": "negligible",
+        "min_expected_count": 5261.91362728,
+        "p_value_holm": 2.09592486136e-82
+      }
+    ]
+  },
+  "stratified_tests": {
+    "family": "every within-project (Cochran-Mantel-Haenszel) test in this report",
+    "adjustment": "holm (statsmodels.stats.multitest.multipletests)",
+    "computed": 5,
+    "not_computable": 0,
+    "tests": [
+      {
+        "key": "tests_changed_within_projects",
+        "finding": "src_test_churn",
+        "description": "tests changed vs not, stratified by project",
+        "strata": 361,
+        "strata_dropped": 41,
+        "n": 124774,
+        "status": "ok",
+        "pooled_odds_ratio": 1.10388405789,
+        "ci95_low": 1.06723960825,
+        "ci95_high": 1.14178672141,
+        "cmh_statistic": 33.3771996109,
+        "p_value": 7.5908700672e-09,
+        "method": "mantel_haenszel",
+        "crude_odds_ratio": {
+          "value": 1.17305033822,
+          "ci95_low": 1.14261954183,
+          "ci95_high": 1.2042915823,
+          "method": "woolf_log"
+        },
+        "crude_odds_ratio_all_projects": {
+          "value": 1.17882018904,
+          "ci95_low": 1.14843350204,
+          "ci95_high": 1.21001088494,
+          "method": "woolf_log"
+        },
+        "p_value_holm": 2.27726102016e-08
+      },
+      {
+        "key": "prev_build_leakage_safe_within_projects",
+        "finding": "previous_build",
+        "description": "previous FINISHED build failed vs passed, stratified by project",
+        "strata": 382,
+        "strata_dropped": 20,
+        "n": 123014,
+        "status": "ok",
+        "pooled_odds_ratio": 7.38195504897,
+        "ci95_low": 7.14377731641,
+        "ci95_high": 7.62807376706,
+        "cmh_statistic": 16891.2457588,
+        "p_value": 0.0,
+        "method": "mantel_haenszel",
+        "crude_odds_ratio": {
+          "value": 14.5569758602,
+          "ci95_low": 14.1188120871,
+          "ci95_high": 15.0087376251,
+          "method": "woolf_log"
+        },
+        "crude_odds_ratio_all_projects": {
+          "value": 17.7753810296,
+          "ci95_low": 17.2493302143,
+          "ci95_high": 18.3174747555,
+          "method": "woolf_log"
+        },
+        "p_value_holm": 0.0
+      },
+      {
+        "key": "prev_build_naive_within_projects",
+        "finding": "previous_build",
+        "description": "previous STARTED build failed vs passed, stratified by project",
+        "strata": 382,
+        "strata_dropped": 19,
+        "n": 122890,
+        "status": "ok",
+        "pooled_odds_ratio": 8.73768170252,
+        "ci95_low": 8.45303120319,
+        "ci95_high": 9.03191762805,
+        "cmh_statistic": 19901.4298004,
+        "p_value": 0.0,
+        "method": "mantel_haenszel",
+        "crude_odds_ratio": {
+          "value": 16.9468241458,
+          "ci95_low": 16.4275182677,
+          "ci95_high": 17.4825462952,
+          "method": "woolf_log"
+        },
+        "crude_odds_ratio_all_projects": {
+          "value": 20.5665778898,
+          "ci95_low": 19.9459111212,
+          "ci95_high": 21.2065582527,
+          "method": "woolf_log"
+        },
+        "p_value_holm": 0.0
+      },
+      {
+        "key": "core_team_within_projects",
+        "finding": "core_team",
+        "description": "core team vs non-core, stratified by project",
+        "strata": 337,
+        "strata_dropped": 65,
+        "n": 121067,
+        "status": "ok",
+        "pooled_odds_ratio": 1.01431667216,
+        "ci95_low": 0.969125043576,
+        "ci95_high": 1.06161564829,
+        "cmh_statistic": 0.38178444037,
+        "p_value": 0.536649777952,
+        "method": "mantel_haenszel",
+        "crude_odds_ratio": {
+          "value": 0.741121284844,
+          "ci95_low": 0.719845976399,
+          "ci95_high": 0.763025392733,
+          "method": "woolf_log"
+        },
+        "crude_odds_ratio_all_projects": {
+          "value": 0.726517416649,
+          "ci95_low": 0.706243189006,
+          "ci95_high": 0.747373659543,
+          "method": "woolf_log"
+        },
+        "p_value_holm": 1.0
+      },
+      {
+        "key": "pull_requests_within_projects",
+        "finding": "pull_requests",
+        "description": "pull request vs push, stratified by project",
+        "strata": 345,
+        "strata_dropped": 57,
+        "n": 107589,
+        "status": "ok",
+        "pooled_odds_ratio": 1.01499249273,
+        "ci95_low": 0.966977038993,
+        "ci95_high": 1.06539216419,
+        "cmh_statistic": 0.368842720231,
+        "p_value": 0.543635761469,
+        "method": "mantel_haenszel",
+        "crude_odds_ratio": {
+          "value": 0.873952571838,
+          "ci95_low": 0.841592631645,
+          "ci95_high": 0.907556778782,
+          "method": "woolf_log"
+        },
+        "crude_odds_ratio_all_projects": {
+          "value": 0.695613212404,
+          "ci95_low": 0.670402529478,
+          "ci95_high": 0.721771950424,
+          "method": "woolf_log"
+        },
+        "p_value_holm": 1.0
+      }
+    ]
+  },
+  "caveats": [
+    "Association, not causation: observational data with no controlled assignment; project, period, author and change type are not held fixed.",
+    "With n in the tens of thousands even negligible differences reach tiny p-values: read the effect size and its interval, not the p-value.",
+    "Label = failed or errored (ADR-0005): errored builds often break in setup or infrastructure rather than in the tests.",
+    "TravisTorrent Java projects 2011-2015 (Travis CI era); not evidence about any particular team's CI today."
+  ]
+}

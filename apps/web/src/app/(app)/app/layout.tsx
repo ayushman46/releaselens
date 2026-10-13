@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { SessionGate } from "@/components/session/session-gate";
+import { SessionProvider } from "@/components/session/session-provider";
 import { AppShell } from "@/components/shell/app-shell";
 
 export const metadata: Metadata = {
@@ -9,5 +11,11 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  return <AppShell>{children}</AppShell>;
+  return (
+    <SessionProvider>
+      <AppShell>
+        <SessionGate>{children}</SessionGate>
+      </AppShell>
+    </SessionProvider>
+  );
 }

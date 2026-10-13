@@ -1,0 +1,3123 @@
+{
+ "engine_version": "regression-engine/1.0.0",
+ "tenant_id": "tenant-a",
+ "deployment": {
+  "service": "payment",
+  "environment": "demo",
+  "version": "v2.18",
+  "previous_version": "v2.17",
+  "deployed_at": "2026-10-13T14:02:00Z",
+  "tenant_id": null
+ },
+ "windows": {
+  "deployed_at": "2026-10-13T14:02:00Z",
+  "baseline_start": "2026-10-13T13:32:00Z",
+  "baseline_end": "2026-10-13T14:02:00Z",
+  "post_start": "2026-10-13T14:04:00Z",
+  "post_end": "2026-10-13T14:17:00Z",
+  "effective_post_end": "2026-10-13T14:17:00Z",
+  "as_of": null
+ },
+ "config": {
+  "name": "strict",
+  "baseline_minutes": 30,
+  "warmup_minutes": 2,
+  "post_end_minutes": 15,
+  "min_requests": 200,
+  "latency_rel_threshold": 0.25,
+  "latency_abs_threshold_ms": 20.0,
+  "bootstrap_resamples": 1000,
+  "bootstrap_confidence": 0.95,
+  "bootstrap_seed": 0,
+  "error_p_threshold": 0.01,
+  "error_abs_threshold_pp": 0.5,
+  "error_rel_threshold": 0.5,
+  "throughput_drop_threshold": 0.3,
+  "percentiles": [
+   0.5,
+   0.95,
+   0.99
+  ],
+  "onset_bucket_seconds": 60,
+  "onset_min_samples": 20
+ },
+ "relaxed_config": {
+  "name": "relaxed",
+  "baseline_minutes": 30,
+  "warmup_minutes": 2,
+  "post_end_minutes": 15,
+  "min_requests": 200,
+  "latency_rel_threshold": 0.125,
+  "latency_abs_threshold_ms": 10.0,
+  "bootstrap_resamples": 1000,
+  "bootstrap_confidence": 0.95,
+  "bootstrap_seed": 0,
+  "error_p_threshold": 0.01,
+  "error_abs_threshold_pp": 0.25,
+  "error_rel_threshold": 0.25,
+  "throughput_drop_threshold": 0.3,
+  "percentiles": [
+   0.5,
+   0.95,
+   0.99
+  ],
+  "onset_bucket_seconds": 60,
+  "onset_min_samples": 20
+ },
+ "seed": 0,
+ "status": "REGRESSED",
+ "severity": {
+  "formula": "severity-v1",
+  "score": 58.624234435628296,
+  "band": "HIGH",
+  "latency_component": 30.57430091960161,
+  "error_component": 28.04993351602669
+ },
+ "severity_service": "payment",
+ "services": [
+  {
+   "service": "fraud",
+   "variant": "strict",
+   "status": "HEALTHY",
+   "sample_gate": {
+    "baseline_requests": 1725,
+    "post_requests": 747,
+    "min_requests": 200,
+    "passed": true
+   },
+   "baseline": {
+    "requests": 1725,
+    "errors": 2,
+    "error_rate": 0.0011594202898550724,
+    "throughput_rpm": 57.5,
+    "latency_p50_ms": 35.402193,
+    "latency_p95_ms": 54.0726386,
+    "latency_p99_ms": 62.8888198,
+    "self_time_p95_ms": 54.0726386
+   },
+   "post": {
+    "requests": 747,
+    "errors": 0,
+    "error_rate": 0.0,
+    "throughput_rpm": 57.46153846153846,
+    "latency_p50_ms": 35.472026,
+    "latency_p95_ms": 52.45037179999998,
+    "latency_p99_ms": 63.76473925999998,
+    "self_time_p95_ms": 52.45037179999998
+   },
+   "latency": [
+    {
+     "metric": "latency",
+     "percentile": 0.5,
+     "baseline_ms": 35.402193,
+     "post_ms": 35.472026,
+     "abs_delta_ms": 0.0698330000000027,
+     "rel_delta": 0.001972561417311145,
+     "ci_low_ms": -0.7062332500000025,
+     "ci_high_ms": 1.1314610000000016,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.001972561417311145,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.0698330000000027,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -0.7062332500000025,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.95,
+     "baseline_ms": 54.0726386,
+     "post_ms": 52.45037179999998,
+     "abs_delta_ms": -1.6222668000000198,
+     "rel_delta": -0.030001620819739686,
+     "ci_low_ms": -3.856659820000003,
+     "ci_high_ms": 0.8163588399999417,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.030001620819739686,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -1.6222668000000198,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -3.856659820000003,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.99,
+     "baseline_ms": 62.8888198,
+     "post_ms": 63.76473925999998,
+     "abs_delta_ms": 0.8759194599999773,
+     "rel_delta": 0.013928063251712943,
+     "ci_low_ms": -5.635118234500072,
+     "ci_high_ms": 3.431786539999983,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.013928063251712943,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.8759194599999773,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -5.635118234500072,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    }
+   ],
+   "self_time": [
+    {
+     "metric": "self_time",
+     "percentile": 0.5,
+     "baseline_ms": 35.402193,
+     "post_ms": 35.472026,
+     "abs_delta_ms": 0.0698330000000027,
+     "rel_delta": 0.001972561417311145,
+     "ci_low_ms": -0.7062332500000025,
+     "ci_high_ms": 1.1314610000000016,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.001972561417311145,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.0698330000000027,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -0.7062332500000025,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.95,
+     "baseline_ms": 54.0726386,
+     "post_ms": 52.45037179999998,
+     "abs_delta_ms": -1.6222668000000198,
+     "rel_delta": -0.030001620819739686,
+     "ci_low_ms": -3.856659820000003,
+     "ci_high_ms": 0.8163588399999417,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.030001620819739686,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -1.6222668000000198,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -3.856659820000003,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.99,
+     "baseline_ms": 62.8888198,
+     "post_ms": 63.76473925999998,
+     "abs_delta_ms": 0.8759194599999773,
+     "rel_delta": 0.013928063251712943,
+     "ci_low_ms": -5.635118234500072,
+     "ci_high_ms": 3.431786539999983,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.013928063251712943,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.8759194599999773,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -5.635118234500072,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    }
+   ],
+   "error_rate": {
+    "metric": "error_rate",
+    "baseline_errors": 2,
+    "baseline_requests": 1725,
+    "post_errors": 0,
+    "post_requests": 747,
+    "baseline_rate": 0.0011594202898550724,
+    "post_rate": 0.0,
+    "abs_delta_pp": -0.11594202898550725,
+    "rel_delta": -1.0,
+    "z": -0.9310146301249926,
+    "p_value": 0.8240770018226108,
+    "exact_p_value": 1.0,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": false,
+      "observed": 0.8240770018226108,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": false,
+      "observed": 1.0,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": false,
+      "observed": -0.11594202898550725,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": false,
+      "observed": -1.0,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     }
+    ],
+    "regressed": false
+   },
+   "own_error_rate": {
+    "metric": "own_error_rate",
+    "baseline_errors": 2,
+    "baseline_requests": 1725,
+    "post_errors": 0,
+    "post_requests": 747,
+    "baseline_rate": 0.0011594202898550724,
+    "post_rate": 0.0,
+    "abs_delta_pp": -0.11594202898550725,
+    "rel_delta": -1.0,
+    "z": -0.9310146301249926,
+    "p_value": 0.8240770018226108,
+    "exact_p_value": 1.0,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": false,
+      "observed": 0.8240770018226108,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": false,
+      "observed": 1.0,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": false,
+      "observed": -0.11594202898550725,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": false,
+      "observed": -1.0,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     }
+    ],
+    "regressed": false
+   },
+   "throughput": {
+    "baseline_rpm": 57.5,
+    "post_rpm": 57.46153846153846,
+    "rel_change": -0.0006688963210702626,
+    "gate": {
+     "name": "throughput_drop",
+     "passed": false,
+     "observed": 0.0006688963210702626,
+     "threshold": 0.3,
+     "op": ">=",
+     "note": null
+    },
+    "dropped": false
+   },
+   "severity": {
+    "formula": "severity-v1",
+    "score": 0.0,
+    "band": "HEALTHY",
+    "latency_component": 0.0,
+    "error_component": 0.0
+   },
+   "onset": null,
+   "regressed_metrics": [],
+   "self_time_regressed": false,
+   "originates_errors": false
+  },
+  {
+   "service": "gateway",
+   "variant": "strict",
+   "status": "REGRESSED",
+   "sample_gate": {
+    "baseline_requests": 1725,
+    "post_requests": 775,
+    "min_requests": 200,
+    "passed": true
+   },
+   "baseline": {
+    "requests": 1725,
+    "errors": 5,
+    "error_rate": 0.002898550724637681,
+    "throughput_rpm": 57.5,
+    "latency_p50_ms": 120.214812,
+    "latency_p95_ms": 154.3196946,
+    "latency_p99_ms": 171.75165408,
+    "self_time_p95_ms": 6.5483604
+   },
+   "post": {
+    "requests": 775,
+    "errors": 30,
+    "error_rate": 0.03870967741935484,
+    "throughput_rpm": 59.61538461538461,
+    "latency_p50_ms": 369.651408,
+    "latency_p95_ms": 404.1202102,
+    "latency_p99_ms": 421.49298059999995,
+    "self_time_p95_ms": 6.383577899999999
+   },
+   "latency": [
+    {
+     "metric": "latency",
+     "percentile": 0.5,
+     "baseline_ms": 120.214812,
+     "post_ms": 369.651408,
+     "abs_delta_ms": 249.436596,
+     "rel_delta": 2.0749239785859337,
+     "ci_low_ms": 247.78333465,
+     "ci_high_ms": 251.2034563,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 775,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 2.0749239785859337,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 249.436596,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 247.78333465,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.95,
+     "baseline_ms": 154.3196946,
+     "post_ms": 404.1202102,
+     "abs_delta_ms": 249.80051559999998,
+     "rel_delta": 1.6187209043375077,
+     "ci_low_ms": 244.68357809500003,
+     "ci_high_ms": 254.79615553000002,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 775,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 1.6187209043375077,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 249.80051559999998,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 244.68357809500003,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.99,
+     "baseline_ms": 171.75165408,
+     "post_ms": 421.49298059999995,
+     "abs_delta_ms": 249.74132651999994,
+     "rel_delta": 1.4540839670963124,
+     "ci_low_ms": 240.70914673150003,
+     "ci_high_ms": 256.64793269250004,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 775,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 1.4540839670963124,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 249.74132651999994,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 240.70914673150003,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    }
+   ],
+   "self_time": [
+    {
+     "metric": "self_time",
+     "percentile": 0.5,
+     "baseline_ms": 4.408912,
+     "post_ms": 4.451794,
+     "abs_delta_ms": 0.04288199999999964,
+     "rel_delta": 0.009726209096484494,
+     "ci_low_ms": -0.05059937500000042,
+     "ci_high_ms": 0.16745620000000006,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 775,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.009726209096484494,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.04288199999999964,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -0.05059937500000042,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.95,
+     "baseline_ms": 6.5483604,
+     "post_ms": 6.383577899999999,
+     "abs_delta_ms": -0.16478250000000116,
+     "rel_delta": -0.025163932638771862,
+     "ci_low_ms": -0.3857635550000013,
+     "ci_high_ms": 0.21254112500000202,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 775,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.025163932638771862,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -0.16478250000000116,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -0.3857635550000013,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.99,
+     "baseline_ms": 7.711828559999999,
+     "post_ms": 7.761441699999999,
+     "abs_delta_ms": 0.049613139999999945,
+     "rel_delta": 0.006433382123837041,
+     "ci_low_ms": -0.7821996835000045,
+     "ci_high_ms": 0.5169922219999987,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 775,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.006433382123837041,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.049613139999999945,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -0.7821996835000045,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    }
+   ],
+   "error_rate": {
+    "metric": "error_rate",
+    "baseline_errors": 5,
+    "baseline_requests": 1725,
+    "post_errors": 30,
+    "post_requests": 775,
+    "baseline_rate": 0.002898550724637681,
+    "post_rate": 0.03870967741935484,
+    "abs_delta_pp": 3.581112669471716,
+    "rel_delta": 12.35483870967742,
+    "z": 7.0484059051953345,
+    "p_value": 9.048953311188271e-13,
+    "exact_p_value": 2.1467947326390324e-11,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": true,
+      "observed": 9.048953311188271e-13,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": true,
+      "observed": 2.1467947326390324e-11,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": true,
+      "observed": 3.581112669471716,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": true,
+      "observed": 12.35483870967742,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     }
+    ],
+    "regressed": true
+   },
+   "own_error_rate": {
+    "metric": "own_error_rate",
+    "baseline_errors": 1,
+    "baseline_requests": 1725,
+    "post_errors": 2,
+    "post_requests": 775,
+    "baseline_rate": 0.0005797101449275362,
+    "post_rate": 0.0025806451612903226,
+    "abs_delta_pp": 0.20009350163627865,
+    "rel_delta": 3.4516129032258065,
+    "z": 1.3365293221667947,
+    "p_value": 0.09068816150036835,
+    "exact_p_value": 0.22862037048606468,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": false,
+      "observed": 0.09068816150036835,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": false,
+      "observed": 0.22862037048606468,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": false,
+      "observed": 0.20009350163627865,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": true,
+      "observed": 3.4516129032258065,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     }
+    ],
+    "regressed": false
+   },
+   "throughput": {
+    "baseline_rpm": 57.5,
+    "post_rpm": 59.61538461538461,
+    "rel_change": 0.03678929765886284,
+    "gate": {
+     "name": "throughput_drop",
+     "passed": false,
+     "observed": -0.03678929765886284,
+     "threshold": 0.3,
+     "op": ">=",
+     "note": null
+    },
+    "dropped": false
+   },
+   "severity": {
+    "formula": "severity-v1",
+    "score": 56.42614754852002,
+    "band": "HIGH",
+    "latency_component": 27.777246192746293,
+    "error_component": 28.648901355773727
+   },
+   "onset": {
+    "onset_at": "2026-10-13T14:02:00Z",
+    "minutes_after_deploy": 0,
+    "baseline_p95_ms": 154.3196946,
+    "baseline_p95_ci_high_ms": 157.404949415,
+    "ci_confidence": 0.95,
+    "bootstrap_resamples": 1000,
+    "bootstrap_seed": 0,
+    "bucket_seconds": 60,
+    "min_samples_per_bucket": 20,
+    "buckets": [
+     {
+      "start": "2026-10-13T14:02:00Z",
+      "samples": 69,
+      "p95_ms": 392.33887339999995,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:03:00Z",
+      "samples": 44,
+      "p95_ms": 396.4065567,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:04:00Z",
+      "samples": 62,
+      "p95_ms": 410.00778564999996,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:05:00Z",
+      "samples": 59,
+      "p95_ms": 395.3547058,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:06:00Z",
+      "samples": 51,
+      "p95_ms": 395.7338555,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:07:00Z",
+      "samples": 65,
+      "p95_ms": 396.708309,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:08:00Z",
+      "samples": 55,
+      "p95_ms": 396.36401739999997,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:09:00Z",
+      "samples": 59,
+      "p95_ms": 408.4908243,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:10:00Z",
+      "samples": 67,
+      "p95_ms": 391.2562122,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:11:00Z",
+      "samples": 62,
+      "p95_ms": 411.60679344999994,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:12:00Z",
+      "samples": 66,
+      "p95_ms": 407.20536975,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:13:00Z",
+      "samples": 59,
+      "p95_ms": 398.95017599999994,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:14:00Z",
+      "samples": 56,
+      "p95_ms": 408.97716925,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:15:00Z",
+      "samples": 58,
+      "p95_ms": 389.9442192,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:16:00Z",
+      "samples": 56,
+      "p95_ms": 409.996977,
+      "exceeds": true
+     }
+    ]
+   },
+   "regressed_metrics": [
+    "latency_p50",
+    "latency_p95",
+    "latency_p99",
+    "error_rate"
+   ],
+   "self_time_regressed": false,
+   "originates_errors": false
+  },
+  {
+   "service": "inventory",
+   "variant": "strict",
+   "status": "HEALTHY",
+   "sample_gate": {
+    "baseline_requests": 1724,
+    "post_requests": 773,
+    "min_requests": 200,
+    "passed": true
+   },
+   "baseline": {
+    "requests": 1724,
+    "errors": 2,
+    "error_rate": 0.001160092807424594,
+    "throughput_rpm": 57.46666666666667,
+    "latency_p50_ms": 18.314424000000002,
+    "latency_p95_ms": 27.80056805,
+    "latency_p99_ms": 32.07522708,
+    "self_time_p95_ms": 27.80056805
+   },
+   "post": {
+    "requests": 773,
+    "errors": 0,
+    "error_rate": 0.0,
+    "throughput_rpm": 59.46153846153846,
+    "latency_p50_ms": 18.099014,
+    "latency_p95_ms": 26.828958599999996,
+    "latency_p99_ms": 31.234374839999997,
+    "self_time_p95_ms": 26.828958599999996
+   },
+   "latency": [
+    {
+     "metric": "latency",
+     "percentile": 0.5,
+     "baseline_ms": 18.314424000000002,
+     "post_ms": 18.099014,
+     "abs_delta_ms": -0.2154100000000021,
+     "rel_delta": -0.011761767664656125,
+     "ci_low_ms": -0.6608575750000018,
+     "ci_high_ms": 0.21215627499999998,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.011761767664656125,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -0.2154100000000021,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -0.6608575750000018,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.95,
+     "baseline_ms": 27.80056805,
+     "post_ms": 26.828958599999996,
+     "abs_delta_ms": -0.9716094500000025,
+     "rel_delta": -0.03494926608163327,
+     "ci_low_ms": -2.058065042499993,
+     "ci_high_ms": 0.787768779999999,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.03494926608163327,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -0.9716094500000025,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -2.058065042499993,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.99,
+     "baseline_ms": 32.07522708,
+     "post_ms": 31.234374839999997,
+     "abs_delta_ms": -0.8408522400000003,
+     "rel_delta": -0.026215005053675845,
+     "ci_low_ms": -3.0779680499999946,
+     "ci_high_ms": 1.1197671492499497,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.026215005053675845,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -0.8408522400000003,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -3.0779680499999946,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    }
+   ],
+   "self_time": [
+    {
+     "metric": "self_time",
+     "percentile": 0.5,
+     "baseline_ms": 18.314424000000002,
+     "post_ms": 18.099014,
+     "abs_delta_ms": -0.2154100000000021,
+     "rel_delta": -0.011761767664656125,
+     "ci_low_ms": -0.6608575750000018,
+     "ci_high_ms": 0.21215627499999998,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.011761767664656125,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -0.2154100000000021,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -0.6608575750000018,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.95,
+     "baseline_ms": 27.80056805,
+     "post_ms": 26.828958599999996,
+     "abs_delta_ms": -0.9716094500000025,
+     "rel_delta": -0.03494926608163327,
+     "ci_low_ms": -2.058065042499993,
+     "ci_high_ms": 0.787768779999999,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.03494926608163327,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -0.9716094500000025,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -2.058065042499993,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.99,
+     "baseline_ms": 32.07522708,
+     "post_ms": 31.234374839999997,
+     "abs_delta_ms": -0.8408522400000003,
+     "rel_delta": -0.026215005053675845,
+     "ci_low_ms": -3.0779680499999946,
+     "ci_high_ms": 1.1197671492499497,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.026215005053675845,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -0.8408522400000003,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -3.0779680499999946,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    }
+   ],
+   "error_rate": {
+    "metric": "error_rate",
+    "baseline_errors": 2,
+    "baseline_requests": 1724,
+    "post_errors": 0,
+    "post_requests": 773,
+    "baseline_rate": 0.001160092807424594,
+    "post_rate": 0.0,
+    "abs_delta_pp": -0.11600928074245939,
+    "rel_delta": -1.0,
+    "z": -0.9473492382482096,
+    "p_value": 0.8282695757909704,
+    "exact_p_value": 1.0,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": false,
+      "observed": 0.8282695757909704,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": false,
+      "observed": 1.0,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": false,
+      "observed": -0.11600928074245939,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": false,
+      "observed": -1.0,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     }
+    ],
+    "regressed": false
+   },
+   "own_error_rate": {
+    "metric": "own_error_rate",
+    "baseline_errors": 2,
+    "baseline_requests": 1724,
+    "post_errors": 0,
+    "post_requests": 773,
+    "baseline_rate": 0.001160092807424594,
+    "post_rate": 0.0,
+    "abs_delta_pp": -0.11600928074245939,
+    "rel_delta": -1.0,
+    "z": -0.9473492382482096,
+    "p_value": 0.8282695757909704,
+    "exact_p_value": 1.0,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": false,
+      "observed": 0.8282695757909704,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": false,
+      "observed": 1.0,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": false,
+      "observed": -0.11600928074245939,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": false,
+      "observed": -1.0,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     }
+    ],
+    "regressed": false
+   },
+   "throughput": {
+    "baseline_rpm": 57.46666666666667,
+    "post_rpm": 59.46153846153846,
+    "rel_change": 0.034713546314474326,
+    "gate": {
+     "name": "throughput_drop",
+     "passed": false,
+     "observed": -0.034713546314474326,
+     "threshold": 0.3,
+     "op": ">=",
+     "note": null
+    },
+    "dropped": false
+   },
+   "severity": {
+    "formula": "severity-v1",
+    "score": 0.0,
+    "band": "HEALTHY",
+    "latency_component": 0.0,
+    "error_component": 0.0
+   },
+   "onset": null,
+   "regressed_metrics": [],
+   "self_time_regressed": false,
+   "originates_errors": false
+  },
+  {
+   "service": "orders",
+   "variant": "strict",
+   "status": "REGRESSED",
+   "sample_gate": {
+    "baseline_requests": 1724,
+    "post_requests": 773,
+    "min_requests": 200,
+    "passed": true
+   },
+   "baseline": {
+    "requests": 1724,
+    "errors": 4,
+    "error_rate": 0.002320185614849188,
+    "throughput_rpm": 57.46666666666667,
+    "latency_p50_ms": 113.758061,
+    "latency_p95_ms": 147.74897235,
+    "latency_p99_ms": 165.67600784,
+    "self_time_p95_ms": 18.89808194999999
+   },
+   "post": {
+    "requests": 773,
+    "errors": 28,
+    "error_rate": 0.03622250970245795,
+    "throughput_rpm": 59.46153846153846,
+    "latency_p50_ms": 363.381787,
+    "latency_p95_ms": 397.4865206,
+    "latency_p99_ms": 414.47463932,
+    "self_time_p95_ms": 18.264358799999997
+   },
+   "latency": [
+    {
+     "metric": "latency",
+     "percentile": 0.5,
+     "baseline_ms": 113.758061,
+     "post_ms": 363.381787,
+     "abs_delta_ms": 249.62372599999998,
+     "rel_delta": 2.1943387906374388,
+     "ci_low_ms": 247.87058136250002,
+     "ci_high_ms": 251.3391568,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 2.1943387906374388,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 249.62372599999998,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 247.87058136250002,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.95,
+     "baseline_ms": 147.74897235,
+     "post_ms": 397.4865206,
+     "abs_delta_ms": 249.73754825,
+     "rel_delta": 1.6902828106201715,
+     "ci_low_ms": 245.22111110875,
+     "ci_high_ms": 254.74008890625,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 1.6902828106201715,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 249.73754825,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 245.22111110875,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.99,
+     "baseline_ms": 165.67600784,
+     "post_ms": 414.47463932,
+     "abs_delta_ms": 248.79863147999998,
+     "rel_delta": 1.501717929612807,
+     "ci_low_ms": 240.75210426199993,
+     "ci_high_ms": 256.43019348674994,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 1.501717929612807,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 248.79863147999998,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 240.75210426199993,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    }
+   ],
+   "self_time": [
+    {
+     "metric": "self_time",
+     "percentile": 0.5,
+     "baseline_ms": 12.393194999999999,
+     "post_ms": 12.425367,
+     "abs_delta_ms": 0.03217200000000098,
+     "rel_delta": 0.002595940756197331,
+     "ci_low_ms": -0.3560123875,
+     "ci_high_ms": 0.37669073749999965,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.002595940756197331,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.03217200000000098,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -0.3560123875,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.95,
+     "baseline_ms": 18.89808194999999,
+     "post_ms": 18.264358799999997,
+     "abs_delta_ms": -0.6337231499999945,
+     "rel_delta": -0.03353372853799032,
+     "ci_low_ms": -1.6844503524999936,
+     "ci_high_ms": 0.20540208000000335,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.03353372853799032,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -0.6337231499999945,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -1.6844503524999936,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.99,
+     "baseline_ms": 22.15586828,
+     "post_ms": 22.30090063999999,
+     "abs_delta_ms": 0.1450323599999912,
+     "rel_delta": 0.00654600208699161,
+     "ci_low_ms": -1.7907942800000178,
+     "ci_high_ms": 1.577445025749999,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.00654600208699161,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.1450323599999912,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -1.7907942800000178,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    }
+   ],
+   "error_rate": {
+    "metric": "error_rate",
+    "baseline_errors": 4,
+    "baseline_requests": 1724,
+    "post_errors": 28,
+    "post_requests": 773,
+    "baseline_rate": 0.002320185614849188,
+    "post_rate": 0.03622250970245795,
+    "abs_delta_pp": 3.390232408760877,
+    "rel_delta": 14.61190168175938,
+    "z": 6.96327695644933,
+    "p_value": 1.662236653726638e-12,
+    "exact_p_value": 3.548604797323549e-11,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": true,
+      "observed": 1.662236653726638e-12,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": true,
+      "observed": 3.548604797323549e-11,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": true,
+      "observed": 3.390232408760877,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": true,
+      "observed": 14.61190168175938,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     }
+    ],
+    "regressed": true
+   },
+   "own_error_rate": {
+    "metric": "own_error_rate",
+    "baseline_errors": 0,
+    "baseline_requests": 1724,
+    "post_errors": 0,
+    "post_requests": 773,
+    "baseline_rate": 0.0,
+    "post_rate": 0.0,
+    "abs_delta_pp": 0.0,
+    "rel_delta": null,
+    "z": 0.0,
+    "p_value": 1.0,
+    "exact_p_value": 1.0,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": false,
+      "observed": 1.0,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": false,
+      "observed": 1.0,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": false,
+      "observed": 0.0,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": false,
+      "observed": null,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": "baseline error rate is 0: relative increase is unbounded; passes iff the absolute gate passes"
+     }
+    ],
+    "regressed": false
+   },
+   "throughput": {
+    "baseline_rpm": 57.46666666666667,
+    "post_rpm": 59.46153846153846,
+    "rel_change": 0.034713546314474326,
+    "gate": {
+     "name": "throughput_drop",
+     "passed": false,
+     "observed": -0.034713546314474326,
+     "threshold": 0.3,
+     "op": ">=",
+     "note": null
+    },
+    "dropped": false
+   },
+   "severity": {
+    "formula": "severity-v1",
+    "score": 55.67701609399927,
+    "band": "HIGH",
+    "latency_component": 28.555156823912252,
+    "error_component": 27.121859270087015
+   },
+   "onset": {
+    "onset_at": "2026-10-13T14:02:00Z",
+    "minutes_after_deploy": 0,
+    "baseline_p95_ms": 147.74897235,
+    "baseline_p95_ci_high_ms": 150.15800595124998,
+    "ci_confidence": 0.95,
+    "bootstrap_resamples": 1000,
+    "bootstrap_seed": 0,
+    "bucket_seconds": 60,
+    "min_samples_per_bucket": 20,
+    "buckets": [
+     {
+      "start": "2026-10-13T14:02:00Z",
+      "samples": 69,
+      "p95_ms": 385.6595558,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:03:00Z",
+      "samples": 44,
+      "p95_ms": 389.0732522,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:04:00Z",
+      "samples": 62,
+      "p95_ms": 403.81060949999994,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:05:00Z",
+      "samples": 58,
+      "p95_ms": 389.91838225000004,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:06:00Z",
+      "samples": 51,
+      "p95_ms": 389.2503365,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:07:00Z",
+      "samples": 65,
+      "p95_ms": 390.208778,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:08:00Z",
+      "samples": 55,
+      "p95_ms": 388.4791892,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:09:00Z",
+      "samples": 59,
+      "p95_ms": 400.92157199999997,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:10:00Z",
+      "samples": 66,
+      "p95_ms": 385.59025275,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:11:00Z",
+      "samples": 62,
+      "p95_ms": 406.21437899999995,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:12:00Z",
+      "samples": 66,
+      "p95_ms": 401.2260395,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:13:00Z",
+      "samples": 59,
+      "p95_ms": 392.9145359,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:14:00Z",
+      "samples": 56,
+      "p95_ms": 403.30263075,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:15:00Z",
+      "samples": 58,
+      "p95_ms": 383.44521665,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:16:00Z",
+      "samples": 56,
+      "p95_ms": 403.70718675,
+      "exceeds": true
+     }
+    ]
+   },
+   "regressed_metrics": [
+    "latency_p50",
+    "latency_p95",
+    "latency_p99",
+    "error_rate"
+   ],
+   "self_time_regressed": false,
+   "originates_errors": false
+  },
+  {
+   "service": "payment",
+   "variant": "strict",
+   "status": "REGRESSED",
+   "sample_gate": {
+    "baseline_requests": 1724,
+    "post_requests": 773,
+    "min_requests": 200,
+    "passed": true
+   },
+   "baseline": {
+    "requests": 1724,
+    "errors": 2,
+    "error_rate": 0.001160092807424594,
+    "throughput_rpm": 57.46666666666667,
+    "latency_p50_ms": 98.6192535,
+    "latency_p95_ms": 132.714533,
+    "latency_p99_ms": 148.9161718,
+    "self_time_p95_ms": 88.9687653
+   },
+   "post": {
+    "requests": 773,
+    "errors": 28,
+    "error_rate": 0.03622250970245795,
+    "throughput_rpm": 59.46153846153846,
+    "latency_p50_ms": 348.525865,
+    "latency_p95_ms": 382.91957379999997,
+    "latency_p99_ms": 398.57142372,
+    "self_time_p95_ms": 340.85388959999995
+   },
+   "latency": [
+    {
+     "metric": "latency",
+     "percentile": 0.5,
+     "baseline_ms": 98.6192535,
+     "post_ms": 348.525865,
+     "abs_delta_ms": 249.9066115,
+     "rel_delta": 2.534054990590656,
+     "ci_low_ms": 248.26539321250002,
+     "ci_high_ms": 251.5040411875,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 2.534054990590656,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 249.9066115,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 248.26539321250002,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.95,
+     "baseline_ms": 132.714533,
+     "post_ms": 382.91957379999997,
+     "abs_delta_ms": 250.20504079999998,
+     "rel_delta": 1.8852874296743372,
+     "ci_low_ms": 245.92676772000002,
+     "ci_high_ms": 254.662925295,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 1.8852874296743372,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 250.20504079999998,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 245.92676772000002,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.99,
+     "baseline_ms": 148.9161718,
+     "post_ms": 398.57142372,
+     "abs_delta_ms": 249.65525191999998,
+     "rel_delta": 1.6764818011525058,
+     "ci_low_ms": 239.6501165242499,
+     "ci_high_ms": 258.6049383765,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 1.6764818011525058,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 249.65525191999998,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 239.6501165242499,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    }
+   ],
+   "self_time": [
+    {
+     "metric": "self_time",
+     "percentile": 0.5,
+     "baseline_ms": 60.282092,
+     "post_ms": 310.040909,
+     "abs_delta_ms": 249.758817,
+     "rel_delta": 4.143167708910965,
+     "ci_low_ms": 248.18767333750003,
+     "ci_high_ms": 251.586864025,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 4.143167708910965,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 249.758817,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 248.18767333750003,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.95,
+     "baseline_ms": 88.9687653,
+     "post_ms": 340.85388959999995,
+     "abs_delta_ms": 251.88512429999994,
+     "rel_delta": 2.83116353757019,
+     "ci_low_ms": 248.01023031000003,
+     "ci_high_ms": 257.50356855125,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 2.83116353757019,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 251.88512429999994,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 248.01023031000003,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.99,
+     "baseline_ms": 105.27164732,
+     "post_ms": 359.1940745999999,
+     "abs_delta_ms": 253.9224272799999,
+     "rel_delta": 2.4120685269428526,
+     "ci_low_ms": 246.99867908199997,
+     "ci_high_ms": 261.1577092617499,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1724,
+     "n_post": 773,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": true,
+       "observed": 2.4120685269428526,
+       "threshold": 0.25,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": true,
+       "observed": 253.9224272799999,
+       "threshold": 20.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": true,
+       "observed": 246.99867908199997,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": true
+    }
+   ],
+   "error_rate": {
+    "metric": "error_rate",
+    "baseline_errors": 2,
+    "baseline_requests": 1724,
+    "post_errors": 28,
+    "post_requests": 773,
+    "baseline_rate": 0.001160092807424594,
+    "post_rate": 0.03622250970245795,
+    "abs_delta_pp": 3.5062416895033364,
+    "rel_delta": 30.22380336351876,
+    "z": 7.434714502525324,
+    "p_value": 5.239702396441857e-14,
+    "exact_p_value": 8.545653554118171e-13,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": true,
+      "observed": 5.239702396441857e-14,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": true,
+      "observed": 8.545653554118171e-13,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": true,
+      "observed": 3.5062416895033364,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": true,
+      "observed": 30.22380336351876,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     }
+    ],
+    "regressed": true
+   },
+   "own_error_rate": {
+    "metric": "own_error_rate",
+    "baseline_errors": 0,
+    "baseline_requests": 1724,
+    "post_errors": 28,
+    "post_requests": 773,
+    "baseline_rate": 0.0,
+    "post_rate": 0.03622250970245795,
+    "abs_delta_pp": 3.6222509702457955,
+    "rel_delta": null,
+    "z": 7.947062447095575,
+    "p_value": 9.549307545180428e-16,
+    "exact_p_value": 3.911629215035621e-15,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": true,
+      "observed": 9.549307545180428e-16,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": true,
+      "observed": 3.911629215035621e-15,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": true,
+      "observed": 3.6222509702457955,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": true,
+      "observed": null,
+      "threshold": 0.5,
+      "op": ">=",
+      "note": "baseline error rate is 0: relative increase is unbounded; passes iff the absolute gate passes"
+     }
+    ],
+    "regressed": true
+   },
+   "throughput": {
+    "baseline_rpm": 57.46666666666667,
+    "post_rpm": 59.46153846153846,
+    "rel_change": 0.034713546314474326,
+    "gate": {
+     "name": "throughput_drop",
+     "passed": false,
+     "observed": -0.034713546314474326,
+     "threshold": 0.3,
+     "op": ">=",
+     "note": null
+    },
+    "dropped": false
+   },
+   "severity": {
+    "formula": "severity-v1",
+    "score": 58.624234435628296,
+    "band": "HIGH",
+    "latency_component": 30.57430091960161,
+    "error_component": 28.04993351602669
+   },
+   "onset": {
+    "onset_at": "2026-10-13T14:02:00Z",
+    "minutes_after_deploy": 0,
+    "baseline_p95_ms": 132.714533,
+    "baseline_p95_ci_high_ms": 134.1293966675,
+    "ci_confidence": 0.95,
+    "bootstrap_resamples": 1000,
+    "bootstrap_seed": 0,
+    "bucket_seconds": 60,
+    "min_samples_per_bucket": 20,
+    "buckets": [
+     {
+      "start": "2026-10-13T14:02:00Z",
+      "samples": 69,
+      "p95_ms": 371.6448332,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:03:00Z",
+      "samples": 44,
+      "p95_ms": 376.42636695000004,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:04:00Z",
+      "samples": 62,
+      "p95_ms": 388.35394295,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:05:00Z",
+      "samples": 58,
+      "p95_ms": 377.7043129,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:06:00Z",
+      "samples": 51,
+      "p95_ms": 375.49350100000004,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:07:00Z",
+      "samples": 64,
+      "p95_ms": 375.6588154,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:08:00Z",
+      "samples": 56,
+      "p95_ms": 372.5629515,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:09:00Z",
+      "samples": 59,
+      "p95_ms": 386.8454823,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:10:00Z",
+      "samples": 66,
+      "p95_ms": 369.1728035,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:11:00Z",
+      "samples": 62,
+      "p95_ms": 388.70229939999996,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:12:00Z",
+      "samples": 66,
+      "p95_ms": 386.25534274999995,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:13:00Z",
+      "samples": 59,
+      "p95_ms": 379.5166526,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:14:00Z",
+      "samples": 56,
+      "p95_ms": 386.4273225,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:15:00Z",
+      "samples": 58,
+      "p95_ms": 366.95199575,
+      "exceeds": true
+     },
+     {
+      "start": "2026-10-13T14:16:00Z",
+      "samples": 56,
+      "p95_ms": 387.08695850000004,
+      "exceeds": true
+     }
+    ]
+   },
+   "regressed_metrics": [
+    "latency_p50",
+    "latency_p95",
+    "latency_p99",
+    "error_rate"
+   ],
+   "self_time_regressed": true,
+   "originates_errors": true
+  }
+ ],
+ "relaxed_services": [
+  {
+   "service": "fraud",
+   "variant": "relaxed",
+   "status": "HEALTHY",
+   "sample_gate": {
+    "baseline_requests": 1725,
+    "post_requests": 747,
+    "min_requests": 200,
+    "passed": true
+   },
+   "baseline": {
+    "requests": 1725,
+    "errors": 2,
+    "error_rate": 0.0011594202898550724,
+    "throughput_rpm": 57.5,
+    "latency_p50_ms": 35.402193,
+    "latency_p95_ms": 54.0726386,
+    "latency_p99_ms": 62.8888198,
+    "self_time_p95_ms": 54.0726386
+   },
+   "post": {
+    "requests": 747,
+    "errors": 0,
+    "error_rate": 0.0,
+    "throughput_rpm": 57.46153846153846,
+    "latency_p50_ms": 35.472026,
+    "latency_p95_ms": 52.45037179999998,
+    "latency_p99_ms": 63.76473925999998,
+    "self_time_p95_ms": 52.45037179999998
+   },
+   "latency": [
+    {
+     "metric": "latency",
+     "percentile": 0.5,
+     "baseline_ms": 35.402193,
+     "post_ms": 35.472026,
+     "abs_delta_ms": 0.0698330000000027,
+     "rel_delta": 0.001972561417311145,
+     "ci_low_ms": -0.7062332500000025,
+     "ci_high_ms": 1.1314610000000016,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.001972561417311145,
+       "threshold": 0.125,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.0698330000000027,
+       "threshold": 10.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -0.7062332500000025,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.95,
+     "baseline_ms": 54.0726386,
+     "post_ms": 52.45037179999998,
+     "abs_delta_ms": -1.6222668000000198,
+     "rel_delta": -0.030001620819739686,
+     "ci_low_ms": -3.856659820000003,
+     "ci_high_ms": 0.8163588399999417,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.030001620819739686,
+       "threshold": 0.125,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -1.6222668000000198,
+       "threshold": 10.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -3.856659820000003,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "latency",
+     "percentile": 0.99,
+     "baseline_ms": 62.8888198,
+     "post_ms": 63.76473925999998,
+     "abs_delta_ms": 0.8759194599999773,
+     "rel_delta": 0.013928063251712943,
+     "ci_low_ms": -5.635118234500072,
+     "ci_high_ms": 3.431786539999983,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.013928063251712943,
+       "threshold": 0.125,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.8759194599999773,
+       "threshold": 10.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -5.635118234500072,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    }
+   ],
+   "self_time": [
+    {
+     "metric": "self_time",
+     "percentile": 0.5,
+     "baseline_ms": 35.402193,
+     "post_ms": 35.472026,
+     "abs_delta_ms": 0.0698330000000027,
+     "rel_delta": 0.001972561417311145,
+     "ci_low_ms": -0.7062332500000025,
+     "ci_high_ms": 1.1314610000000016,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.001972561417311145,
+       "threshold": 0.125,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.0698330000000027,
+       "threshold": 10.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -0.7062332500000025,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.95,
+     "baseline_ms": 54.0726386,
+     "post_ms": 52.45037179999998,
+     "abs_delta_ms": -1.6222668000000198,
+     "rel_delta": -0.030001620819739686,
+     "ci_low_ms": -3.856659820000003,
+     "ci_high_ms": 0.8163588399999417,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": -0.030001620819739686,
+       "threshold": 0.125,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": -1.6222668000000198,
+       "threshold": 10.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -3.856659820000003,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    },
+    {
+     "metric": "self_time",
+     "percentile": 0.99,
+     "baseline_ms": 62.8888198,
+     "post_ms": 63.76473925999998,
+     "abs_delta_ms": 0.8759194599999773,
+     "rel_delta": 0.013928063251712943,
+     "ci_low_ms": -5.635118234500072,
+     "ci_high_ms": 3.431786539999983,
+     "ci_confidence": 0.95,
+     "bootstrap_resamples": 1000,
+     "bootstrap_seed": 0,
+     "n_baseline": 1725,
+     "n_post": 747,
+     "gates": [
+      {
+       "name": "relative_increase",
+       "passed": false,
+       "observed": 0.013928063251712943,
+       "threshold": 0.125,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "absolute_increase_ms",
+       "passed": false,
+       "observed": 0.8759194599999773,
+       "threshold": 10.0,
+       "op": ">=",
+       "note": null
+      },
+      {
+       "name": "bootstrap_ci_low_above_zero",
+       "passed": false,
+       "observed": -5.635118234500072,
+       "threshold": 0.0,
+       "op": ">",
+       "note": null
+      }
+     ],
+     "regressed": false
+    }
+   ],
+   "error_rate": {
+    "metric": "error_rate",
+    "baseline_errors": 2,
+    "baseline_requests": 1725,
+    "post_errors": 0,
+    "post_requests": 747,
+    "baseline_rate": 0.0011594202898550724,
+    "post_rate": 0.0,
+    "abs_delta_pp": -0.11594202898550725,
+    "rel_delta": -1.0,
+    "z": -0.9310146301249926,
+    "p_value": 0.8240770018226108,
+    "exact_p_value": 1.0,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": false,
+      "observed": 0.8240770018226108,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": false,
+      "observed": 1.0,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": false,
+      "observed": -0.11594202898550725,
+      "threshold": 0.25,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": false,
+      "observed": -1.0,
+      "threshold": 0.25,
+      "op": ">=",
+      "note": null
+     }
+    ],
+    "regressed": false
+   },
+   "own_error_rate": {
+    "metric": "own_error_rate",
+    "baseline_errors": 2,
+    "baseline_requests": 1725,
+    "post_errors": 0,
+    "post_requests": 747,
+    "baseline_rate": 0.0011594202898550724,
+    "post_rate": 0.0,
+    "abs_delta_pp": -0.11594202898550725,
+    "rel_delta": -1.0,
+    "z": -0.9310146301249926,
+    "p_value": 0.8240770018226108,
+    "exact_p_value": 1.0,
+    "gates": [
+     {
+      "name": "z_test_p_value",
+      "passed": false,
+      "observed": 0.8240770018226108,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "fisher_exact_p_value",
+      "passed": false,
+      "observed": 1.0,
+      "threshold": 0.01,
+      "op": "<",
+      "note": null
+     },
+     {
+      "name": "absolute_increase_pp",
+      "passed": false,
+      "observed": -0.11594202898550725,
+      "threshold": 0.25,
+      "op": ">=",
+      "note": null
+     },
+     {
+      "name": "relative_increase",
+      "passed": false,
+      "observed": -1.0,
+      "threshold": 0.25,
+      "op": ">=",
+      "note": null
+     }
+    ],
+    "regressed": false
+   },
+   "throughput": {
+    "baseline_rpm": 57.5,
+    "post_rpm": 57.46153846153846,
+    "rel_change": -0.0006688963210702626,
+    "gate": {
+     "name": "throughput_drop",
+     "passed": false,
+     "observed": 0.0006688963210702626,
+     "threshold": 0.3,
+     "op": ">=",
+     "note": null
+    },
+    "dropped": false
+   },
+   "severity": {
+    "formula": "severity-v1",
+    "score": 0.0,
+    "band": "HEALTHY",
+    "latency_component": 0.0,
+    "error_component": 0.0
+   },
+   "onset": null,
+   "regressed_metrics": [],
+   "self_time_regressed": false,
+   "originates_errors": false
+  }
+ ],
+ "graph": {
+  "nodes": [
+   "fraud",
+   "gateway",
+   "inventory",
+   "orders",
+   "payment"
+  ],
+  "edges": [
+   {
+    "source": "gateway",
+    "target": "orders",
+    "call_count": 2610
+   },
+   {
+    "source": "orders",
+    "target": "inventory",
+    "call_count": 2610
+   },
+   {
+    "source": "orders",
+    "target": "payment",
+    "call_count": 2610
+   },
+   {
+    "source": "payment",
+    "target": "fraud",
+    "call_count": 2577
+   }
+  ]
+ },
+ "triage": {
+  "candidates": [
+   {
+    "service": "payment",
+    "score": 12,
+    "onset_at": "2026-10-13T14:02:00Z",
+    "factors": [
+     {
+      "factor": "deployed",
+      "applies": true,
+      "points": 3,
+      "reason": "payment was deployed at 14:02 UTC (v2.17 \u2192 v2.18)"
+     },
+     {
+      "factor": "self_time_regressed",
+      "applies": true,
+      "points": 3,
+      "reason": "payment self-time p95 89 \u2192 341 ms (+283%)"
+     },
+     {
+      "factor": "originates_errors",
+      "applies": true,
+      "points": 2,
+      "reason": "payment originates errors: own error rate 0.00% \u2192 3.62% (+3.62 pp, p = 9.5e-16)"
+     },
+     {
+      "factor": "downstream_healthy",
+      "applies": true,
+      "points": 2,
+      "reason": "fraud (downstream) healthy"
+     },
+     {
+      "factor": "upstream_degraded",
+      "applies": true,
+      "points": 1,
+      "reason": "orders and gateway (upstream) degraded, consistent with propagation from payment"
+     },
+     {
+      "factor": "earliest_onset",
+      "applies": true,
+      "points": 1,
+      "reason": "earliest latency onset among regressed services: 14:02 UTC (tied with gateway and orders)"
+     },
+     {
+      "factor": "downstream_self_regressed",
+      "applies": false,
+      "points": 0,
+      "reason": "no downstream service regressed with its own self-time regression"
+     }
+    ],
+    "reasoning": [
+     "payment was deployed at 14:02 UTC (v2.17 \u2192 v2.18)",
+     "payment self-time p95 89 \u2192 341 ms (+283%)",
+     "payment originates errors: own error rate 0.00% \u2192 3.62% (+3.62 pp, p = 9.5e-16)",
+     "fraud (downstream) healthy",
+     "orders and gateway (upstream) degraded, consistent with propagation from payment",
+     "earliest latency onset among regressed services: 14:02 UTC (tied with gateway and orders)"
+    ]
+   },
+   {
+    "service": "orders",
+    "score": -1,
+    "onset_at": "2026-10-13T14:02:00Z",
+    "factors": [
+     {
+      "factor": "deployed",
+      "applies": false,
+      "points": 0,
+      "reason": "orders was not deployed in this window (payment was)"
+     },
+     {
+      "factor": "self_time_regressed",
+      "applies": false,
+      "points": 0,
+      "reason": "orders self-time p95 19 \u2192 18 ms (-3%): no own self-time regression at p95/p99"
+     },
+     {
+      "factor": "originates_errors",
+      "applies": false,
+      "points": 0,
+      "reason": "orders error rate rose but its own-error rate did not: the extra failed requests had a failing callee"
+     },
+     {
+      "factor": "downstream_healthy",
+      "applies": false,
+      "points": 0,
+      "reason": "payment (downstream) also regressed"
+     },
+     {
+      "factor": "upstream_degraded",
+      "applies": true,
+      "points": 1,
+      "reason": "gateway (upstream) degraded, consistent with propagation from orders"
+     },
+     {
+      "factor": "earliest_onset",
+      "applies": true,
+      "points": 1,
+      "reason": "earliest latency onset among regressed services: 14:02 UTC (tied with gateway and payment)"
+     },
+     {
+      "factor": "downstream_self_regressed",
+      "applies": true,
+      "points": -3,
+      "reason": "payment (downstream) also regressed with its own self-time regression, so the probable origin is further downstream: payment self-time p95 89 \u2192 341 ms (+283%)"
+     }
+    ],
+    "reasoning": [
+     "gateway (upstream) degraded, consistent with propagation from orders",
+     "earliest latency onset among regressed services: 14:02 UTC (tied with gateway and payment)",
+     "payment (downstream) also regressed with its own self-time regression, so the probable origin is further downstream: payment self-time p95 89 \u2192 341 ms (+283%)"
+    ]
+   },
+   {
+    "service": "gateway",
+    "score": -2,
+    "onset_at": "2026-10-13T14:02:00Z",
+    "factors": [
+     {
+      "factor": "deployed",
+      "applies": false,
+      "points": 0,
+      "reason": "gateway was not deployed in this window (payment was)"
+     },
+     {
+      "factor": "self_time_regressed",
+      "applies": false,
+      "points": 0,
+      "reason": "gateway self-time p95 6.5 \u2192 6.4 ms (-3%): no own self-time regression at p95/p99"
+     },
+     {
+      "factor": "originates_errors",
+      "applies": false,
+      "points": 0,
+      "reason": "gateway error rate rose but its own-error rate did not: the extra failed requests had a failing callee"
+     },
+     {
+      "factor": "downstream_healthy",
+      "applies": false,
+      "points": 0,
+      "reason": "orders and payment (downstream) also regressed"
+     },
+     {
+      "factor": "upstream_degraded",
+      "applies": false,
+      "points": 0,
+      "reason": "gateway has no upstream callers in the traces"
+     },
+     {
+      "factor": "earliest_onset",
+      "applies": true,
+      "points": 1,
+      "reason": "earliest latency onset among regressed services: 14:02 UTC (tied with orders and payment)"
+     },
+     {
+      "factor": "downstream_self_regressed",
+      "applies": true,
+      "points": -3,
+      "reason": "payment (downstream) also regressed with its own self-time regression, so the probable origin is further downstream: payment self-time p95 89 \u2192 341 ms (+283%)"
+     }
+    ],
+    "reasoning": [
+     "earliest latency onset among regressed services: 14:02 UTC (tied with orders and payment)",
+     "payment (downstream) also regressed with its own self-time regression, so the probable origin is further downstream: payment self-time p95 89 \u2192 341 ms (+283%)"
+    ]
+   }
+  ],
+  "confidence": "HIGH",
+  "probable_origin": "payment",
+  "shortlist": [
+   "payment"
+  ],
+  "top_score": 12,
+  "margin": 13,
+  "weights": {
+   "deployed": 3,
+   "self_time_regressed": 3,
+   "originates_errors": 2,
+   "downstream_healthy": 2,
+   "upstream_degraded": 1,
+   "earliest_onset": 1,
+   "downstream_self_regressed": -3
+  },
+  "summary": "payment is the probable origin (score 12, HIGH confidence; next: orders (-1))"
+ },
+ "blast_radius": {
+  "origin": "payment",
+  "nodes": [
+   {
+    "service": "orders",
+    "direction": "upstream",
+    "depth": 1,
+    "impact": "AFFECTED_UPSTREAM",
+    "strict_status": "REGRESSED",
+    "relaxed_status": null,
+    "affected_via": "strict"
+   },
+   {
+    "service": "gateway",
+    "direction": "upstream",
+    "depth": 2,
+    "impact": "AFFECTED_UPSTREAM",
+    "strict_status": "REGRESSED",
+    "relaxed_status": null,
+    "affected_via": "strict"
+   },
+   {
+    "service": "fraud",
+    "direction": "downstream",
+    "depth": 1,
+    "impact": "HEALTHY_DOWNSTREAM",
+    "strict_status": "HEALTHY",
+    "relaxed_status": "HEALTHY",
+    "affected_via": null
+   }
+  ],
+  "affected": [
+   "orders",
+   "gateway"
+  ],
+  "not_in_radius": [
+   "inventory"
+  ]
+ },
+ "input": {
+  "spans_received": 37732,
+  "other_environment_spans_dropped": 0,
+  "duplicate_spans_dropped": 0,
+  "spans_in_windows": 36447
+ }
+}
