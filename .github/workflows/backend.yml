@@ -55,6 +55,10 @@ jobs:
     needs: lint-type-unit
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Compose file is valid for every profile
+        run: |
+          cp infra/compose/.env.example infra/compose/.env
+          docker compose -f infra/compose/compose.yaml --env-file infra/compose/.env --profile core --profile data --profile demo --profile airflow-full config -q
       - name: Build shared Python image
         run: docker build -f infra/docker/python.Dockerfile -t rlens/python:ci .
       - name: Smoke-test image entrypoints
