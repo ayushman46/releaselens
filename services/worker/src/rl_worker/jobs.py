@@ -168,10 +168,12 @@ class JobRunner:
                 self.stats.lost += 1
                 log.warning("analysis job skipped: its claim expired and another runner took it")
                 return
+            deadline = asyncio.timeout(self._job_timeout_s)
             try:
-                await asyncio.wait_for(handler(job), timeout=self._job_timeout_s)
+                async with deadline:
+                    await handler(job)
             except Exception as exc:
-                await self._fail(job, exc)
+                await self._fail(job, exc, timed_out=deadline.expired())
             else:
                 async with self._sessions.begin() as session:
                     owned = await complete_job(session, job.id, self.worker_id)
@@ -184,11 +186,13 @@ class JobRunner:
         finally:
             reset_log_context(token)
 
-    async def _fail(self, job: ClaimedJob, exc: BaseException) -> None:
+    async def _fail(self, job: ClaimedJob, exc: BaseException, *, timed_out: bool) -> None:
+        # Only the job's own deadline is a job timeout; a TimeoutError raised inside the handler
+        # (a database statement timeout, say) is reported as what it is.
         reason = (
             f"timed out after {self._job_timeout_s:.0f}s"
-            if isinstance(exc, TimeoutError)
-            else f"{type(exc).__name__}: {exc}"
+            if timed_out
+            else f"{type(exc).__name__}: {str(exc) or 'no detail'}"
         )
         delay = timedelta(seconds=self._backoff.delay(job.attempts))
         async with self._sessions.begin() as session:

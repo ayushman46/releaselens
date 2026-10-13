@@ -71,6 +71,12 @@ class WorkerSettings(BaseSettings):
     job_poll_interval_s: float = Field(default=2.0, gt=0, le=60)
     job_lease_s: int = Field(default=600, ge=30)
     job_timeout_s: int = Field(default=300, ge=1)
+    # Analysis jobs read whole baseline + post windows of spans, which can take far longer than
+    # the 15 s that suits the consumers' short statements (observed on the 2-CPU demo VM under
+    # ingest load). They use their own small engine with this per-statement timeout; the job as
+    # a whole is still bounded by job_timeout_s (the engine uses the smaller of the two).
+    analysis_db_command_timeout_s: float = Field(default=120.0, gt=0, le=3_600)
+    analysis_db_pool_size: int = Field(default=2, ge=1, le=20)
 
     # Outbox relay
     outbox_enabled: bool = True

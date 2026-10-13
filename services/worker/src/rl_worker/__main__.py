@@ -91,6 +91,12 @@ async def run(settings: WorkerSettings, stop: asyncio.Event) -> int:
         command_timeout_s=settings.db_command_timeout_s,
     )
     sessions = create_session_factory(engine)
+    analysis_engine = create_engine(
+        settings.database_url,
+        pool_size=settings.analysis_db_pool_size,
+        connect_timeout_s=settings.db_connect_timeout_s,
+        command_timeout_s=min(settings.analysis_db_command_timeout_s, settings.job_timeout_s),
+    )
     producer = AsyncProducer(
         settings.kafka_bootstrap,
         client_id=f"{settings.service_name}-{settings.worker_id}",
@@ -176,7 +182,7 @@ async def run(settings: WorkerSettings, stop: asyncio.Event) -> int:
         )
         components["outbox-relay"] = relay.run(stop)
     handler = AnalysisJobHandler(
-        sessions,
+        create_session_factory(analysis_engine),
         AnalysisSettings(
             per_environment=settings.window_profiles(),
             max_spans=settings.analysis_max_spans,
@@ -273,6 +279,7 @@ async def run(settings: WorkerSettings, stop: asyncio.Event) -> int:
             await http_client.aclose()
         await asyncio.to_thread(producer.close, settings.kafka_delivery_timeout_s)
         await engine.dispose()
+        await analysis_engine.dispose()
         log.info("worker stopped", extra={"exit_code": exit_code})
     return exit_code
 

@@ -197,7 +197,7 @@ async def test_sigterm_on_the_real_process_finishes_in_flight_work_and_exits_0(
     try:
         await wait_until(lambda: _ready(port), timeout_s=30)
         event_id, raw = make_event(tenant_id, service="sigterm-svc")
-        produce_raw(kafka_bootstrap, DEPLOYMENT_EVENTS, [(f"{tenant_id}:sigterm-svc", raw)])
+        landed = _produce_and_locate(kafka_bootstrap, f"{tenant_id}:sigterm-svc", raw)
 
         async def persisted() -> bool:
             async with sessions() as s:
@@ -224,5 +224,26 @@ async def test_sigterm_on_the_real_process_finishes_in_flight_work_and_exits_0(
     started = next(e for e in logs if e["msg"] == "worker started")
     assert {"job-runner", "spans-consumer", "telemetry-maintenance"} <= set(started["components"])
     assert any(e["msg"] == "span consumer stopped" for e in logs)
-    offsets = committed_vs_end(kafka_bootstrap, group, DEPLOYMENT_EVENTS)
-    assert all(committed == end for committed, end in offsets.values() if end)
+    # The group starts from the beginning of a topic shared with earlier tests, so other
+    # partitions may legitimately still hold unread messages at SIGTERM (seen under full-suite
+    # load). What must hold is that the message in flight was committed before exit.
+    partition, offset = landed
+    committed, _end = committed_vs_end(kafka_bootstrap, group, DEPLOYMENT_EVENTS)[partition]
+    assert committed > offset
+
+
+def _produce_and_locate(bootstrap: str, key: str, value: bytes) -> tuple[int, int]:
+    """Produce one message and return the (partition, offset) it was written to."""
+    from confluent_kafka import KafkaError, Message, Producer
+
+    where: list[tuple[int, int]] = []
+
+    def delivered(err: KafkaError | None, msg: Message) -> None:
+        if err is None:
+            where.append((msg.partition() or 0, msg.offset() or 0))
+
+    producer = Producer({"bootstrap.servers": bootstrap, "acks": "all"})
+    producer.produce(DEPLOYMENT_EVENTS, key=key, value=value, on_delivery=delivered)
+    assert producer.flush(15) == 0, "test message not delivered"
+    assert where, "no delivery report"
+    return where[0]

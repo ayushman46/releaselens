@@ -207,6 +207,29 @@ async def test_handler_timeout_counts_as_a_failure(db: Sessions) -> None:
     assert job.last_error.startswith("timed out")
 
 
+async def test_a_timeout_inside_the_handler_is_not_reported_as_the_job_timeout(
+    db: Sessions,
+) -> None:
+    """Seen live: a 15 s database statement timeout surfaced as "timed out after 300s"."""
+    await _due_deployments(db, 1)
+
+    async def statement_timeout(_job: ClaimedJob) -> None:
+        raise TimeoutError
+
+    registry = HandlerRegistry()
+    registry.register(JobKind.EARLY_5M, statement_timeout)
+    runner = JobRunner(
+        db, registry, worker_id="w", job_timeout=timedelta(seconds=30), lease=timedelta(minutes=1)
+    )
+    assert await runner.run_once() == 1
+    async with db() as s:
+        job = (
+            await s.scalars(select(AnalysisJob).where(AnalysisJob.kind == JobKind.EARLY_5M))
+        ).one()
+    assert job.status == JobStatus.FAILED
+    assert job.last_error == "TimeoutError: no detail"
+
+
 async def test_stop_hands_unstarted_jobs_back_without_using_an_attempt(db: Sessions) -> None:
     await _due_deployments(db, 3)
     ran: list[uuid.UUID] = []
