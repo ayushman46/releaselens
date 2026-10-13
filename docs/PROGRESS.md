@@ -4,41 +4,28 @@
 > `DECISIONS.md`, `BLOCKERS.md`, `git log --oneline -20`; run `make check` to confirm the real
 > state; continue from **Next step**. Tests beat this file if they disagree.
 
-## Current state (2026-10-13 09:55 IST)
+## Current state (2026-10-13, after integrating all parallel branches)
 
-- **Done and pushed:**
-  - M0 and M1.
-  - M2: both datasets, primary 5_3_2016.
-  - M3a: dbt project and feature mart, run `m3-run1`.
-  - M6: deployment events.
-  - M8/M9 core logic.
-  - M5 GitHub Action.
-  - M11a: web design system, shell and marketing site.
-  - Contracts: FEATURE_DEFINITIONS, RISK_ASSESSMENTS, ANALYSIS_RESULTS.
-- **Real feature mart:**
-  - Location: `s3://releaselens-data/features/release_features/schema=1.0.0/run_id=m3-run1/part-00000.parquet`, 128,617 rows, sha256 `384f66b6…`.
-  - Splits: train 90,031 / validation 19,293 / test 19,293.
-  - Cut points: validation from 2015-01-10T08:05:34Z, test from 2015-04-17T18:41:22Z.
-- **In flight.** A 06:30 IST session-limit stop interrupted these agents, and they were then resumed:
-  1. M7 + M8 wiring, worktree branch `worktree-agent-a5ea34aa43cf5ac41`, migration `0003_telemetry`.
-  2. M10 SaaS layer, worktree branch `worktree-agent-a37fc8e4e8d135faf`, migration `0003_saas`.
-     **Renumber to `0004_saas` (down_revision `0003_telemetry`) when merging.**
-  3. M4 ML, worktree branch `worktree-agent-ac96dff39debc0085`.
-  4. Main tree workflow `wg1l9c7xw`: dbt adversarial review plus the bandit B608 fixes in
-     `data/pipeline`, and M3b analytics (`data/analysis`, no migration yet).
-- **Recovery if a session dies:** each worktree branch holds committed work. For each one, run
-  `git log main..<branch>`, then run its tests inside the worktree, then
-  `git merge <branch>` into main and resolve migration numbering. The analytics Postgres export
-  becomes migration `0005_analytics` after M7 and M10 merge.
-- **Security CI:** bandit B608 ×12 in `data/pipeline` (being fixed by the dbt reviewer). Pushes go
-  through `make push` (gitleaks-gated, with the `.gitleaks.toml` allowlist).
-- **Disk:** host ≈ 2.0 GiB free, Colima VM ≈ 2 GiB free.
-- **Next steps after the merges:**
-  - Compose services: mlflow, demo profile (collector, 5 services, k6), mailpit.
-  - `demo/scenarios/run_demo.sh` end to end.
-  - M5 risk endpoint serving the champion model.
-  - M11 wiring of the web pages to the real APIs.
-  - M12 benchmarks, security scans, README and DONE.md.
+- **main = `290f861`**, which includes M0–M4, M6–M10, the M5 GitHub Action and M11a.
+- **Verified on merged main:**
+  - ruff and format clean; mypy clean on 199 files; bandit clean repo-wide.
+  - 874 unit tests pass.
+  - Integration suites pass per branch at merge time (446 for M7+M10).
+- **Model:** champion `release_risk_ci/3`, XGBoost, registered in MLflow. MLflow ran as a host
+  process during M4; the compose `mlflow` service exists.
+  - Test PR-AUC 0.811, ROC-AUC 0.881, against a 0.279 base rate.
+  - Most of the signal is persistence: after a passing build, PR-AUC is 0.320 against a 0.122
+    base rate.
+  - See `docs/ml/RESULTS.md` and `docs/ml/MODEL_CARD.md`.
+- **Next steps:**
+  1. M5: the risk endpoint serving the champion, `ci_runs` history, GitHub App webhooks and
+     Check Runs (fixture-tested), and the offline/online parity test on historical builds.
+  2. M11: wire the pages to the real APIs (auth, deployments, regressions, services, map,
+     analytics findings.json, model).
+  3. Rebuild images and run `demo/scenarios/run_demo.sh` for real (payment, fraud, control).
+  4. M12: k6 benchmarks, Trivy image scans, RLS, README, DEMO_SCRIPT, DONE.md.
+- **Disk:** host ≈ 4 GiB free. Only `rlens`-labelled images and our own build cache may be
+  pruned.
 
 ## Verification commands (current)
 
