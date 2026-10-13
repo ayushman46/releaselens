@@ -25,3 +25,13 @@ jobs:
       - run: uv sync --all-packages --frozen --python 3.12
       - name: Pipeline tests on the synthetic fixture
         run: uv run pytest -m "not integration" data
+      # The dbt project end to end (staging -> intermediate -> marts -> ml, every dbt test, the
+      # rl_core Python model) on the SYNTHETIC fixture: target "fixture" reads/writes local
+      # Parquet, so no object store, network or extension download is needed.
+      - name: dbt build on the synthetic fixture (no S3)
+        env:
+          RL_LOG_FORMAT: console
+          RL_DUCKDB_MEMORY_LIMIT: 1GB
+        run: >-
+          uv run python -m rl_pipeline dbt_build_fixture
+          --params-json "{\"work_dir\": \"${RUNNER_TEMP}/dbt-fixture\", \"run_id\": \"ci-${GITHUB_RUN_ID}\"}"

@@ -1,3 +1,4 @@
-# The repo ignores *.csv.gz (real datasets must never be committed). This tiny synthetic
-# fixture (see README.md) is the one exception.
+# The repo ignores *.csv.gz (real datasets must never be committed). These tiny synthetic
+# fixtures (see README.md) are the only exceptions.
 !travistorrent_synthetic_fixture.csv.gz
+!travistorrent_5_3_2016_synthetic_fixture.csv.gz

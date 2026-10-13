@@ -1,7 +1,7 @@
 [project]
 name = "rl-pipeline"
 version = "0.1.0"
-description = "ReleaseLens historical pipeline task callables (Airflow-agnostic): locate, validate, convert, load, dictionary"
+description = "ReleaseLens historical pipeline task callables (Airflow-agnostic): locate, validate, convert, load, dictionary, dbt"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "rl-core",
@@ -10,6 +10,9 @@ dependencies = [
     "polars>=1.44,<2.0",
     "boto3>=1.35",
     "pydantic-settings>=2.6",
+    # dbt project data/dbt (M3a, ADR-0006); exact pins per ADR-0014.
+    "dbt-core==1.12.5",
+    "dbt-duckdb==1.11.0",
 ]
 
 [project.scripts]

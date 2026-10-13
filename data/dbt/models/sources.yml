@@ -1,0 +1,35 @@
+version: 2
+
+sources:
+  - name: travistorrent
+    description: >
+      Raw TravisTorrent job rows of the PRIMARY release (`travistorrent_5_3_2016.csv.gz`,
+      ADR-0017) as converted by rl_pipeline (M2b): typed, every column, no deduplication, `-1`
+      placeholders kept. Layout `<raw_root>/version=<md5>/lang=<lang>/part-00000.parquet`;
+      only the Java partition is read (`gh_lang = 'java'`). Column meanings, grains and
+      availability tags: docs/data/DATA_DICTIONARY.md.
+    tables:
+      - name: java_jobs
+        description: One row per raw job row of the Java partition (256,055 rows in the real release).
+        config:
+          meta:
+            external_location: >-
+              read_parquet('{{ var("raw_root") }}/version={{ var("dataset_version") }}/lang=java/part-00000.parquet',
+              hive_partitioning = false)
+        columns:
+          - name: row
+            description: Row number in the dump; unique (the conversion gate enforces it).
+            data_tests:
+              - not_null
+              - unique
+          - name: tr_build_id
+            data_tests:
+              - not_null
+          - name: tr_job_id
+            data_tests:
+              - not_null
+          - name: gh_lang
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: ["java"]

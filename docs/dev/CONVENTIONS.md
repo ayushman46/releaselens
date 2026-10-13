@@ -38,7 +38,9 @@ This file is the contract between components. Change it only together with every
 | `RL_S3_BUCKET_MLFLOW` | `releaselens-mlflow` | mlflow |
 | `RL_MLFLOW_TRACKING_URI` | `http://mlflow:5000` | ml, api |
 | `RL_SMTP_HOST` / `RL_SMTP_PORT` | `mailpit` / `1025` | worker, api |
-| `RL_DATASET_PATH` | `/datasets/travistorrent` | pipeline |
+| `RL_DATASETS_DIR` | `/datasets` (one sub-directory per registered dataset, `rl_pipeline.datasets`) | pipeline |
+| `RL_LAKE_DIR` | `/lake` (Parquet staging, DuckDB spill, dbt work dir `<lake>/dbt`) | pipeline |
+| `RL_DBT_PROJECT_DIR` | `/opt/airflow/dbt` (default `<repo>/data/dbt`; read-only, see docs/data/PIPELINE.md §8) | pipeline |
 | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` | standard OTel | all (self-telemetry, demo) |
 
 Secrets never have defaults in code outside `RL_ENV=dev|test`. `.env.example` is committed,

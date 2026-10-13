@@ -1,0 +1,11 @@
+# gitleaks configuration: default rules plus narrowly scoped allowlists for verified false positives.
+# Every entry must explain why the match is not a secret. Inline `gitleaks:allow` comments are
+# preferred where the file format supports comments (e.g. dummy passwords in tests).
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Dataset registry keys (e.g. \"key\": \"travistorrent-5-3-2016\") in the generated data dictionaries are public dataset identifiers, not credentials."
+paths = ['''^docs/data/data_dictionary(_final_2017)?\.json$''']
+regexTarget = "line"
+regexes = ['''"key": "travistorrent-[a-z0-9-]+"''']
