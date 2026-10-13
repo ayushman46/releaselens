@@ -11,7 +11,7 @@ import pytest
 from rl_api import tokens
 from rl_api.clientip import resolve_client_ip
 from rl_api.passwords import PasswordHasher, password_problems
-from rl_api.settings import Settings
+from rl_api.settings import DEV_SECRET_KEY, Settings
 from rl_api.testing import TEST_PASSWORD
 
 DB = "postgresql+asyncpg://x:y@127.0.0.1:1/z"
@@ -113,11 +113,7 @@ def test_prod_requires_a_real_secret_key() -> None:
     with pytest.raises(ValueError, match="RL_SECRET_KEY"):
         Settings(env="prod", database_url=DB)
     with pytest.raises(ValueError, match="public development key"):
-        Settings(
-            env="prod",
-            database_url=DB,
-            secret_key="releaselens-dev-only-secret-key-not-for-production",
-        )  # gitleaks:allow
+        Settings(env="prod", database_url=DB, secret_key=DEV_SECRET_KEY)
     ok = Settings(env="prod", database_url=DB, secret_key="p" * 40)  # gitleaks:allow
     assert ok.master_secret() == "p" * 40
     assert Settings(env="dev", database_url=DB).master_secret()  # dev default exists
