@@ -185,6 +185,24 @@ Delivery semantics: at-least-once + idempotent persistence (`UNIQUE(tenant_id, e
 Transient errors → bounded exponential backoff with jitter, then partition pause/resume.
 Permanent errors → DLQ with reason, stack, original topic/partition/offset.
 
+**As built (M7/M8)** — details and limits in [`docs/events/TELEMETRY.md`](events/TELEMETRY.md):
+
+* The API answers `/v1/traces` only after Kafka acknowledged every message (one per service per
+  request, split above 768 KiB); rejected spans are reported through OTLP `partial_success`.
+* The span consumer handles up to 100 messages per transaction; spans are idempotent on
+  `(tenant_id, trace_id, span_id, start_time)`, and edges and minute rollups are derived only
+  from the rows that transaction inserted. A per-tenant advisory lock makes edge counts exact
+  when a parent and its child are stored by concurrent consumers.
+* Day partitions are created by the worker's maintenance loop (today + 2 days, hourly) and, for
+  any other day, by the consumer before its insert transaction; retention drops partitions
+  (7 days) and deletes rollups (30 days).
+* Analysis jobs: `early_5m` / `early_10m` analyse **as of** T+5 / T+10 even when they run late;
+  `final` runs at T+15 on the full window. Window profiles are per environment (`demo`: baseline
+  10 min, warm-up 1 min, post window to T+8). The handler writes `regression_analyses` and the
+  `analysis.results` outbox row (`rl_core.events.analysis.AnalysisEnvelope`) in one transaction.
+* `spans` has no foreign key to `organizations` (per-row cost on the hottest path); the consumer
+  checks each batch's tenants once and dead-letters unknown ones.
+
 ## 6. Post-deployment intelligence (all in `rl_core`, M8–M9)
 
 ```mermaid
