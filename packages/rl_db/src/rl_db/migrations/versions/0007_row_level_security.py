@@ -54,20 +54,21 @@ TENANT_TABLES = (
 # admin-only and get no policy: webhook_deliveries, stripe_events, audit_log.
 
 _BOUND = "NULLIF(current_setting('app.tenant_id', true), '')::uuid"
+# A plain literal (no interpolation), kept in step with ROLE by the assert below.
+_CREATE_ROLE = """
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'rl_tenant') THEN
+        CREATE ROLE rl_tenant NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT;
+    END IF;
+END
+$$
+"""
+assert f"rolname = '{ROLE}'" in _CREATE_ROLE
 
 
 def upgrade() -> None:
-    op.execute(
-        f"""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{ROLE}') THEN
-                CREATE ROLE {ROLE} NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT;
-            END IF;
-        END
-        $$
-        """
-    )
+    op.execute(_CREATE_ROLE)
     # The connecting role must be allowed to switch to rl_tenant (a superuser always is).
     op.execute(f"GRANT {ROLE} TO CURRENT_USER")
     op.execute(f"GRANT USAGE ON SCHEMA public TO {ROLE}")
