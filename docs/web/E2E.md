@@ -43,24 +43,22 @@ the e-mail; nothing leaves the machine).
 ## Getting the demo data into your account's organization
 
 `run_demo.sh` creates its own organization with the admin CLI (`rl_api.admin create-org`) and an
-API key. That organization has no members, so no one can invite you into it, and the admin CLI has
-no "add member" command yet. Until the backend adds one (or lets the script reuse an existing key),
-either:
+API key. Sign up in the web app first, then run the demo with your address:
 
-* add your user to the demo organization with a membership row in the local database, or
-* create a key with `deployments:write`, `telemetry:write`, `risk:write` and `read` in
-  **Settings → API keys** of your own organization and run the demo services with
-  `RL_DEMO_INGEST_KEY=<that key>`, skipping step 2 of the script (a small `run_demo.sh` change,
-  owned by the backend).
+```sh
+DEMO_MEMBER_EMAIL=you@example.test demo/scenarios/run_demo.sh
+```
 
-## Known limitation (backend)
+The script then runs `python -m rl_api.admin add-member --org <demo slug> --email <you> --role
+owner`, so the demo organization appears in your organization switcher. The user must already
+exist (the CLI never creates accounts); an existing membership just gets the role.
 
-The deployment page's analysis (timeline, before/after, probable origin, blast radius, latency) comes
-from `GET /api/v1/deployments/{id}/analysis`, and the Regressions, Services and Service map pages
-from `GET /api/v1/regressions`, `/services` and `/service-map`. At the time of writing those four
-routes accept **API keys only** (`require_scope("read")`), so a browser session gets `401` and the
-pages show "not available to browser sessions yet". The demo test therefore passes only once those
-routes use `require_tenant_read` like `/api/v1/deployments` and `/api/v1/risk/*` already do.
+## Analysis routes and browser sessions
+
+The deployment page's analysis and the Regressions, Services and Service map pages read
+`GET /api/v1/deployments/{id}/analysis`, `/api/v1/regressions`, `/services` and `/service-map`.
+They accept a browser session plus `X-RL-Org` (`require_tenant_read`), like `/api/v1/deployments`
+and `/api/v1/risk/*`.
 
 ## CI
 

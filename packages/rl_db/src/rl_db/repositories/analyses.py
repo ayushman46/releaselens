@@ -196,6 +196,21 @@ async def list_analyses(
     return list((await session.execute(stmt)).scalars())
 
 
+async def latest_analysis_windows(
+    session: AsyncSession, ctx: TenantContext, deployment_id: uuid.UUID
+) -> Row[Any] | None:
+    """``(id, kind, windows)`` of the deployment's most complete analysis, without loading its
+    (large) ``result``; None when it has none."""
+    ra = RegressionAnalysisRecord
+    stmt = (
+        select(ra.id, ra.kind, ra.windows)
+        .where(ra.tenant_id == ctx.tenant_id, ra.deployment_id == deployment_id)
+        .order_by(ra.kind.desc())
+        .limit(1)
+    )
+    return (await session.execute(stmt)).first()
+
+
 # ----------------------------------------------------------------------------- regressions
 REGRESSION_STATUSES: Final = ("REGRESSED", "WARNING")
 
@@ -226,8 +241,10 @@ async def list_regressions(
     environment: str | None = None,
     service: str | None = None,
     after: RegressionCursor | None = None,
+    since: datetime | None = None,
 ) -> Sequence[Row[Any]]:
-    """Deployments whose latest analysis is REGRESSED or WARNING, newest deployment first.
+    """Deployments whose latest analysis is REGRESSED or WARNING, newest deployment first;
+    ``since`` keeps deployments with ``deployed_at >= since``.
 
     Each row has the deployment's columns (``d_*``) and the analysis's (``a_*``).
     """
@@ -261,6 +278,8 @@ async def list_regressions(
         stmt = stmt.where(d.environment == environment)
     if service is not None:
         stmt = stmt.where(d.service == service)
+    if since is not None:
+        stmt = stmt.where(d.deployed_at >= since)
     if after is not None:
         stmt = stmt.where(
             tuple_(d.deployed_at, d.id) < tuple_(after.deployed_at, after.deployment_id)

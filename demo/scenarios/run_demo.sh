@@ -8,7 +8,9 @@
 #   SCENARIO=control demo/scenarios/run_demo.sh      # payment v1 -> v1 redeploy: must NOT alarm
 #
 # Tunables (env): BASELINE_MINUTES (default 11), POST_MINUTES (default 10), RATE (req/s, 20),
-# KEEP_STACK=1 to leave the demo services running afterwards.
+# KEEP_STACK=1 to leave the demo services running afterwards, DEMO_MEMBER_EMAIL=you@example.com
+# to make that (already signed-up) user an owner of the demo organization, so the dashboard
+# shows the run when they sign in.
 # The "demo" environment uses shorter analysis windows (baseline 10 min, warm-up 1 min, post 8 min;
 # configured in the worker, recorded in every result) so a run takes ~25 minutes, not ~50.
 set -euo pipefail
@@ -52,6 +54,11 @@ KEY=$("${COMPOSE[@]}" run --rm -T api python -m rl_api.admin create-key --org "$
       --scopes deployments:write,telemetry:write,risk:write,read --name "demo-$RUN_ID" 2>/dev/null | tail -1)
 [[ "$KEY" == rlk_* ]] || die "could not create an API key"
 echo "org $ORG_ID · key ${KEY:0:16}… (printed once, not stored)"
+if [ -n "${DEMO_MEMBER_EMAIL:-}" ]; then
+  "${COMPOSE[@]}" run --rm -T api python -m rl_api.admin add-member --org "$SLUG" \
+      --email "$DEMO_MEMBER_EMAIL" --role owner \
+    || die "could not add $DEMO_MEMBER_EMAIL to '$SLUG' (sign up in the web app first)"
+fi
 export RL_DEMO_INGEST_KEY="$KEY"
 
 # ---------------------------------------------------------------- 3. demo services, baseline

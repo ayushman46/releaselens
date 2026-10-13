@@ -18,7 +18,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, BeforeValidator, ConfigDict
+from pydantic import AwareDatetime, BaseModel, BeforeValidator, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_api.auth import require_scope
@@ -41,9 +41,10 @@ from rl_core.tenancy import TenantContext
 from rl_db.models import AnalysisJob, Deployment
 from rl_db.repositories import (
     DeploymentCursor,
-    get_deployment,
+    LatestAnalysis,
+    get_deployment_with_latest_analysis,
     list_analysis_jobs,
-    list_deployments,
+    list_deployments_with_latest_analysis,
 )
 from rl_db.repositories.billing import increment_usage, month_start
 
@@ -95,6 +96,36 @@ class AnalysisJobOut(BaseModel):
     attempts: int
 
 
+class LatestAnalysisOut(BaseModel):
+    """Verdict of the deployment's most complete analysis (final > early_10m > early_5m)."""
+
+    id: uuid.UUID
+    kind: Literal["early_5m", "early_10m", "final"]
+    status: Literal["HEALTHY", "WARNING", "REGRESSED", "INSUFFICIENT_DATA"]
+    severity_score: float | None = Field(description="Severity v1 (0-100), not a probability")
+    severity_band: Literal["HEALTHY", "WARNING", "HIGH", "CRITICAL"] | None
+    probable_origin: str | None = Field(
+        description="Service the evidence points to; null when confidence is LOW"
+    )
+    confidence: Literal["HIGH", "MEDIUM", "LOW"] | None
+    analysed_at: datetime
+
+    @classmethod
+    def of(cls, a: LatestAnalysis) -> LatestAnalysisOut:
+        return cls.model_validate(
+            {
+                "id": a.id,
+                "kind": a.kind.value,
+                "status": a.status,
+                "severity_score": a.severity_score,
+                "severity_band": a.severity_band,
+                "probable_origin": a.probable_origin,
+                "confidence": a.confidence,
+                "analysed_at": a.analysed_at,
+            }
+        )
+
+
 class DeploymentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -114,6 +145,15 @@ class DeploymentOut(BaseModel):
     risk_assessment_id: uuid.UUID | None
     labels: dict[str, str]
     received_at: datetime
+    latest_analysis: LatestAnalysisOut | None = Field(
+        default=None, description="null until the first analysis of this deployment is stored"
+    )
+
+    @classmethod
+    def of(cls, row: Deployment, latest: LatestAnalysis | None) -> DeploymentOut:
+        out = cls.model_validate(row)
+        out.latest_analysis = None if latest is None else LatestAnalysisOut.of(latest)
+        return out
 
 
 class DeploymentDetail(DeploymentOut):
@@ -254,15 +294,25 @@ async def list_deployments_route(
     environment: Annotated[str | None, Query(max_length=64)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     cursor: Annotated[str | None, Query(max_length=512)] = None,
+    since: Annotated[
+        AwareDatetime | None,
+        Query(description="ISO 8601 with offset: only deployments with deployed_at >= since"),
+    ] = None,
 ) -> DeploymentPage:
     after = _decode_cursor(cursor) if cursor else None
-    rows = await list_deployments(
-        session, ctx, limit=limit + 1, service=service, environment=environment, after=after
+    rows = await list_deployments_with_latest_analysis(
+        session,
+        ctx,
+        limit=limit + 1,
+        service=service,
+        environment=environment,
+        after=after,
+        since=since,
     )
     page, has_more = rows[:limit], len(rows) > limit
     return DeploymentPage(
-        items=[DeploymentOut.model_validate(r) for r in page],
-        next_cursor=_encode_cursor(page[-1]) if has_more else None,
+        items=[DeploymentOut.of(d, latest) for d, latest in page],
+        next_cursor=_encode_cursor(page[-1][0]) if has_more else None,
     )
 
 
@@ -277,10 +327,11 @@ async def get_deployment_route(
     ctx: Annotated[TenantContext, Depends(require_tenant_read)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> DeploymentDetail:
-    row = await get_deployment(session, ctx, deployment_id)
-    if row is None:
+    found = await get_deployment_with_latest_analysis(session, ctx, deployment_id)
+    if found is None:
         # Same answer for "does not exist" and "belongs to another tenant" (ADR-0010 §4).
         raise ApiError(404, "not_found", "deployment not found")
+    row, latest = found
     jobs: list[AnalysisJob] = await list_analysis_jobs(session, ctx, row.id)
-    out = DeploymentOut.model_validate(row).model_dump()
+    out = DeploymentOut.of(row, latest).model_dump()
     return DeploymentDetail(**out, analysis_jobs=[AnalysisJobOut.model_validate(j) for j in jobs])

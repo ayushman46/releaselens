@@ -430,10 +430,9 @@
             "title": "Probable Origin"
           },
           "result": {
-            "additionalProperties": true,
-            "description": "Full RegressionAnalysis JSON of engine_version (evidence per service, graph, triage, blast radius)",
-            "title": "Result",
-            "type": "object"
+            "$ref": "#/components/schemas/RegressionAnalysis",
+            "description": "Full RegressionAnalysis of engine_version (evidence per service, graph, triage, blast radius). Typed for engine regression-engine/1.x; a result of another engine version is returned unchanged as a JSON object.",
+            "title": "Result"
           },
           "sampling": {
             "additionalProperties": true,
@@ -507,6 +506,65 @@
           "result"
         ],
         "title": "AnalysisOut",
+        "type": "object"
+      },
+      "AnalysisWindows": {
+        "additionalProperties": false,
+        "description": "Resolved windows for one deployment (all instants are UTC).",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "baseline_end": {
+            "format": "date-time",
+            "title": "Baseline End",
+            "type": "string"
+          },
+          "baseline_start": {
+            "format": "date-time",
+            "title": "Baseline Start",
+            "type": "string"
+          },
+          "deployed_at": {
+            "format": "date-time",
+            "title": "Deployed At",
+            "type": "string"
+          },
+          "effective_post_end": {
+            "format": "date-time",
+            "title": "Effective Post End",
+            "type": "string"
+          },
+          "post_end": {
+            "format": "date-time",
+            "title": "Post End",
+            "type": "string"
+          },
+          "post_start": {
+            "format": "date-time",
+            "title": "Post Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deployed_at",
+          "baseline_start",
+          "baseline_end",
+          "post_start",
+          "post_end",
+          "effective_post_end",
+          "as_of"
+        ],
+        "title": "AnalysisWindows",
         "type": "object"
       },
       "ApiKeyCreate": {
@@ -919,6 +977,44 @@
         "title": "BillingOut",
         "type": "object"
       },
+      "BlastRadius": {
+        "additionalProperties": false,
+        "properties": {
+          "affected": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/RadiusNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "not_in_radius": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Not In Radius",
+            "type": "array"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "origin",
+          "nodes",
+          "affected",
+          "not_in_radius"
+        ],
+        "title": "BlastRadius",
+        "type": "object"
+      },
       "CheckoutIn": {
         "properties": {
           "plan": {
@@ -1174,6 +1270,15 @@
         ],
         "title": "CiRunOut",
         "type": "object"
+      },
+      "Confidence": {
+        "enum": [
+          "HIGH",
+          "MEDIUM",
+          "LOW"
+        ],
+        "title": "Confidence",
+        "type": "string"
       },
       "DeploymentAccepted": {
         "properties": {
@@ -1446,6 +1551,17 @@
             "title": "Labels",
             "type": "object"
           },
+          "latest_analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestAnalysisOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null until the first analysis of this deployment is stored"
+          },
           "previous_version": {
             "anyOf": [
               {
@@ -1585,6 +1701,17 @@
             "title": "Labels",
             "type": "object"
           },
+          "latest_analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestAnalysisOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null until the first analysis of this deployment is stored"
+          },
           "previous_version": {
             "anyOf": [
               {
@@ -1697,6 +1824,166 @@
         "title": "DeploymentPage",
         "type": "object"
       },
+      "DeploymentRef": {
+        "additionalProperties": false,
+        "description": "The deployment being analysed (subset of the deployment event).",
+        "properties": {
+          "deployed_at": {
+            "format": "date-time",
+            "title": "Deployed At",
+            "type": "string"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment"
+          },
+          "previous_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Version"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "service",
+          "deployed_at"
+        ],
+        "title": "DeploymentRef",
+        "type": "object"
+      },
+      "DeploymentTimeseries": {
+        "properties": {
+          "deployment_id": {
+            "format": "uuid",
+            "title": "Deployment Id",
+            "type": "string"
+          },
+          "end": {
+            "description": "Exclusive: the minute after the post window's end, or the current (still-filling) minute if that is earlier",
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "latency_approximate": {
+            "const": true,
+            "default": true,
+            "title": "Latency Approximate",
+            "type": "boolean"
+          },
+          "series": {
+            "description": "Per service, by name: every service of the environment with requests in the range, or just the requested one",
+            "items": {
+              "$ref": "#/components/schemas/ServiceSeries"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The service filter, or null for every service",
+            "title": "Service"
+          },
+          "start": {
+            "description": "First minute (the baseline start's minute)",
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "step_seconds": {
+            "const": 60,
+            "default": 60,
+            "title": "Step Seconds",
+            "type": "integer"
+          },
+          "windows": {
+            "$ref": "#/components/schemas/SeriesWindows"
+          }
+        },
+        "required": [
+          "deployment_id",
+          "environment",
+          "service",
+          "start",
+          "end",
+          "windows",
+          "series"
+        ],
+        "title": "DeploymentTimeseries",
+        "type": "object"
+      },
+      "EdgeSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "call_count": {
+            "title": "Call Count",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "call_count"
+        ],
+        "title": "EdgeSnapshot",
+        "type": "object"
+      },
       "EmailIn": {
         "properties": {
           "email": {
@@ -1757,6 +2044,106 @@
         "title": "EnvironmentOut",
         "type": "object"
       },
+      "ErrorRateEvidence": {
+        "additionalProperties": false,
+        "description": "Gates on an error rate: all errors (``error_rate``) or own errors (``own_error_rate``).",
+        "properties": {
+          "abs_delta_pp": {
+            "title": "Abs Delta Pp",
+            "type": "number"
+          },
+          "baseline_errors": {
+            "title": "Baseline Errors",
+            "type": "integer"
+          },
+          "baseline_rate": {
+            "title": "Baseline Rate",
+            "type": "number"
+          },
+          "baseline_requests": {
+            "title": "Baseline Requests",
+            "type": "integer"
+          },
+          "exact_p_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exact P Value"
+          },
+          "gates": {
+            "items": {
+              "$ref": "#/components/schemas/Gate"
+            },
+            "title": "Gates",
+            "type": "array"
+          },
+          "metric": {
+            "enum": [
+              "error_rate",
+              "own_error_rate"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "p_value": {
+            "title": "P Value",
+            "type": "number"
+          },
+          "post_errors": {
+            "title": "Post Errors",
+            "type": "integer"
+          },
+          "post_rate": {
+            "title": "Post Rate",
+            "type": "number"
+          },
+          "post_requests": {
+            "title": "Post Requests",
+            "type": "integer"
+          },
+          "regressed": {
+            "title": "Regressed",
+            "type": "boolean"
+          },
+          "rel_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rel Delta"
+          },
+          "z": {
+            "title": "Z",
+            "type": "number"
+          }
+        },
+        "required": [
+          "metric",
+          "baseline_errors",
+          "baseline_requests",
+          "post_errors",
+          "post_requests",
+          "baseline_rate",
+          "post_rate",
+          "abs_delta_pp",
+          "rel_delta",
+          "z",
+          "p_value",
+          "gates",
+          "regressed"
+        ],
+        "title": "ErrorRateEvidence",
+        "type": "object"
+      },
       "Extractor": {
         "additionalProperties": false,
         "properties": {
@@ -1780,6 +2167,119 @@
           "version"
         ],
         "title": "Extractor",
+        "type": "object"
+      },
+      "Factor": {
+        "enum": [
+          "deployed",
+          "self_time_regressed",
+          "originates_errors",
+          "downstream_healthy",
+          "upstream_degraded",
+          "earliest_onset",
+          "downstream_self_regressed"
+        ],
+        "title": "Factor",
+        "type": "string"
+      },
+      "FactorResult": {
+        "additionalProperties": false,
+        "properties": {
+          "applies": {
+            "title": "Applies",
+            "type": "boolean"
+          },
+          "factor": {
+            "$ref": "#/components/schemas/Factor"
+          },
+          "points": {
+            "title": "Points",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "factor",
+          "applies",
+          "points",
+          "reason"
+        ],
+        "title": "FactorResult",
+        "type": "object"
+      },
+      "Gate": {
+        "additionalProperties": false,
+        "description": "One named check. ``passed`` is the decision; the rest is the evidence for it.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "observed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed"
+          },
+          "op": {
+            "enum": [
+              ">=",
+              ">",
+              "<",
+              "<="
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "passed",
+          "observed",
+          "threshold",
+          "op"
+        ],
+        "title": "Gate",
+        "type": "object"
+      },
+      "GitHubOAuthStatus": {
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "configured"
+        ],
+        "title": "GitHubOAuthStatus",
         "type": "object"
       },
       "GitHubRepoIn": {
@@ -1844,6 +2344,32 @@
         "title": "GitHubRepoOut",
         "type": "object"
       },
+      "GraphSnapshot": {
+        "additionalProperties": false,
+        "description": "JSON-serialisable graph, as stored with a regression analysis.",
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/EdgeSnapshot"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Nodes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "GraphSnapshot",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1873,6 +2399,47 @@
           "cold_start"
         ],
         "title": "HistoryInfo",
+        "type": "object"
+      },
+      "Impact": {
+        "enum": [
+          "AFFECTED_UPSTREAM",
+          "AFFECTED_DOWNSTREAM",
+          "HEALTHY_UPSTREAM",
+          "HEALTHY_DOWNSTREAM",
+          "UNKNOWN_UPSTREAM",
+          "UNKNOWN_DOWNSTREAM"
+        ],
+        "title": "Impact",
+        "type": "string"
+      },
+      "InputSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "duplicate_spans_dropped": {
+            "title": "Duplicate Spans Dropped",
+            "type": "integer"
+          },
+          "other_environment_spans_dropped": {
+            "title": "Other Environment Spans Dropped",
+            "type": "integer"
+          },
+          "spans_in_windows": {
+            "title": "Spans In Windows",
+            "type": "integer"
+          },
+          "spans_received": {
+            "title": "Spans Received",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "spans_received",
+          "other_environment_spans_dropped",
+          "duplicate_spans_dropped",
+          "spans_in_windows"
+        ],
+        "title": "InputSummary",
         "type": "object"
       },
       "InviteCreate": {
@@ -1952,6 +2519,208 @@
           "deployed_at"
         ],
         "title": "LastDeployment",
+        "type": "object"
+      },
+      "LatencyEvidence": {
+        "additionalProperties": false,
+        "description": "Gates on one percentile of a latency distribution (total latency or service self-time).",
+        "properties": {
+          "abs_delta_ms": {
+            "title": "Abs Delta Ms",
+            "type": "number"
+          },
+          "baseline_ms": {
+            "title": "Baseline Ms",
+            "type": "number"
+          },
+          "bootstrap_resamples": {
+            "title": "Bootstrap Resamples",
+            "type": "integer"
+          },
+          "bootstrap_seed": {
+            "title": "Bootstrap Seed",
+            "type": "integer"
+          },
+          "ci_confidence": {
+            "title": "Ci Confidence",
+            "type": "number"
+          },
+          "ci_high_ms": {
+            "title": "Ci High Ms",
+            "type": "number"
+          },
+          "ci_low_ms": {
+            "title": "Ci Low Ms",
+            "type": "number"
+          },
+          "gates": {
+            "items": {
+              "$ref": "#/components/schemas/Gate"
+            },
+            "title": "Gates",
+            "type": "array"
+          },
+          "metric": {
+            "enum": [
+              "latency",
+              "self_time"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "n_baseline": {
+            "title": "N Baseline",
+            "type": "integer"
+          },
+          "n_post": {
+            "title": "N Post",
+            "type": "integer"
+          },
+          "percentile": {
+            "title": "Percentile",
+            "type": "number"
+          },
+          "post_ms": {
+            "title": "Post Ms",
+            "type": "number"
+          },
+          "regressed": {
+            "title": "Regressed",
+            "type": "boolean"
+          },
+          "rel_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rel Delta"
+          }
+        },
+        "required": [
+          "metric",
+          "percentile",
+          "baseline_ms",
+          "post_ms",
+          "abs_delta_ms",
+          "rel_delta",
+          "ci_low_ms",
+          "ci_high_ms",
+          "ci_confidence",
+          "bootstrap_resamples",
+          "bootstrap_seed",
+          "n_baseline",
+          "n_post",
+          "gates",
+          "regressed"
+        ],
+        "title": "LatencyEvidence",
+        "type": "object"
+      },
+      "LatestAnalysisOut": {
+        "description": "Verdict of the deployment's most complete analysis (final > early_10m > early_5m).",
+        "properties": {
+          "analysed_at": {
+            "format": "date-time",
+            "title": "Analysed At",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "HIGH",
+                  "MEDIUM",
+                  "LOW"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "early_5m",
+              "early_10m",
+              "final"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "probable_origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Service the evidence points to; null when confidence is LOW",
+            "title": "Probable Origin"
+          },
+          "severity_band": {
+            "anyOf": [
+              {
+                "enum": [
+                  "HEALTHY",
+                  "WARNING",
+                  "HIGH",
+                  "CRITICAL"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Band"
+          },
+          "severity_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Severity v1 (0-100), not a probability",
+            "title": "Severity Score"
+          },
+          "status": {
+            "enum": [
+              "HEALTHY",
+              "WARNING",
+              "REGRESSED",
+              "INSUFFICIENT_DATA"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "severity_score",
+          "severity_band",
+          "probable_origin",
+          "confidence",
+          "analysed_at"
+        ],
+        "title": "LatestAnalysisOut",
         "type": "object"
       },
       "LoginIn": {
@@ -2270,6 +3039,121 @@
         "title": "NotificationOut",
         "type": "object"
       },
+      "OnsetBucket": {
+        "additionalProperties": false,
+        "properties": {
+          "exceeds": {
+            "title": "Exceeds",
+            "type": "boolean"
+          },
+          "p95_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95 Ms"
+          },
+          "samples": {
+            "title": "Samples",
+            "type": "integer"
+          },
+          "start": {
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "samples",
+          "p95_ms",
+          "exceeds"
+        ],
+        "title": "OnsetBucket",
+        "type": "object"
+      },
+      "OnsetEvidence": {
+        "additionalProperties": false,
+        "description": "First minute bucket (from T, warm-up included) whose p95 exceeds the baseline p95 CI.",
+        "properties": {
+          "baseline_p95_ci_high_ms": {
+            "title": "Baseline P95 Ci High Ms",
+            "type": "number"
+          },
+          "baseline_p95_ms": {
+            "title": "Baseline P95 Ms",
+            "type": "number"
+          },
+          "bootstrap_resamples": {
+            "title": "Bootstrap Resamples",
+            "type": "integer"
+          },
+          "bootstrap_seed": {
+            "title": "Bootstrap Seed",
+            "type": "integer"
+          },
+          "bucket_seconds": {
+            "title": "Bucket Seconds",
+            "type": "integer"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/OnsetBucket"
+            },
+            "title": "Buckets",
+            "type": "array"
+          },
+          "ci_confidence": {
+            "title": "Ci Confidence",
+            "type": "number"
+          },
+          "min_samples_per_bucket": {
+            "title": "Min Samples Per Bucket",
+            "type": "integer"
+          },
+          "minutes_after_deploy": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes After Deploy"
+          },
+          "onset_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onset At"
+          }
+        },
+        "required": [
+          "onset_at",
+          "minutes_after_deploy",
+          "baseline_p95_ms",
+          "baseline_p95_ci_high_ms",
+          "ci_confidence",
+          "bootstrap_resamples",
+          "bootstrap_seed",
+          "bucket_seconds",
+          "min_samples_per_bucket",
+          "buckets"
+        ],
+        "title": "OnsetEvidence",
+        "type": "object"
+      },
       "OrgCreate": {
         "properties": {
           "name": {
@@ -2389,6 +3273,115 @@
           "name"
         ],
         "title": "OrgUpdate",
+        "type": "object"
+      },
+      "OriginCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/FactorResult"
+            },
+            "title": "Factors",
+            "type": "array"
+          },
+          "onset_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onset At"
+          },
+          "reasoning": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasoning",
+            "type": "array"
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "score",
+          "onset_at",
+          "factors",
+          "reasoning"
+        ],
+        "title": "OriginCandidate",
+        "type": "object"
+      },
+      "OverviewStats": {
+        "properties": {
+          "active_regressions": {
+            "description": "(service, environment) pairs whose newest deployment's latest analysis is REGRESSED or WARNING; a later deployment of the service supersedes it",
+            "title": "Active Regressions",
+            "type": "integer"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "deployments_7d": {
+            "description": "Deployments with deployed_at in the last 7 days",
+            "title": "Deployments 7D",
+            "type": "integer"
+          },
+          "deployments_since": {
+            "format": "date-time",
+            "title": "Deployments Since",
+            "type": "string"
+          },
+          "regressions_7d": {
+            "description": "Of those, deployments whose latest analysis is REGRESSED or WARNING (= GET /api/v1/regressions?since=deployments_since)",
+            "title": "Regressions 7D",
+            "type": "integer"
+          },
+          "risk_assessments_7d": {
+            "$ref": "#/components/schemas/RiskBandCounts",
+            "description": "Risk assessments created in the last 7 days, by band"
+          },
+          "risk_assessments_since": {
+            "format": "date-time",
+            "title": "Risk Assessments Since",
+            "type": "string"
+          },
+          "services_seen_24h": {
+            "description": "Distinct services with requests (SERVER spans) in the last 24 hours",
+            "title": "Services Seen 24H",
+            "type": "integer"
+          },
+          "services_since": {
+            "format": "date-time",
+            "title": "Services Since",
+            "type": "string"
+          }
+        },
+        "required": [
+          "as_of",
+          "deployments_since",
+          "deployments_7d",
+          "regressions_7d",
+          "active_regressions",
+          "risk_assessments_since",
+          "risk_assessments_7d",
+          "services_since",
+          "services_seen_24h"
+        ],
+        "title": "OverviewStats",
         "type": "object"
       },
       "PlanLimitsOut": {
@@ -2585,6 +3578,69 @@
         "title": "ProjectUpdate",
         "type": "object"
       },
+      "RadiusNode": {
+        "additionalProperties": false,
+        "properties": {
+          "affected_via": {
+            "anyOf": [
+              {
+                "enum": [
+                  "strict",
+                  "relaxed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Via"
+          },
+          "depth": {
+            "title": "Depth",
+            "type": "integer"
+          },
+          "direction": {
+            "enum": [
+              "upstream",
+              "downstream"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "impact": {
+            "$ref": "#/components/schemas/Impact"
+          },
+          "relaxed_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServiceStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "strict_status": {
+            "$ref": "#/components/schemas/ServiceStatus"
+          }
+        },
+        "required": [
+          "service",
+          "direction",
+          "depth",
+          "impact",
+          "strict_status",
+          "relaxed_status",
+          "affected_via"
+        ],
+        "title": "RadiusNode",
+        "type": "object"
+      },
       "RedirectUrl": {
         "properties": {
           "url": {
@@ -2596,6 +3652,127 @@
           "url"
         ],
         "title": "RedirectUrl",
+        "type": "object"
+      },
+      "RegressionAnalysis": {
+        "additionalProperties": false,
+        "description": "The complete, JSON-serialisable result of analysing one deployment.",
+        "properties": {
+          "blast_radius": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BlastRadius"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "config": {
+            "$ref": "#/components/schemas/WindowConfig"
+          },
+          "deployment": {
+            "$ref": "#/components/schemas/DeploymentRef"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "graph": {
+            "$ref": "#/components/schemas/GraphSnapshot"
+          },
+          "input": {
+            "$ref": "#/components/schemas/InputSummary"
+          },
+          "relaxed_config": {
+            "$ref": "#/components/schemas/WindowConfig"
+          },
+          "relaxed_services": {
+            "items": {
+              "$ref": "#/components/schemas/ServiceEvidence"
+            },
+            "title": "Relaxed Services",
+            "type": "array"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/ServiceEvidence"
+            },
+            "title": "Services",
+            "type": "array"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Severity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "severity_service": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Service"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ServiceStatus"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          },
+          "triage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TriageResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "windows": {
+            "$ref": "#/components/schemas/AnalysisWindows"
+          }
+        },
+        "required": [
+          "engine_version",
+          "tenant_id",
+          "deployment",
+          "windows",
+          "config",
+          "relaxed_config",
+          "seed",
+          "status",
+          "severity",
+          "severity_service",
+          "services",
+          "relaxed_services",
+          "graph",
+          "triage",
+          "blast_radius",
+          "input"
+        ],
+        "title": "RegressionAnalysis",
         "type": "object"
       },
       "RegressionItem": {
@@ -3287,6 +4464,39 @@
         "title": "RiskAssessmentPage",
         "type": "object"
       },
+      "RiskBandCounts": {
+        "properties": {
+          "CRITICAL": {
+            "title": "Critical",
+            "type": "integer"
+          },
+          "HIGH": {
+            "title": "High",
+            "type": "integer"
+          },
+          "LOW": {
+            "title": "Low",
+            "type": "integer"
+          },
+          "MEDIUM": {
+            "title": "Medium",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "CRITICAL",
+          "total"
+        ],
+        "title": "RiskBandCounts",
+        "type": "object"
+      },
       "Role": {
         "enum": [
           "owner",
@@ -3307,6 +4517,254 @@
           "role"
         ],
         "title": "RoleUpdate",
+        "type": "object"
+      },
+      "SampleGate": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline_requests": {
+            "title": "Baseline Requests",
+            "type": "integer"
+          },
+          "min_requests": {
+            "title": "Min Requests",
+            "type": "integer"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "post_requests": {
+            "title": "Post Requests",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "baseline_requests",
+          "post_requests",
+          "min_requests",
+          "passed"
+        ],
+        "title": "SampleGate",
+        "type": "object"
+      },
+      "SeenEnvironment": {
+        "properties": {
+          "last_deployment_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Newest deployed_at in it",
+            "title": "Last Deployment At"
+          },
+          "last_seen": {
+            "description": "Newest of last_deployment_at and last_telemetry_at",
+            "format": "date-time",
+            "title": "Last Seen",
+            "type": "string"
+          },
+          "last_telemetry_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Newest request minute (its start) or service-to-service call in it",
+            "title": "Last Telemetry At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "last_seen",
+          "last_deployment_at",
+          "last_telemetry_at"
+        ],
+        "title": "SeenEnvironment",
+        "type": "object"
+      },
+      "SeenEnvironmentList": {
+        "properties": {
+          "items": {
+            "description": "By name (at most 500)",
+            "items": {
+              "$ref": "#/components/schemas/SeenEnvironment"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SeenEnvironmentList",
+        "type": "object"
+      },
+      "SeriesPoint": {
+        "properties": {
+          "error_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "errors / requests; null without requests",
+            "title": "Error Rate"
+          },
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "latency_mean_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Mean Ms"
+          },
+          "latency_p50_ms_approx": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Approximate p50 from the minute's log-scale histogram (within a factor √2)",
+            "title": "Latency P50 Ms Approx"
+          },
+          "latency_p95_ms_approx": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Approximate p95 from the minute's log-scale histogram (within a factor √2)",
+            "title": "Latency P95 Ms Approx"
+          },
+          "minute": {
+            "description": "Start of the minute (requests that started in it)",
+            "format": "date-time",
+            "title": "Minute",
+            "type": "string"
+          },
+          "requests": {
+            "title": "Requests",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "minute",
+          "requests",
+          "errors",
+          "error_rate",
+          "latency_mean_ms",
+          "latency_p50_ms_approx",
+          "latency_p95_ms_approx"
+        ],
+        "title": "SeriesPoint",
+        "type": "object"
+      },
+      "SeriesWindows": {
+        "properties": {
+          "analysis_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Id"
+          },
+          "analysis_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "early_5m",
+                  "early_10m",
+                  "final"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Kind"
+          },
+          "baseline_end": {
+            "format": "date-time",
+            "title": "Baseline End",
+            "type": "string"
+          },
+          "baseline_start": {
+            "format": "date-time",
+            "title": "Baseline Start",
+            "type": "string"
+          },
+          "deployed_at": {
+            "format": "date-time",
+            "title": "Deployed At",
+            "type": "string"
+          },
+          "post_end": {
+            "format": "date-time",
+            "title": "Post End",
+            "type": "string"
+          },
+          "post_start": {
+            "format": "date-time",
+            "title": "Post Start",
+            "type": "string"
+          },
+          "source": {
+            "description": "analysis: the windows the latest analysis used; default: the spec defaults (baseline 30 min, warm-up 2 min, post window to T+15 min) — no analysis yet",
+            "enum": [
+              "analysis",
+              "default"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "analysis_id",
+          "analysis_kind",
+          "deployed_at",
+          "baseline_start",
+          "baseline_end",
+          "post_start",
+          "post_end"
+        ],
+        "title": "SeriesWindows",
         "type": "object"
       },
       "ServiceCreate": {
@@ -3336,6 +4794,126 @@
           "name"
         ],
         "title": "ServiceCreate",
+        "type": "object"
+      },
+      "ServiceEvidence": {
+        "additionalProperties": false,
+        "description": "Everything the detector concluded about one service, and why.",
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/WindowSummary"
+          },
+          "error_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorRateEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latency": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LatencyEvidence"
+            },
+            "title": "Latency",
+            "type": "array"
+          },
+          "onset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OnsetEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "originates_errors": {
+            "default": false,
+            "title": "Originates Errors",
+            "type": "boolean"
+          },
+          "own_error_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorRateEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "post": {
+            "$ref": "#/components/schemas/WindowSummary"
+          },
+          "regressed_metrics": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Regressed Metrics",
+            "type": "array"
+          },
+          "sample_gate": {
+            "$ref": "#/components/schemas/SampleGate"
+          },
+          "self_time": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LatencyEvidence"
+            },
+            "title": "Self Time",
+            "type": "array"
+          },
+          "self_time_regressed": {
+            "default": false,
+            "title": "Self Time Regressed",
+            "type": "boolean"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Severity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/ServiceStatus"
+          },
+          "throughput": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThroughputEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "variant": {
+            "title": "Variant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "variant",
+          "status",
+          "sample_gate",
+          "baseline",
+          "post"
+        ],
+        "title": "ServiceEvidence",
         "type": "object"
       },
       "ServiceHealth": {
@@ -3733,6 +5311,38 @@
         "title": "ServicePage",
         "type": "object"
       },
+      "ServiceSeries": {
+        "properties": {
+          "points": {
+            "description": "One point per minute of [start, end)",
+            "items": {
+              "$ref": "#/components/schemas/SeriesPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "points"
+        ],
+        "title": "ServiceSeries",
+        "type": "object"
+      },
+      "ServiceStatus": {
+        "enum": [
+          "HEALTHY",
+          "WARNING",
+          "REGRESSED",
+          "INSUFFICIENT_DATA"
+        ],
+        "title": "ServiceStatus",
+        "type": "string"
+      },
       "ServiceUpdate": {
         "properties": {
           "description": {
@@ -3795,6 +5405,51 @@
         ],
         "title": "SessionOut",
         "type": "object"
+      },
+      "Severity": {
+        "additionalProperties": false,
+        "description": "Severity v1 — a deterministic score in [0, 100], **not** a probability.\n\n``s_lat = clamp(20·log2(p95_post / p95_base), 0, 50)`` if the p95 latency gate passed, else 0;\n``s_err = clamp(8·(err_post_pp - err_base_pp), 0, 50)`` if the error-rate gate passed, else 0;\n``score = min(100, s_lat + s_err)``; band: HEALTHY < 15 ≤ WARNING < 40 ≤ HIGH < 70 ≤ CRITICAL.",
+        "properties": {
+          "band": {
+            "$ref": "#/components/schemas/SeverityBand"
+          },
+          "error_component": {
+            "title": "Error Component",
+            "type": "number"
+          },
+          "formula": {
+            "const": "severity-v1",
+            "default": "severity-v1",
+            "title": "Formula",
+            "type": "string"
+          },
+          "latency_component": {
+            "title": "Latency Component",
+            "type": "number"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "score",
+          "band",
+          "latency_component",
+          "error_component"
+        ],
+        "title": "Severity",
+        "type": "object"
+      },
+      "SeverityBand": {
+        "enum": [
+          "HEALTHY",
+          "WARNING",
+          "HIGH",
+          "CRITICAL"
+        ],
+        "title": "SeverityBand",
+        "type": "string"
       },
       "ShapVector": {
         "properties": {
@@ -4004,6 +5659,60 @@
         "title": "SubscriptionOut",
         "type": "object"
       },
+      "ThroughputEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline_rpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Rpm"
+          },
+          "dropped": {
+            "title": "Dropped",
+            "type": "boolean"
+          },
+          "gate": {
+            "$ref": "#/components/schemas/Gate"
+          },
+          "post_rpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Rpm"
+          },
+          "rel_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rel Change"
+          }
+        },
+        "required": [
+          "baseline_rpm",
+          "post_rpm",
+          "rel_change",
+          "gate",
+          "dropped"
+        ],
+        "title": "ThroughputEvidence",
+        "type": "object"
+      },
       "TokenIn": {
         "properties": {
           "token": {
@@ -4017,6 +5726,77 @@
           "token"
         ],
         "title": "TokenIn",
+        "type": "object"
+      },
+      "TriageResult": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/OriginCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/Confidence"
+          },
+          "margin": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin"
+          },
+          "probable_origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probable Origin"
+          },
+          "shortlist": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Shortlist",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "top_score": {
+            "title": "Top Score",
+            "type": "integer"
+          },
+          "weights": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Weights",
+            "type": "object"
+          }
+        },
+        "required": [
+          "candidates",
+          "confidence",
+          "probable_origin",
+          "shortlist",
+          "top_score",
+          "margin",
+          "weights",
+          "summary"
+        ],
+        "title": "TriageResult",
         "type": "object"
       },
       "UsageOut": {
@@ -4140,6 +5920,216 @@
         ],
         "title": "WebhookAck",
         "type": "object"
+      },
+      "WindowConfig": {
+        "additionalProperties": false,
+        "description": "All windows and gate thresholds (spec M8 defaults). Immutable and JSON-serialisable.\n\nInfinite thresholds are rejected: they are stored with every analysis (JSON has no inf) and\nthe error gates compare thresholds as exact decimals.",
+        "properties": {
+          "baseline_minutes": {
+            "default": 30,
+            "exclusiveMinimum": 0,
+            "title": "Baseline Minutes",
+            "type": "integer"
+          },
+          "bootstrap_confidence": {
+            "default": 0.95,
+            "exclusiveMaximum": 1,
+            "exclusiveMinimum": 0,
+            "title": "Bootstrap Confidence",
+            "type": "number"
+          },
+          "bootstrap_resamples": {
+            "default": 1000,
+            "minimum": 1000,
+            "title": "Bootstrap Resamples",
+            "type": "integer"
+          },
+          "bootstrap_seed": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Bootstrap Seed",
+            "type": "integer"
+          },
+          "error_abs_threshold_pp": {
+            "default": 0.5,
+            "minimum": 0,
+            "title": "Error Abs Threshold Pp",
+            "type": "number"
+          },
+          "error_p_threshold": {
+            "default": 0.01,
+            "exclusiveMaximum": 1,
+            "exclusiveMinimum": 0,
+            "title": "Error P Threshold",
+            "type": "number"
+          },
+          "error_rel_threshold": {
+            "default": 0.5,
+            "minimum": 0,
+            "title": "Error Rel Threshold",
+            "type": "number"
+          },
+          "latency_abs_threshold_ms": {
+            "default": 20,
+            "minimum": 0,
+            "title": "Latency Abs Threshold Ms",
+            "type": "number"
+          },
+          "latency_rel_threshold": {
+            "default": 0.25,
+            "minimum": 0,
+            "title": "Latency Rel Threshold",
+            "type": "number"
+          },
+          "min_requests": {
+            "default": 200,
+            "minimum": 1,
+            "title": "Min Requests",
+            "type": "integer"
+          },
+          "name": {
+            "default": "strict",
+            "title": "Name",
+            "type": "string"
+          },
+          "onset_bucket_seconds": {
+            "default": 60,
+            "exclusiveMinimum": 0,
+            "title": "Onset Bucket Seconds",
+            "type": "integer"
+          },
+          "onset_min_samples": {
+            "default": 20,
+            "minimum": 1,
+            "title": "Onset Min Samples",
+            "type": "integer"
+          },
+          "percentiles": {
+            "default": [
+              0.5,
+              0.95,
+              0.99
+            ],
+            "items": {
+              "type": "number"
+            },
+            "title": "Percentiles",
+            "type": "array"
+          },
+          "post_end_minutes": {
+            "default": 15,
+            "exclusiveMinimum": 0,
+            "title": "Post End Minutes",
+            "type": "integer"
+          },
+          "throughput_drop_threshold": {
+            "default": 0.3,
+            "exclusiveMaximum": 1,
+            "exclusiveMinimum": 0,
+            "title": "Throughput Drop Threshold",
+            "type": "number"
+          },
+          "warmup_minutes": {
+            "default": 2,
+            "minimum": 0,
+            "title": "Warmup Minutes",
+            "type": "integer"
+          }
+        },
+        "title": "WindowConfig",
+        "type": "object"
+      },
+      "WindowSummary": {
+        "additionalProperties": false,
+        "description": "Descriptive statistics of one window (for display; decisions use the evidence models).",
+        "properties": {
+          "error_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Rate"
+          },
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "latency_p50_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency P50 Ms"
+          },
+          "latency_p95_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency P95 Ms"
+          },
+          "latency_p99_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency P99 Ms"
+          },
+          "requests": {
+            "title": "Requests",
+            "type": "integer"
+          },
+          "self_time_p95_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Self Time P95 Ms"
+          },
+          "throughput_rpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Throughput Rpm"
+          }
+        },
+        "required": [
+          "requests",
+          "errors",
+          "error_rate",
+          "throughput_rpm",
+          "latency_p50_ms",
+          "latency_p95_ms",
+          "latency_p99_ms",
+          "self_time_p95_ms"
+        ],
+        "title": "WindowSummary",
+        "type": "object"
       }
     }
   },
@@ -4251,6 +6241,28 @@
           }
         },
         "summary": "GitHub OAuth callback (exchanges the code, signs in, redirects to the app)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/github/status": {
+      "get": {
+        "description": "Lets the login page show or hide the GitHub button. Reads configuration only: no\nsession, state, cookie or rate-limit bucket is touched.",
+        "operationId": "github_status_api_v1_auth_github_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubOAuthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Whether sign-in with GitHub is configured (no side effects)",
         "tags": [
           "auth"
         ]
@@ -4619,17 +6631,44 @@
     },
     "/api/v1/ci-runs": {
       "get": {
+        "description": "At least one of ``repository`` and ``commit_sha`` is required; both narrow the list.",
         "operationId": "list_ci_runs_route_api_v1_ci_runs_get",
         "parameters": [
           {
             "in": "query",
             "name": "repository",
-            "required": true,
+            "required": false,
             "schema": {
-              "maxLength": 201,
-              "minLength": 3,
-              "title": "Repository",
-              "type": "string"
+              "anyOf": [
+                {
+                  "maxLength": 201,
+                  "minLength": 3,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Repository"
+            }
+          },
+          {
+            "description": "Commit SHA, 7-64 hex: the CI outcome of that commit. A SHA shorter than 40 characters (deployment events allow abbreviated ones) matches as a prefix.",
+            "in": "query",
+            "name": "commit_sha",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9a-fA-F]{7,64}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Commit SHA, 7-64 hex: the CI outcome of that commit. A SHA shorter than 40 characters (deployment events allow abbreviated ones) matches as a prefix.",
+              "title": "Commit Sha"
             }
           },
           {
@@ -4664,17 +6703,10 @@
             "description": "Missing or invalid credentials"
           },
           "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
+            "description": "Neither repository nor commit_sha given"
           }
         },
-        "summary": "Recent CI runs of a repository, newest start first",
+        "summary": "Recent CI runs of a repository and/or a commit, newest start first",
         "tags": [
           "risk"
         ]
@@ -4796,6 +6828,25 @@
                 }
               ],
               "title": "Cursor"
+            }
+          },
+          {
+            "description": "ISO 8601 with offset: only deployments with deployed_at >= since",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO 8601 with offset: only deployments with deployed_at >= since",
+              "title": "Since"
             }
           }
         ],
@@ -4988,6 +7039,107 @@
         "summary": "Regression analyses of one deployment",
         "tags": [
           "analysis"
+        ]
+      }
+    },
+    "/api/v1/deployments/{deployment_id}/timeseries": {
+      "get": {
+        "description": "From the deployment environment's minute rollups (SERVER spans), over [baseline start,\npost end] of the latest analysis's windows (the spec defaults before any analysis). Only\ncomplete minutes are returned; minutes without requests are zero points. Percentiles are\napproximations from histograms; the analysis's exact numbers come from raw spans.",
+        "operationId": "get_deployment_timeseries_api_v1_deployments__deployment_id__timeseries_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deployment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Deployment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "service",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentTimeseries"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Malformed cursor"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "403": {
+            "description": "The API key lacks the read scope"
+          },
+          "404": {
+            "description": "No such deployment for this tenant"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Per-minute requests, errors and approximate p50/p95 around one deployment",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/v1/environments": {
+      "get": {
+        "operationId": "list_environments_route_api_v1_environments_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeenEnvironmentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          },
+          "403": {
+            "description": "The API key lacks the read scope"
+          }
+        },
+        "summary": "Environments seen in deployments and telemetry, with when each was last seen",
+        "tags": [
+          "overview"
         ]
       }
     },
@@ -7644,6 +9796,25 @@
               ],
               "title": "Cursor"
             }
+          },
+          {
+            "description": "ISO 8601 with offset: only deployments with deployed_at >= since",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO 8601 with offset: only deployments with deployed_at >= since",
+              "title": "Since"
+            }
           }
         ],
         "responses": {
@@ -7770,6 +9941,25 @@
                 }
               ],
               "title": "Cursor"
+            }
+          },
+          {
+            "description": "ISO 8601 with offset: only assessments created at or after it",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO 8601 with offset: only assessments created at or after it",
+              "title": "Since"
             }
           }
         ],
@@ -8084,6 +10274,33 @@
         "summary": "Service catalog with request rate, error rate and approximate p95 (last 15 min)",
         "tags": [
           "analysis"
+        ]
+      }
+    },
+    "/api/v1/stats/overview": {
+      "get": {
+        "operationId": "stats_overview_api_v1_stats_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverviewStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          },
+          "403": {
+            "description": "The API key lacks the read scope"
+          }
+        },
+        "summary": "Exact counts for the overview: deployments, regressions, risk, services",
+        "tags": [
+          "overview"
         ]
       }
     },

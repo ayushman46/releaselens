@@ -17,6 +17,11 @@ log = logging.getLogger("rl_api.errors")
 # Stable codes where the HTTP reason phrase changed across Python versions.
 _STATUS_CODES = {413: "payload_too_large"}
 
+# A 404 raised as a Starlette HTTPException comes from routing: no route matches the path. A
+# handler that misses a *resource* raises ApiError(404, "not_found") instead, so clients can tell
+# "this endpoint does not exist" (a client or deployment bug) from "this id does not exist".
+ROUTE_NOT_FOUND = "route_not_found"
+
 
 class ApiError(Exception):
     """Raise from handlers for expected, client-visible failures."""
@@ -59,11 +64,15 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-        code = _STATUS_CODES.get(exc.status_code) or HTTPStatus(
-            exc.status_code
-        ).phrase.lower().replace(" ", "_")
+        if exc.status_code == 404:
+            code, message = ROUTE_NOT_FOUND, "no such route"
+        else:
+            code = _STATUS_CODES.get(exc.status_code) or HTTPStatus(
+                exc.status_code
+            ).phrase.lower().replace(" ", "_")
+            message = str(exc.detail)
         return JSONResponse(
-            _body(request, code, str(exc.detail)),
+            _body(request, code, message),
             status_code=exc.status_code,
             headers=getattr(exc, "headers", None),
         )

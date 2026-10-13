@@ -1,7 +1,11 @@
 """Read APIs over analyses and telemetry aggregates (scope ``read``, tenant-scoped).
 
 * ``GET /api/v1/deployments/{id}/analysis`` — every analysis of a deployment and the latest one
-  (the most complete kind: ``final`` > ``early_10m`` > ``early_5m``).
+  (the most complete kind: ``final`` > ``early_10m`` > ``early_5m``). ``result`` is typed as
+  rl_core's ``RegressionAnalysis`` (engine ``regression-engine/1.x``); a result another engine
+  version wrote, which that model does not describe, is returned unchanged.
+* ``GET /api/v1/deployments/{id}/timeseries`` — per-minute requests, errors and **approximate**
+  p50/p95 (from minute-rollup histograms) over the deployment's analysis windows.
 * ``GET /api/v1/regressions`` — deployments whose latest analysis is REGRESSED or WARNING.
 * ``GET /api/v1/services`` — the service catalog with request rate, error rate and an
   **approximate** p95 over the last 15 complete minutes (from minute rollups).
@@ -22,23 +26,33 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
+from pydantic.json_schema import SkipJsonSchema
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rl_api.deps import get_session
 from rl_api.errors import ApiError
 from rl_api.principal import require_tenant_read
+from rl_core.regression.analysis import RegressionAnalysis
+from rl_core.regression.windows import WindowConfig
 from rl_core.telemetry.rollup import approx_quantile
 from rl_core.tenancy import TenantContext
 from rl_db.models import RegressionAnalysisRecord
 from rl_db.repositories import (
     RegressionCursor,
     get_deployment,
+    latest_analysis_windows,
     latest_environment_analysis,
     list_analyses,
     list_regressions,
 )
-from rl_db.repositories.catalog import WindowHealth, service_catalog, service_map_edges
+from rl_db.repositories.catalog import (
+    MinuteRow,
+    WindowHealth,
+    minute_series,
+    service_catalog,
+    service_map_edges,
+)
 
 router = APIRouter(tags=["analysis"])
 
@@ -57,6 +71,21 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
 
 
 # ----------------------------------------------------------------------------- models
+# Left to right: a result the engine-1.x model describes is validated into it (lossless: the
+# model forbids unknown keys, and its JSON round-trips exactly); any other result (another
+# engine_version) falls through to the plain object, unchanged. Only the typed member is in the
+# OpenAPI document.
+AnalysisResult = Annotated[
+    RegressionAnalysis | SkipJsonSchema[dict[str, Any]],
+    Field(
+        union_mode="left_to_right",
+        description="Full RegressionAnalysis of engine_version (evidence per service, graph, "
+        "triage, blast radius). Typed for engine regression-engine/1.x; a result of another "
+        "engine version is returned unchanged as a JSON object.",
+    ),
+]
+
+
 class AnalysisOut(BaseModel):
     id: uuid.UUID
     deployment_id: uuid.UUID
@@ -73,28 +102,27 @@ class AnalysisOut(BaseModel):
     sampling: dict[str, Any]
     created_at: datetime
     updated_at: datetime
-    result: dict[str, Any] = Field(
-        description="Full RegressionAnalysis JSON of engine_version (evidence per service, "
-        "graph, triage, blast radius)"
-    )
+    result: AnalysisResult
 
     @classmethod
     def of(cls, row: RegressionAnalysisRecord) -> AnalysisOut:
-        return cls(
-            id=row.id,
-            deployment_id=row.deployment_id,
-            kind=row.kind.value,
-            status=row.status,
-            severity_score=row.severity_score,
-            severity_band=row.severity_band,
-            probable_origin=row.probable_origin,
-            confidence=row.confidence,
-            engine_version=row.engine_version,
-            windows=row.windows,
-            sampling=row.sampling,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
-            result=row.result,
+        return cls.model_validate(
+            {
+                "id": row.id,
+                "deployment_id": row.deployment_id,
+                "kind": row.kind.value,
+                "status": row.status,
+                "severity_score": row.severity_score,
+                "severity_band": row.severity_band,
+                "probable_origin": row.probable_origin,
+                "confidence": row.confidence,
+                "engine_version": row.engine_version,
+                "windows": row.windows,
+                "sampling": row.sampling,
+                "created_at": row.created_at,
+                "updated_at": row.updated_at,
+                "result": row.result,
+            }
         )
 
 
@@ -191,6 +219,57 @@ class MapAnalysisRef(BaseModel):
     analysed_at: datetime
 
 
+class SeriesPoint(BaseModel):
+    minute: datetime = Field(description="Start of the minute (requests that started in it)")
+    requests: int
+    errors: int
+    error_rate: float | None = Field(description="errors / requests; null without requests")
+    latency_mean_ms: float | None
+    latency_p50_ms_approx: float | None = Field(
+        description="Approximate p50 from the minute's log-scale histogram (within a factor √2)"
+    )
+    latency_p95_ms_approx: float | None = Field(
+        description="Approximate p95 from the minute's log-scale histogram (within a factor √2)"
+    )
+
+
+class ServiceSeries(BaseModel):
+    service: str
+    points: list[SeriesPoint] = Field(description="One point per minute of [start, end)")
+
+
+class SeriesWindows(BaseModel):
+    source: Literal["analysis", "default"] = Field(
+        description="analysis: the windows the latest analysis used; default: the spec "
+        "defaults (baseline 30 min, warm-up 2 min, post window to T+15 min) — no analysis yet"
+    )
+    analysis_id: uuid.UUID | None
+    analysis_kind: AnalysisKind | None
+    deployed_at: datetime
+    baseline_start: datetime
+    baseline_end: datetime
+    post_start: datetime
+    post_end: datetime
+
+
+class DeploymentTimeseries(BaseModel):
+    deployment_id: uuid.UUID
+    environment: str
+    service: str | None = Field(description="The service filter, or null for every service")
+    start: datetime = Field(description="First minute (the baseline start's minute)")
+    end: datetime = Field(
+        description="Exclusive: the minute after the post window's end, or the current "
+        "(still-filling) minute if that is earlier"
+    )
+    step_seconds: Literal[60] = 60
+    windows: SeriesWindows
+    latency_approximate: Literal[True] = True
+    series: list[ServiceSeries] = Field(
+        description="Per service, by name: every service of the environment with requests in "
+        "the range, or just the requested one"
+    )
+
+
 class ServiceMap(BaseModel):
     environment: str
     since: datetime
@@ -261,10 +340,20 @@ async def list_regressions_route(
     service: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     cursor: Annotated[str | None, Query(max_length=512)] = None,
+    since: Annotated[
+        AwareDatetime | None,
+        Query(description="ISO 8601 with offset: only deployments with deployed_at >= since"),
+    ] = None,
 ) -> RegressionPage:
     after = _regression_cursor(cursor) if cursor else None
     rows = await list_regressions(
-        session, ctx, limit=limit + 1, environment=environment, service=service, after=after
+        session,
+        ctx,
+        limit=limit + 1,
+        environment=environment,
+        service=service,
+        after=after,
+        since=since,
     )
     page, more = rows[:limit], len(rows) > limit
     items = [
@@ -293,6 +382,126 @@ async def list_regressions_route(
         else None
     )
     return RegressionPage(items=items, next_cursor=next_cursor)
+
+
+# ----------------------------------------------------------------------------- timeseries
+MINUTE = timedelta(minutes=1)
+# Analysis windows are tens of minutes; anything longer than this in a stored row is not trusted.
+MAX_SERIES_RANGE = timedelta(hours=6)
+
+
+class _StoredWindows(BaseModel):
+    """The instants of ``regression_analyses.windows`` this endpoint needs (other keys ignored)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    deployed_at: AwareDatetime
+    baseline_start: AwareDatetime
+    baseline_end: AwareDatetime
+    post_start: AwareDatetime
+    post_end: AwareDatetime
+
+
+def _floor_minute(at: datetime) -> datetime:
+    return at.astimezone(UTC).replace(second=0, microsecond=0)
+
+
+def _series_windows(deployed_at: datetime, latest: Any) -> SeriesWindows:
+    if latest is not None:
+        try:
+            w = _StoredWindows.model_validate(latest.windows)
+        except ValidationError:
+            w = None
+        if w is not None and w.baseline_start < w.post_end <= w.baseline_start + MAX_SERIES_RANGE:
+            return SeriesWindows(
+                source="analysis",
+                analysis_id=latest.id,
+                analysis_kind=latest.kind.value,
+                **w.model_dump(),
+            )
+    d = WindowConfig().windows(deployed_at)
+    return SeriesWindows(
+        source="default",
+        analysis_id=None,
+        analysis_kind=None,
+        deployed_at=d.deployed_at,
+        baseline_start=d.baseline_start,
+        baseline_end=d.baseline_end,
+        post_start=d.post_start,
+        post_end=d.post_end,
+    )
+
+
+def _point(minute: datetime, row: MinuteRow | None) -> SeriesPoint:
+    if row is None or row.requests == 0:
+        return SeriesPoint(
+            minute=minute,
+            requests=0,
+            errors=0,
+            error_rate=None,
+            latency_mean_ms=None,
+            latency_p50_ms_approx=None,
+            latency_p95_ms_approx=None,
+        )
+    p50 = approx_quantile(row.buckets, 0.5)
+    p95 = approx_quantile(row.buckets, 0.95)
+    return SeriesPoint(
+        minute=minute,
+        requests=row.requests,
+        errors=row.errors,
+        error_rate=row.errors / row.requests,
+        latency_mean_ms=row.duration_sum_ms / row.requests,
+        latency_p50_ms_approx=None if p50 is None else p50.value_ms,
+        latency_p95_ms_approx=None if p95 is None else p95.value_ms,
+    )
+
+
+@router.get(
+    "/api/v1/deployments/{deployment_id}/timeseries",
+    response_model=DeploymentTimeseries,
+    summary="Per-minute requests, errors and approximate p50/p95 around one deployment",
+    responses={**_ERRORS, 404: {"description": "No such deployment for this tenant"}},
+)
+async def get_deployment_timeseries(
+    deployment_id: uuid.UUID,
+    ctx: Annotated[TenantContext, Depends(require_tenant_read)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    service: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
+) -> DeploymentTimeseries:
+    """From the deployment environment's minute rollups (SERVER spans), over [baseline start,
+    post end] of the latest analysis's windows (the spec defaults before any analysis). Only
+    complete minutes are returned; minutes without requests are zero points. Percentiles are
+    approximations from histograms; the analysis's exact numbers come from raw spans."""
+    deployment = await get_deployment(session, ctx, deployment_id)
+    if deployment is None:
+        raise ApiError(404, "not_found", "deployment not found")
+    windows = _series_windows(
+        deployment.deployed_at, await latest_analysis_windows(session, ctx, deployment_id)
+    )
+    start = _floor_minute(windows.baseline_start)
+    end = min(_floor_minute(windows.post_end) + MINUTE, _floor_minute(datetime.now(UTC)))
+    end = max(end, start)
+    rows = await minute_series(
+        session, ctx, environment=deployment.environment, start=start, end=end, service=service
+    )
+    by_service: dict[str, dict[datetime, MinuteRow]] = {}
+    for r in rows:
+        by_service.setdefault(r.service, {})[_floor_minute(r.minute)] = r
+    if service is not None:
+        by_service.setdefault(service, {})
+    minutes = [start + i * MINUTE for i in range(int((end - start) / MINUTE))]
+    return DeploymentTimeseries(
+        deployment_id=deployment.id,
+        environment=deployment.environment,
+        service=service,
+        start=start,
+        end=end,
+        windows=windows,
+        series=[
+            ServiceSeries(service=name, points=[_point(m, points.get(m)) for m in minutes])
+            for name, points in sorted(by_service.items())
+        ],
+    )
 
 
 def _health(h: WindowHealth, start: datetime, end: datetime) -> ServiceHealth:

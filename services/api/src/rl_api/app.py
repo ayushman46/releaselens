@@ -39,6 +39,7 @@ from rl_api.routers.deployments import router as deployments_router
 from rl_api.routers.github import router as github_router
 from rl_api.routers.orgs import router as orgs_router
 from rl_api.routers.otlp import router as otlp_router
+from rl_api.routers.overview import router as overview_router
 from rl_api.routers.projects import router as projects_router
 from rl_api.routers.risk import router as risk_router
 from rl_api.settings import Settings, get_settings
@@ -188,6 +189,7 @@ def create_app(
     app.include_router(health_router)
     app.include_router(deployments_router)
     app.include_router(analysis_router)
+    app.include_router(overview_router)
     app.include_router(otlp_router)
     app.include_router(auth_router)
     app.include_router(me_router)

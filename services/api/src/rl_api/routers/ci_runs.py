@@ -141,14 +141,34 @@ async def report_ci_run(
 @router.get(
     "",
     response_model=list[CiRunOut],
-    summary="Recent CI runs of a repository, newest start first",
-    responses={401: {"description": "Missing or invalid credentials"}},
+    summary="Recent CI runs of a repository and/or a commit, newest start first",
+    responses={
+        401: {"description": "Missing or invalid credentials"},
+        422: {"description": "Neither repository nor commit_sha given"},
+    },
 )
 async def list_ci_runs_route(
     ctx: Annotated[TenantContext, Depends(require_tenant_read)],
     session: Annotated[AsyncSession, Depends(get_session)],
-    repository: Annotated[str, Query(min_length=3, max_length=201)],
+    repository: Annotated[str | None, Query(min_length=3, max_length=201)] = None,
+    commit_sha: Annotated[
+        str | None,
+        Query(
+            pattern=r"^[0-9a-fA-F]{7,64}$",
+            description="Commit SHA, 7-64 hex: the CI outcome of that commit. A SHA shorter "
+            "than 40 characters (deployment events allow abbreviated ones) matches as a prefix.",
+        ),
+    ] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> list[CiRunOut]:
-    rows = await list_ci_runs(session, ctx, repository.lower(), limit=limit)
+    """At least one of ``repository`` and ``commit_sha`` is required; both narrow the list."""
+    if repository is None and commit_sha is None:
+        raise ApiError(422, "validation_error", "send repository, commit_sha or both")
+    rows = await list_ci_runs(
+        session,
+        ctx,
+        repository.lower() if repository is not None else None,
+        commit_sha=commit_sha.lower() if commit_sha is not None else None,
+        limit=limit,
+    )
     return [CiRunOut.model_validate(r) for r in rows]

@@ -326,7 +326,16 @@ async def test_session_org_header_on_tenant_implicit_reads(world: World) -> None
 
 @pytest.mark.parametrize(
     "path",
-    ["/api/v1/regressions", "/api/v1/services", "/api/v1/service-map?environment=demo"],
+    [
+        "/api/v1/regressions",
+        "/api/v1/services",
+        "/api/v1/service-map?environment=demo",
+        "/api/v1/environments",
+        "/api/v1/stats/overview",
+        f"/api/v1/ci-runs?commit_sha={'a' * 40}",
+        "/api/v1/deployments?since=2026-01-01T00:00:00Z",
+        "/api/v1/risk/assessments?since=2026-01-01T00:00:00Z",
+    ],
 )
 async def test_session_reads_on_analysis_routes(world: World, path: str) -> None:
     """Signed-in users (not only API keys) read the analysis routes of their own org."""
@@ -338,11 +347,20 @@ async def test_session_reads_on_analysis_routes(world: World, path: str) -> None
     assert (await viewer.get(path)).status_code == 400
 
 
-async def test_session_read_of_a_foreign_deployment_analysis_is_404(world: World) -> None:
+@pytest.mark.parametrize("suffix", ["analysis", "timeseries"])
+async def test_session_read_of_a_foreign_deployment_analysis_is_404(
+    world: World, suffix: str
+) -> None:
     resp = await world.b.users[OWNER].get(
-        f"/api/v1/deployments/{uuid.uuid4()}/analysis", headers={"X-RL-Org": str(world.a.id)}
+        f"/api/v1/deployments/{uuid.uuid4()}/{suffix}", headers={"X-RL-Org": str(world.a.id)}
     )
     assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "not_found"
+    own = await world.a.users[VIEWER].get(
+        f"/api/v1/deployments/{uuid.uuid4()}/{suffix}", headers={"X-RL-Org": str(world.a.id)}
+    )
+    assert own.status_code == 404
+    assert own.json()["error"]["code"] == "not_found"
 
 
 async def test_my_orgs_lists_only_memberships(world: World) -> None:

@@ -139,14 +139,15 @@ that alias is served. A plain directory path loads a bundle directly. Startup wa
 
 Scope `read` key, or a browser session plus `X-RL-Org: <org id>` (same as deployments).
 
-- `GET /api/v1/risk/assessments?repository=&commit_sha=&risk_band=&limit=50&cursor=`:
-  newest first, keyset cursor (`next_cursor`).
+- `GET /api/v1/risk/assessments?repository=&commit_sha=&risk_band=&since=&limit=50&cursor=`:
+  newest first, keyset cursor (`next_cursor`). `since` (ISO 8601 **with** offset, e.g.
+  `2026-10-06T00:00:00Z`; a naive value is `422`) keeps assessments created at or after it.
 - `GET /api/v1/risk/assessments/{id}`: the summary above plus `model_name`, `raw_score`,
   `branch`, `ci_run_url`, `previous_built_sha`, `extractor`, `features` (all 39, `null` =
   unknown), `change_facts` and `shap` (`unit`, `base_value`, `values`: the full vector;
   `base_value + Σ values` = the raw score's log-odds). Another tenant's id → `404`.
 
-## CI runs: `POST /api/v1/ci-runs` / `GET /api/v1/ci-runs?repository=`
+## CI runs: `POST /api/v1/ci-runs` / `GET /api/v1/ci-runs?repository=&commit_sha=`
 
 History comes from the GitHub App webhooks (`workflow_run`, `check_suite`) or, without the App,
 from CI reporting finished runs here. Scope **`risk:write`** (chosen over `deployments:write`:
@@ -164,6 +165,13 @@ first three, forbidden for `running`, and never before `started_at`. Idempotent 
 `200 duplicate` (already recorded; an outcome is never overwritten; the same `external_id`
 reported by another source counts once). For GitHub Actions use
 `gha:<run_id>:<run_attempt>`, the id the App records.
+
+`GET /api/v1/ci-runs` (scope `read`, or a session plus `X-RL-Org`) lists runs newest start first
+(`limit` ≤ 200, default 50). Give `repository`, `commit_sha` or both (neither → `422
+validation_error`). `commit_sha` (7–64 hex, case-insensitive) is the CI outcome of one commit: 40+
+characters match exactly; a shorter, abbreviated SHA (deployment events allow 7+) matches as a
+prefix. Lookups by commit use the index `ix_ci_runs_tenant_commit_sha (tenant_id, commit_sha,
+started_at DESC)` (migration `0006`).
 
 ## Latency (in process)
 

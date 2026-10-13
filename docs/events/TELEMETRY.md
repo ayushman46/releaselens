@@ -234,11 +234,21 @@ Registered for `early_5m`, `early_10m`, `final` (the job runner now always start
 
 ## 6. Read APIs (scope `read`, tenant-scoped, 404 across tenants)
 
+`since` (deployments, regressions, risk assessments) is ISO 8601 **with** an offset
+(`2026-10-06T00:00:00Z`); a naive value is `422`. It filters on `deployed_at >= since` (risk:
+`created_at`). Distinct `(environment, service)` rollup pairs are read with a recursive loose index
+scan on the rollup primary key (Postgres 16 has no skip scan), so the environment list, the
+services count and the all-services time series never read every minute row of a tenant.
+
 | Endpoint | Returns |
 |---|---|
-| `GET /api/v1/deployments/{id}/analysis` | every analysis of the deployment (most complete kind first) and `latest` (`final` > `early_10m` > `early_5m`) |
-| `GET /api/v1/regressions?environment=&service=&limit=&cursor=` | deployments whose latest analysis is REGRESSED or WARNING: severity, probable origin, confidence, affected services (blast radius); keyset-paginated by `(deployed_at, id)` |
+| `GET /api/v1/deployments/{id}/analysis` | every analysis of the deployment (most complete kind first) and `latest` (`final` > `early_10m` > `early_5m`). `result` is typed in OpenAPI as rl_core's `RegressionAnalysis` (engine `regression-engine/1.x`, see `engine_version`); a result that model does not describe (another engine version) is returned unchanged. Validation is lossless: the model forbids unknown keys and its JSON round-trips exactly |
+| `GET /api/v1/deployments/{id}/timeseries?service=` | per-minute `requests`, `errors`, `error_rate`, `latency_mean_ms`, `latency_p50_ms_approx`, `latency_p95_ms_approx` (from the minute's histogram, within a factor √2; `latency_approximate: true`) of every service of the deployment's environment with requests in the range, or of `service` only. Range: `[baseline start, post end]` of the latest analysis's stored `windows` (`windows.source: "analysis"`), else the spec defaults (`"default"`: T−30 min … T+15 min); whole minutes, dense (zero points for idle minutes), ending before the still-filling current minute |
+| `GET /api/v1/deployments?…&since=` | deployment rows carry `latest_analysis` (`kind`, `status`, `severity_score`, `severity_band`, `probable_origin`, `confidence`, `id`, `analysed_at`; null before the first analysis), read with a `LEFT JOIN LATERAL` in the listing query (one index probe per row, no query per row); also on `GET /api/v1/deployments/{id}` |
+| `GET /api/v1/regressions?environment=&service=&since=&limit=&cursor=` | deployments whose latest analysis is REGRESSED or WARNING: severity, probable origin, confidence, affected services (blast radius); keyset-paginated by `(deployed_at, id)` |
 | `GET /api/v1/services?environment=&limit=&cursor=` | known services (rollups in the last 7 days, deployments, edges): latest version seen (spans, last 24 h), last deployment, and over the **last 15 complete minutes**: requests, rate/min, errors, error rate, mean/max latency and `latency_p95_ms_approx` with its bucket bounds (`latency_approximate: true`) |
+| `GET /api/v1/environments` | environments seen in deployments, minute rollups or service edges (`''` left out), by name: `last_seen`, `last_deployment_at`, `last_telemetry_at` (newest rollup minute start or edge call) |
+| `GET /api/v1/stats/overview` | exact counts: `deployments_7d`, `regressions_7d` (= `/regressions?since=`), `active_regressions` ((service, environment) pairs whose newest deployment's latest analysis is REGRESSED or WARNING), `risk_assessments_7d` by band, `services_seen_24h` (distinct services with requests). Definitions: `rl_db.repositories.stats` |
 | `GET /api/v1/service-map?environment=&window_hours=24` | nodes and edges (cumulative `call_count`, edges last seen in the window, ≤ 5 000), per-node `status` / `impact` / `probable_origin` from the environment's latest analysis |
 
 ## Measured throughput

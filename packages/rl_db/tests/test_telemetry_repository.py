@@ -25,8 +25,11 @@ from rl_db.admin.telemetry import delete_rollups_older_than, existing_tenants
 from rl_db.models import JobKind, RegressionAnalysisRecord, ServiceEdge, ServiceMinuteRollup
 from rl_db.repositories import (
     AnalysisWrite,
+    get_deployment_with_latest_analysis,
+    latest_analysis_windows,
     latest_environment_analysis,
     list_analyses,
+    list_deployments_with_latest_analysis,
     list_regressions,
     load_analysis_spans,
     record_deployment,
@@ -34,6 +37,8 @@ from rl_db.repositories import (
     upsert_analysis,
 )
 from rl_db.repositories.analyses import sample_threshold
+from rl_db.repositories.catalog import list_environments, minute_series
+from rl_db.repositories.stats import overview_counts
 from rl_db.repositories.telemetry import fold_new_spans, insert_spans
 
 pytestmark = pytest.mark.integration
@@ -339,3 +344,152 @@ async def test_analyses_upsert_per_kind_and_regression_listing(
             )
         )
         assert count == first
+
+
+async def test_deployments_carry_their_latest_analysis_and_filter_by_since(
+    sessions: Sessions, ctx: TenantContext
+) -> None:
+    d1 = await _deployment(sessions, ctx, env="demo", minutes=0)
+    d2 = await _deployment(sessions, ctx, env="demo", minutes=10)
+    d3 = await _deployment(sessions, ctx, env="prod", minutes=20)
+    async with sessions.begin() as s:
+        await upsert_analysis(s, ctx, _analysis(d1, JobKind.EARLY_5M, "WARNING"))
+        await upsert_analysis(
+            s, ctx, _analysis(d1, JobKind.FINAL, "REGRESSED", windows={"post_end": "t"})
+        )
+        await upsert_analysis(s, ctx, _analysis(d2, JobKind.EARLY_10M, "HEALTHY"))
+    other = TenantContext(tenant_id=uuid.uuid4(), principal=Principal.SYSTEM)
+    async with sessions() as s:
+        rows = await list_deployments_with_latest_analysis(s, ctx, limit=10)
+        recent = await list_deployments_with_latest_analysis(
+            s, ctx, limit=10, since=BASE + timedelta(minutes=10)
+        )
+        demo = await list_deployments_with_latest_analysis(s, ctx, limit=10, environment="demo")
+        one = await get_deployment_with_latest_analysis(s, ctx, d1)
+        windows = await latest_analysis_windows(s, ctx, d1)
+        assert await list_deployments_with_latest_analysis(s, other, limit=10) == []
+        assert await get_deployment_with_latest_analysis(s, other, d1) is None
+        assert await latest_analysis_windows(s, other, d1) is None
+        assert await latest_analysis_windows(s, ctx, d3) is None
+    verdicts = [(d.id, None if a is None else (a.kind, a.status)) for d, a in rows]
+    assert verdicts == [
+        (d3, None),
+        (d2, (JobKind.EARLY_10M, "HEALTHY")),
+        (d1, (JobKind.FINAL, "REGRESSED")),  # the most complete kind wins
+    ]
+    assert [d.id for d, _ in recent] == [d3, d2]  # deployed_at >= since (inclusive)
+    assert [d.id for d, _ in demo] == [d2, d1]
+    assert one is not None
+    assert one[0].id == d1
+    assert one[1] is not None
+    assert (one[1].severity_band, one[1].probable_origin) == ("HIGH", "payment")
+    assert windows is not None
+    assert (windows.kind, windows.windows) == (JobKind.FINAL, {"post_end": "t"})
+
+
+async def test_environments_minute_series_and_overview_counts(
+    sessions: Sessions, ctx: TenantContext
+) -> None:
+    spans = [s for t in range(1, 6) for s in _call(ctx, t, "orders", "payment")]
+    spans.append(_span(ctx, 99, 991, None, "nowhere", env=None))  # environment not reported
+    spans.append(_span(ctx, 98, 981, None, "orders", start_ms=60_000, dur_ms=50, error=True))
+    async with sessions.begin() as s:
+        await record_spans(s, ctx, spans)
+    old = await _deployment(sessions, ctx, env="prod", minutes=-30)
+    new = await _deployment(sessions, ctx, env="prod", minutes=-5)
+    async with sessions.begin() as s:
+        await upsert_analysis(s, ctx, _analysis(old, JobKind.FINAL, "HEALTHY"))
+        await upsert_analysis(s, ctx, _analysis(new, JobKind.FINAL, "REGRESSED"))
+    other = TenantContext(tenant_id=uuid.uuid4(), principal=Principal.SYSTEM)
+
+    async with sessions() as s:
+        envs = await list_environments(s, ctx)
+        assert await list_environments(s, other) == []
+        series = await minute_series(
+            s,
+            ctx,
+            environment="demo",
+            start=BASE - timedelta(minutes=5),
+            end=BASE + timedelta(minutes=5),
+        )
+        payment = await minute_series(
+            s,
+            ctx,
+            environment="demo",
+            start=BASE,
+            end=BASE + timedelta(minutes=5),
+            service="payment",
+        )
+        first_minute_only = await minute_series(
+            s, ctx, environment="demo", start=BASE, end=BASE + timedelta(minutes=1)
+        )
+        assert (
+            await minute_series(
+                s, other, environment="demo", start=BASE, end=BASE + timedelta(minutes=5)
+            )
+            == []
+        )
+        counts = await overview_counts(
+            s,
+            ctx,
+            deployments_since=BASE - timedelta(days=1),
+            assessments_since=BASE - timedelta(days=1),
+            services_since=BASE - timedelta(minutes=1),
+        )
+        later = await overview_counts(
+            s,
+            ctx,
+            deployments_since=BASE - timedelta(minutes=10),
+            assessments_since=BASE,
+            services_since=BASE + timedelta(minutes=1),
+        )
+        theirs = await overview_counts(
+            s,
+            other,
+            deployments_since=BASE - timedelta(days=1),
+            assessments_since=BASE - timedelta(days=1),
+            services_since=BASE - timedelta(days=1),
+        )
+
+    by_name = {e.name: e for e in envs}
+    assert list(by_name) == ["demo", "prod"]  # '' (not reported) is left out
+    demo, prod = by_name["demo"], by_name["prod"]
+    assert demo.last_deployment_at is None
+    assert demo.last_telemetry_at == BASE + timedelta(minutes=1)  # the later orders minute
+    assert demo.last_seen == demo.last_telemetry_at
+    assert (prod.last_deployment_at, prod.last_telemetry_at) == (
+        BASE - timedelta(minutes=5),
+        None,
+    )
+
+    assert [(r.service, r.minute, r.requests, r.errors) for r in series] == [
+        ("orders", BASE, 5, 0),
+        ("orders", BASE + timedelta(minutes=1), 1, 1),
+        ("payment", BASE, 5, 0),
+    ]
+    assert sum(series[0].buckets) == 5
+    assert [r.service for r in payment] == ["payment"]
+    assert [(r.service, r.minute) for r in first_minute_only] == [
+        ("orders", BASE),
+        ("payment", BASE),
+    ]
+
+    assert (counts.deployments, counts.regressions, counts.active_regressions) == (2, 1, 1)
+    assert counts.services_seen == 3  # orders, payment and the environment-less "nowhere"
+    assert counts.risk_assessments_by_band == {}
+    assert (later.deployments, later.regressions, later.services_seen) == (1, 1, 1)
+    assert (theirs.deployments, theirs.active_regressions, theirs.services_seen) == (0, 0, 0)
+
+    # A newer deployment of the same service and environment supersedes the regression.
+    fixed = await _deployment(sessions, ctx, env="prod", minutes=0)
+    async with sessions.begin() as s:
+        await upsert_analysis(s, ctx, _analysis(fixed, JobKind.FINAL, "HEALTHY"))
+    async with sessions() as s:
+        after = await overview_counts(
+            s,
+            ctx,
+            deployments_since=BASE - timedelta(days=1),
+            assessments_since=BASE,
+            services_since=BASE,
+        )
+    assert (after.deployments, after.regressions, after.active_regressions) == (3, 1, 0)

@@ -169,5 +169,5 @@ export const analysisOut: AnalysisOut = {
   sampling: {},
   created_at: "2026-10-13T02:10:00Z",
   updated_at: "2026-10-13T02:10:00Z",
-  result: analysisResult as unknown as Record<string, unknown>,
+  result: analysisResult as unknown as AnalysisOut["result"],
 };

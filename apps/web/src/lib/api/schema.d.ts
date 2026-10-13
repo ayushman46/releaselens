@@ -38,6 +38,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/github/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether sign-in with GitHub is configured (no side effects)
+         * @description Lets the login page show or hide the GitHub button. Reads configuration only: no
+         *     session, state, cookie or rate-limit bucket is touched.
+         */
+        get: operations["github_status_api_v1_auth_github_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -198,7 +219,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Recent CI runs of a repository, newest start first */
+        /**
+         * Recent CI runs of a repository and/or a commit, newest start first
+         * @description At least one of ``repository`` and ``commit_sha`` is required; both narrow the list.
+         */
         get: operations["list_ci_runs_route_api_v1_ci_runs_get"];
         put?: never;
         /** Report a CI run (build) for the risk model's history */
@@ -253,6 +277,46 @@ export interface paths {
         };
         /** Regression analyses of one deployment */
         get: operations["get_deployment_analysis_api_v1_deployments__deployment_id__analysis_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deployments/{deployment_id}/timeseries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Per-minute requests, errors and approximate p50/p95 around one deployment
+         * @description From the deployment environment's minute rollups (SERVER spans), over [baseline start,
+         *     post end] of the latest analysis's windows (the spec defaults before any analysis). Only
+         *     complete minutes are returned; minutes without requests are zero points. Percentiles are
+         *     approximations from histograms; the analysis's exact numbers come from raw spans.
+         */
+        get: operations["get_deployment_timeseries_api_v1_deployments__deployment_id__timeseries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/environments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Environments seen in deployments and telemetry, with when each was last seen */
+        get: operations["list_environments_route_api_v1_environments_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -840,6 +904,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/stats/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exact counts for the overview: deployments, regressions, risk, services */
+        get: operations["stats_overview_api_v1_stats_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -1044,11 +1125,9 @@ export interface components {
             probable_origin: string | null;
             /**
              * Result
-             * @description Full RegressionAnalysis JSON of engine_version (evidence per service, graph, triage, blast radius)
+             * @description Full RegressionAnalysis of engine_version (evidence per service, graph, triage, blast radius). Typed for engine regression-engine/1.x; a result of another engine version is returned unchanged as a JSON object.
              */
-            result: {
-                [key: string]: unknown;
-            };
+            result: components["schemas"]["RegressionAnalysis"];
             /** Sampling */
             sampling: {
                 [key: string]: unknown;
@@ -1074,6 +1153,44 @@ export interface components {
             windows: {
                 [key: string]: unknown;
             };
+        };
+        /**
+         * AnalysisWindows
+         * @description Resolved windows for one deployment (all instants are UTC).
+         */
+        AnalysisWindows: {
+            /** As Of */
+            as_of: string | null;
+            /**
+             * Baseline End
+             * Format: date-time
+             */
+            baseline_end: string;
+            /**
+             * Baseline Start
+             * Format: date-time
+             */
+            baseline_start: string;
+            /**
+             * Deployed At
+             * Format: date-time
+             */
+            deployed_at: string;
+            /**
+             * Effective Post End
+             * Format: date-time
+             */
+            effective_post_end: string;
+            /**
+             * Post End
+             * Format: date-time
+             */
+            post_end: string;
+            /**
+             * Post Start
+             * Format: date-time
+             */
+            post_start: string;
         };
         /** ApiKeyCreate */
         ApiKeyCreate: {
@@ -1195,6 +1312,17 @@ export interface components {
             subscription: components["schemas"]["SubscriptionOut"] | null;
             usage: components["schemas"]["UsageOut"];
         };
+        /** BlastRadius */
+        BlastRadius: {
+            /** Affected */
+            affected: string[];
+            /** Nodes */
+            nodes: components["schemas"]["RadiusNode"][];
+            /** Not In Radius */
+            not_in_radius: string[];
+            /** Origin */
+            origin: string;
+        };
         /** CheckoutIn */
         CheckoutIn: {
             /**
@@ -1290,6 +1418,11 @@ export interface components {
             /** Status */
             status: string;
         };
+        /**
+         * Confidence
+         * @enum {string}
+         */
+        Confidence: "HIGH" | "MEDIUM" | "LOW";
         /** DeploymentAccepted */
         DeploymentAccepted: {
             /**
@@ -1384,6 +1517,8 @@ export interface components {
             labels: {
                 [key: string]: string;
             };
+            /** @description null until the first analysis of this deployment is stored */
+            latest_analysis?: components["schemas"]["LatestAnalysisOut"] | null;
             /** Previous Version */
             previous_version: string | null;
             /** Pull Request */
@@ -1433,6 +1568,8 @@ export interface components {
             labels: {
                 [key: string]: string;
             };
+            /** @description null until the first analysis of this deployment is stored */
+            latest_analysis?: components["schemas"]["LatestAnalysisOut"] | null;
             /** Previous Version */
             previous_version: string | null;
             /** Pull Request */
@@ -1459,6 +1596,81 @@ export interface components {
             items: components["schemas"]["DeploymentOut"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /**
+         * DeploymentRef
+         * @description The deployment being analysed (subset of the deployment event).
+         */
+        DeploymentRef: {
+            /**
+             * Deployed At
+             * Format: date-time
+             */
+            deployed_at: string;
+            /** Environment */
+            environment?: string | null;
+            /** Previous Version */
+            previous_version?: string | null;
+            /** Service */
+            service: string;
+            /** Tenant Id */
+            tenant_id?: string | null;
+            /** Version */
+            version?: string | null;
+        };
+        /** DeploymentTimeseries */
+        DeploymentTimeseries: {
+            /**
+             * Deployment Id
+             * Format: uuid
+             */
+            deployment_id: string;
+            /**
+             * End
+             * Format: date-time
+             * @description Exclusive: the minute after the post window's end, or the current (still-filling) minute if that is earlier
+             */
+            end: string;
+            /** Environment */
+            environment: string;
+            /**
+             * Latency Approximate
+             * @default true
+             * @constant
+             */
+            latency_approximate: true;
+            /**
+             * Series
+             * @description Per service, by name: every service of the environment with requests in the range, or just the requested one
+             */
+            series: components["schemas"]["ServiceSeries"][];
+            /**
+             * Service
+             * @description The service filter, or null for every service
+             */
+            service: string | null;
+            /**
+             * Start
+             * Format: date-time
+             * @description First minute (the baseline start's minute)
+             */
+            start: string;
+            /**
+             * Step Seconds
+             * @default 60
+             * @constant
+             */
+            step_seconds: 60;
+            windows: components["schemas"]["SeriesWindows"];
+        };
+        /** EdgeSnapshot */
+        EdgeSnapshot: {
+            /** Call Count */
+            call_count: number;
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
         };
         /** EmailIn */
         EmailIn: {
@@ -1490,12 +1702,90 @@ export interface components {
              */
             project_id: string;
         };
+        /**
+         * ErrorRateEvidence
+         * @description Gates on an error rate: all errors (``error_rate``) or own errors (``own_error_rate``).
+         */
+        ErrorRateEvidence: {
+            /** Abs Delta Pp */
+            abs_delta_pp: number;
+            /** Baseline Errors */
+            baseline_errors: number;
+            /** Baseline Rate */
+            baseline_rate: number;
+            /** Baseline Requests */
+            baseline_requests: number;
+            /** Exact P Value */
+            exact_p_value?: number | null;
+            /** Gates */
+            gates: components["schemas"]["Gate"][];
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "error_rate" | "own_error_rate";
+            /** P Value */
+            p_value: number;
+            /** Post Errors */
+            post_errors: number;
+            /** Post Rate */
+            post_rate: number;
+            /** Post Requests */
+            post_requests: number;
+            /** Regressed */
+            regressed: boolean;
+            /** Rel Delta */
+            rel_delta: number | null;
+            /** Z */
+            z: number;
+        };
         /** Extractor */
         Extractor: {
             /** Name */
             name: string;
             /** Version */
             version: string;
+        };
+        /**
+         * Factor
+         * @enum {string}
+         */
+        Factor: "deployed" | "self_time_regressed" | "originates_errors" | "downstream_healthy" | "upstream_degraded" | "earliest_onset" | "downstream_self_regressed";
+        /** FactorResult */
+        FactorResult: {
+            /** Applies */
+            applies: boolean;
+            factor: components["schemas"]["Factor"];
+            /** Points */
+            points: number;
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * Gate
+         * @description One named check. ``passed`` is the decision; the rest is the evidence for it.
+         */
+        Gate: {
+            /** Name */
+            name: string;
+            /** Note */
+            note?: string | null;
+            /** Observed */
+            observed: number | null;
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: ">=" | ">" | "<" | "<=";
+            /** Passed */
+            passed: boolean;
+            /** Threshold */
+            threshold: number;
+        };
+        /** GitHubOAuthStatus */
+        GitHubOAuthStatus: {
+            /** Configured */
+            configured: boolean;
         };
         /** GitHubRepoIn */
         GitHubRepoIn: {
@@ -1515,6 +1805,16 @@ export interface components {
             /** Repo */
             repo: string;
         };
+        /**
+         * GraphSnapshot
+         * @description JSON-serialisable graph, as stored with a regression analysis.
+         */
+        GraphSnapshot: {
+            /** Edges */
+            edges: components["schemas"]["EdgeSnapshot"][];
+            /** Nodes */
+            nodes: string[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1526,6 +1826,22 @@ export interface components {
             cold_start: boolean;
             /** Finished Builds Used */
             finished_builds_used: number;
+        };
+        /**
+         * Impact
+         * @enum {string}
+         */
+        Impact: "AFFECTED_UPSTREAM" | "AFFECTED_DOWNSTREAM" | "HEALTHY_UPSTREAM" | "HEALTHY_DOWNSTREAM" | "UNKNOWN_UPSTREAM" | "UNKNOWN_DOWNSTREAM";
+        /** InputSummary */
+        InputSummary: {
+            /** Duplicate Spans Dropped */
+            duplicate_spans_dropped: number;
+            /** Other Environment Spans Dropped */
+            other_environment_spans_dropped: number;
+            /** Spans In Windows */
+            spans_in_windows: number;
+            /** Spans Received */
+            spans_received: number;
         };
         /** InviteCreate */
         InviteCreate: {
@@ -1570,6 +1886,85 @@ export interface components {
             id: string;
             /** Version */
             version: string;
+        };
+        /**
+         * LatencyEvidence
+         * @description Gates on one percentile of a latency distribution (total latency or service self-time).
+         */
+        LatencyEvidence: {
+            /** Abs Delta Ms */
+            abs_delta_ms: number;
+            /** Baseline Ms */
+            baseline_ms: number;
+            /** Bootstrap Resamples */
+            bootstrap_resamples: number;
+            /** Bootstrap Seed */
+            bootstrap_seed: number;
+            /** Ci Confidence */
+            ci_confidence: number;
+            /** Ci High Ms */
+            ci_high_ms: number;
+            /** Ci Low Ms */
+            ci_low_ms: number;
+            /** Gates */
+            gates: components["schemas"]["Gate"][];
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "latency" | "self_time";
+            /** N Baseline */
+            n_baseline: number;
+            /** N Post */
+            n_post: number;
+            /** Percentile */
+            percentile: number;
+            /** Post Ms */
+            post_ms: number;
+            /** Regressed */
+            regressed: boolean;
+            /** Rel Delta */
+            rel_delta: number | null;
+        };
+        /**
+         * LatestAnalysisOut
+         * @description Verdict of the deployment's most complete analysis (final > early_10m > early_5m).
+         */
+        LatestAnalysisOut: {
+            /**
+             * Analysed At
+             * Format: date-time
+             */
+            analysed_at: string;
+            /** Confidence */
+            confidence: ("HIGH" | "MEDIUM" | "LOW") | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "early_5m" | "early_10m" | "final";
+            /**
+             * Probable Origin
+             * @description Service the evidence points to; null when confidence is LOW
+             */
+            probable_origin: string | null;
+            /** Severity Band */
+            severity_band: ("HEALTHY" | "WARNING" | "HIGH" | "CRITICAL") | null;
+            /**
+             * Severity Score
+             * @description Severity v1 (0-100), not a probability
+             */
+            severity_score: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "HEALTHY" | "WARNING" | "REGRESSED" | "INSUFFICIENT_DATA";
         };
         /** LoginIn */
         LoginIn: {
@@ -1710,6 +2105,46 @@ export interface components {
              */
             subject_id: string;
         };
+        /** OnsetBucket */
+        OnsetBucket: {
+            /** Exceeds */
+            exceeds: boolean;
+            /** P95 Ms */
+            p95_ms: number | null;
+            /** Samples */
+            samples: number;
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+        };
+        /**
+         * OnsetEvidence
+         * @description First minute bucket (from T, warm-up included) whose p95 exceeds the baseline p95 CI.
+         */
+        OnsetEvidence: {
+            /** Baseline P95 Ci High Ms */
+            baseline_p95_ci_high_ms: number;
+            /** Baseline P95 Ms */
+            baseline_p95_ms: number;
+            /** Bootstrap Resamples */
+            bootstrap_resamples: number;
+            /** Bootstrap Seed */
+            bootstrap_seed: number;
+            /** Bucket Seconds */
+            bucket_seconds: number;
+            /** Buckets */
+            buckets: components["schemas"]["OnsetBucket"][];
+            /** Ci Confidence */
+            ci_confidence: number;
+            /** Min Samples Per Bucket */
+            min_samples_per_bucket: number;
+            /** Minutes After Deploy */
+            minutes_after_deploy: number | null;
+            /** Onset At */
+            onset_at: string | null;
+        };
         /** OrgCreate */
         OrgCreate: {
             /** Name */
@@ -1759,6 +2194,64 @@ export interface components {
         OrgUpdate: {
             /** Name */
             name: string;
+        };
+        /** OriginCandidate */
+        OriginCandidate: {
+            /** Factors */
+            factors: components["schemas"]["FactorResult"][];
+            /** Onset At */
+            onset_at: string | null;
+            /** Reasoning */
+            reasoning: string[];
+            /** Score */
+            score: number;
+            /** Service */
+            service: string;
+        };
+        /** OverviewStats */
+        OverviewStats: {
+            /**
+             * Active Regressions
+             * @description (service, environment) pairs whose newest deployment's latest analysis is REGRESSED or WARNING; a later deployment of the service supersedes it
+             */
+            active_regressions: number;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /**
+             * Deployments 7D
+             * @description Deployments with deployed_at in the last 7 days
+             */
+            deployments_7d: number;
+            /**
+             * Deployments Since
+             * Format: date-time
+             */
+            deployments_since: string;
+            /**
+             * Regressions 7D
+             * @description Of those, deployments whose latest analysis is REGRESSED or WARNING (= GET /api/v1/regressions?since=deployments_since)
+             */
+            regressions_7d: number;
+            /** @description Risk assessments created in the last 7 days, by band */
+            risk_assessments_7d: components["schemas"]["RiskBandCounts"];
+            /**
+             * Risk Assessments Since
+             * Format: date-time
+             */
+            risk_assessments_since: string;
+            /**
+             * Services Seen 24H
+             * @description Distinct services with requests (SERVER spans) in the last 24 hours
+             */
+            services_seen_24h: number;
+            /**
+             * Services Since
+             * Format: date-time
+             */
+            services_since: string;
         };
         /** PlanLimitsOut */
         PlanLimitsOut: {
@@ -1823,10 +2316,55 @@ export interface components {
             /** Slug */
             slug?: string | null;
         };
+        /** RadiusNode */
+        RadiusNode: {
+            /** Affected Via */
+            affected_via: ("strict" | "relaxed") | null;
+            /** Depth */
+            depth: number;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "upstream" | "downstream";
+            impact: components["schemas"]["Impact"];
+            relaxed_status: components["schemas"]["ServiceStatus"] | null;
+            /** Service */
+            service: string;
+            strict_status: components["schemas"]["ServiceStatus"];
+        };
         /** RedirectUrl */
         RedirectUrl: {
             /** Url */
             url: string;
+        };
+        /**
+         * RegressionAnalysis
+         * @description The complete, JSON-serialisable result of analysing one deployment.
+         */
+        RegressionAnalysis: {
+            blast_radius: components["schemas"]["BlastRadius"] | null;
+            config: components["schemas"]["WindowConfig"];
+            deployment: components["schemas"]["DeploymentRef"];
+            /** Engine Version */
+            engine_version: string;
+            graph: components["schemas"]["GraphSnapshot"];
+            input: components["schemas"]["InputSummary"];
+            relaxed_config: components["schemas"]["WindowConfig"];
+            /** Relaxed Services */
+            relaxed_services: components["schemas"]["ServiceEvidence"][];
+            /** Seed */
+            seed: number;
+            /** Services */
+            services: components["schemas"]["ServiceEvidence"][];
+            severity: components["schemas"]["Severity"] | null;
+            /** Severity Service */
+            severity_service: string | null;
+            status: components["schemas"]["ServiceStatus"];
+            /** Tenant Id */
+            tenant_id: string | null;
+            triage: components["schemas"]["TriageResult"] | null;
+            windows: components["schemas"]["AnalysisWindows"];
         };
         /** RegressionItem */
         RegressionItem: {
@@ -2055,6 +2593,19 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** RiskBandCounts */
+        RiskBandCounts: {
+            /** Critical */
+            CRITICAL: number;
+            /** High */
+            HIGH: number;
+            /** Low */
+            LOW: number;
+            /** Medium */
+            MEDIUM: number;
+            /** Total */
+            total: number;
+        };
         /**
          * Role
          * @enum {string}
@@ -2064,12 +2615,164 @@ export interface components {
         RoleUpdate: {
             role: components["schemas"]["Role"];
         };
+        /** SampleGate */
+        SampleGate: {
+            /** Baseline Requests */
+            baseline_requests: number;
+            /** Min Requests */
+            min_requests: number;
+            /** Passed */
+            passed: boolean;
+            /** Post Requests */
+            post_requests: number;
+        };
+        /** SeenEnvironment */
+        SeenEnvironment: {
+            /**
+             * Last Deployment At
+             * @description Newest deployed_at in it
+             */
+            last_deployment_at: string | null;
+            /**
+             * Last Seen
+             * Format: date-time
+             * @description Newest of last_deployment_at and last_telemetry_at
+             */
+            last_seen: string;
+            /**
+             * Last Telemetry At
+             * @description Newest request minute (its start) or service-to-service call in it
+             */
+            last_telemetry_at: string | null;
+            /** Name */
+            name: string;
+        };
+        /** SeenEnvironmentList */
+        SeenEnvironmentList: {
+            /**
+             * Items
+             * @description By name (at most 500)
+             */
+            items: components["schemas"]["SeenEnvironment"][];
+        };
+        /** SeriesPoint */
+        SeriesPoint: {
+            /**
+             * Error Rate
+             * @description errors / requests; null without requests
+             */
+            error_rate: number | null;
+            /** Errors */
+            errors: number;
+            /** Latency Mean Ms */
+            latency_mean_ms: number | null;
+            /**
+             * Latency P50 Ms Approx
+             * @description Approximate p50 from the minute's log-scale histogram (within a factor √2)
+             */
+            latency_p50_ms_approx: number | null;
+            /**
+             * Latency P95 Ms Approx
+             * @description Approximate p95 from the minute's log-scale histogram (within a factor √2)
+             */
+            latency_p95_ms_approx: number | null;
+            /**
+             * Minute
+             * Format: date-time
+             * @description Start of the minute (requests that started in it)
+             */
+            minute: string;
+            /** Requests */
+            requests: number;
+        };
+        /** SeriesWindows */
+        SeriesWindows: {
+            /** Analysis Id */
+            analysis_id: string | null;
+            /** Analysis Kind */
+            analysis_kind: ("early_5m" | "early_10m" | "final") | null;
+            /**
+             * Baseline End
+             * Format: date-time
+             */
+            baseline_end: string;
+            /**
+             * Baseline Start
+             * Format: date-time
+             */
+            baseline_start: string;
+            /**
+             * Deployed At
+             * Format: date-time
+             */
+            deployed_at: string;
+            /**
+             * Post End
+             * Format: date-time
+             */
+            post_end: string;
+            /**
+             * Post Start
+             * Format: date-time
+             */
+            post_start: string;
+            /**
+             * Source
+             * @description analysis: the windows the latest analysis used; default: the spec defaults (baseline 30 min, warm-up 2 min, post window to T+15 min) — no analysis yet
+             * @enum {string}
+             */
+            source: "analysis" | "default";
+        };
         /** ServiceCreate */
         ServiceCreate: {
             /** Description */
             description?: string | null;
             /** Name */
             name: string;
+        };
+        /**
+         * ServiceEvidence
+         * @description Everything the detector concluded about one service, and why.
+         */
+        ServiceEvidence: {
+            baseline: components["schemas"]["WindowSummary"];
+            error_rate?: components["schemas"]["ErrorRateEvidence"] | null;
+            /**
+             * Latency
+             * @default []
+             */
+            latency: components["schemas"]["LatencyEvidence"][];
+            onset?: components["schemas"]["OnsetEvidence"] | null;
+            /**
+             * Originates Errors
+             * @default false
+             */
+            originates_errors: boolean;
+            own_error_rate?: components["schemas"]["ErrorRateEvidence"] | null;
+            post: components["schemas"]["WindowSummary"];
+            /**
+             * Regressed Metrics
+             * @default []
+             */
+            regressed_metrics: string[];
+            sample_gate: components["schemas"]["SampleGate"];
+            /**
+             * Self Time
+             * @default []
+             */
+            self_time: components["schemas"]["LatencyEvidence"][];
+            /**
+             * Self Time Regressed
+             * @default false
+             */
+            self_time_regressed: boolean;
+            /** Service */
+            service: string;
+            severity?: components["schemas"]["Severity"] | null;
+            status: components["schemas"]["ServiceStatus"];
+            throughput?: components["schemas"]["ThroughputEvidence"] | null;
+            /** Variant */
+            variant: string;
         };
         /** ServiceHealth */
         ServiceHealth: {
@@ -2219,6 +2922,21 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** ServiceSeries */
+        ServiceSeries: {
+            /**
+             * Points
+             * @description One point per minute of [start, end)
+             */
+            points: components["schemas"]["SeriesPoint"][];
+            /** Service */
+            service: string;
+        };
+        /**
+         * ServiceStatus
+         * @enum {string}
+         */
+        ServiceStatus: "HEALTHY" | "WARNING" | "REGRESSED" | "INSUFFICIENT_DATA";
         /** ServiceUpdate */
         ServiceUpdate: {
             /** Description */
@@ -2246,6 +2964,34 @@ export interface components {
             refresh_expires_at: string;
             user: components["schemas"]["UserOut"];
         };
+        /**
+         * Severity
+         * @description Severity v1 — a deterministic score in [0, 100], **not** a probability.
+         *
+         *     ``s_lat = clamp(20·log2(p95_post / p95_base), 0, 50)`` if the p95 latency gate passed, else 0;
+         *     ``s_err = clamp(8·(err_post_pp - err_base_pp), 0, 50)`` if the error-rate gate passed, else 0;
+         *     ``score = min(100, s_lat + s_err)``; band: HEALTHY < 15 ≤ WARNING < 40 ≤ HIGH < 70 ≤ CRITICAL.
+         */
+        Severity: {
+            band: components["schemas"]["SeverityBand"];
+            /** Error Component */
+            error_component: number;
+            /**
+             * Formula
+             * @default severity-v1
+             * @constant
+             */
+            formula: "severity-v1";
+            /** Latency Component */
+            latency_component: number;
+            /** Score */
+            score: number;
+        };
+        /**
+         * SeverityBand
+         * @enum {string}
+         */
+        SeverityBand: "HEALTHY" | "WARNING" | "HIGH" | "CRITICAL";
         /** ShapVector */
         ShapVector: {
             /** Base Value */
@@ -2306,10 +3052,42 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** ThroughputEvidence */
+        ThroughputEvidence: {
+            /** Baseline Rpm */
+            baseline_rpm: number | null;
+            /** Dropped */
+            dropped: boolean;
+            gate: components["schemas"]["Gate"];
+            /** Post Rpm */
+            post_rpm: number | null;
+            /** Rel Change */
+            rel_change: number | null;
+        };
         /** TokenIn */
         TokenIn: {
             /** Token */
             token: string;
+        };
+        /** TriageResult */
+        TriageResult: {
+            /** Candidates */
+            candidates: components["schemas"]["OriginCandidate"][];
+            confidence: components["schemas"]["Confidence"];
+            /** Margin */
+            margin: number | null;
+            /** Probable Origin */
+            probable_origin: string | null;
+            /** Shortlist */
+            shortlist: string[];
+            /** Summary */
+            summary: string;
+            /** Top Score */
+            top_score: number;
+            /** Weights */
+            weights: {
+                [key: string]: number;
+            };
         };
         /** UsageOut */
         UsageOut: {
@@ -2355,6 +3133,126 @@ export interface components {
         WebhookAck: {
             /** Status */
             status: string;
+        };
+        /**
+         * WindowConfig
+         * @description All windows and gate thresholds (spec M8 defaults). Immutable and JSON-serialisable.
+         *
+         *     Infinite thresholds are rejected: they are stored with every analysis (JSON has no inf) and
+         *     the error gates compare thresholds as exact decimals.
+         */
+        WindowConfig: {
+            /**
+             * Baseline Minutes
+             * @default 30
+             */
+            baseline_minutes: number;
+            /**
+             * Bootstrap Confidence
+             * @default 0.95
+             */
+            bootstrap_confidence: number;
+            /**
+             * Bootstrap Resamples
+             * @default 1000
+             */
+            bootstrap_resamples: number;
+            /**
+             * Bootstrap Seed
+             * @default 0
+             */
+            bootstrap_seed: number;
+            /**
+             * Error Abs Threshold Pp
+             * @default 0.5
+             */
+            error_abs_threshold_pp: number;
+            /**
+             * Error P Threshold
+             * @default 0.01
+             */
+            error_p_threshold: number;
+            /**
+             * Error Rel Threshold
+             * @default 0.5
+             */
+            error_rel_threshold: number;
+            /**
+             * Latency Abs Threshold Ms
+             * @default 20
+             */
+            latency_abs_threshold_ms: number;
+            /**
+             * Latency Rel Threshold
+             * @default 0.25
+             */
+            latency_rel_threshold: number;
+            /**
+             * Min Requests
+             * @default 200
+             */
+            min_requests: number;
+            /**
+             * Name
+             * @default strict
+             */
+            name: string;
+            /**
+             * Onset Bucket Seconds
+             * @default 60
+             */
+            onset_bucket_seconds: number;
+            /**
+             * Onset Min Samples
+             * @default 20
+             */
+            onset_min_samples: number;
+            /**
+             * Percentiles
+             * @default [
+             *       0.5,
+             *       0.95,
+             *       0.99
+             *     ]
+             */
+            percentiles: number[];
+            /**
+             * Post End Minutes
+             * @default 15
+             */
+            post_end_minutes: number;
+            /**
+             * Throughput Drop Threshold
+             * @default 0.3
+             */
+            throughput_drop_threshold: number;
+            /**
+             * Warmup Minutes
+             * @default 2
+             */
+            warmup_minutes: number;
+        };
+        /**
+         * WindowSummary
+         * @description Descriptive statistics of one window (for display; decisions use the evidence models).
+         */
+        WindowSummary: {
+            /** Error Rate */
+            error_rate: number | null;
+            /** Errors */
+            errors: number;
+            /** Latency P50 Ms */
+            latency_p50_ms: number | null;
+            /** Latency P95 Ms */
+            latency_p95_ms: number | null;
+            /** Latency P99 Ms */
+            latency_p99_ms: number | null;
+            /** Requests */
+            requests: number;
+            /** Self Time P95 Ms */
+            self_time_p95_ms: number | null;
+            /** Throughput Rpm */
+            throughput_rpm: number | null;
         };
     };
     responses: never;
@@ -2429,6 +3327,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    github_status_api_v1_auth_github_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubOAuthStatus"];
+                };
             };
         };
     };
@@ -2802,8 +3720,10 @@ export interface operations {
     };
     list_ci_runs_route_api_v1_ci_runs_get: {
         parameters: {
-            query: {
-                repository: string;
+            query?: {
+                repository?: string | null;
+                /** @description Commit SHA, 7-64 hex: the CI outcome of that commit. A SHA shorter than 40 characters (deployment events allow abbreviated ones) matches as a prefix. */
+                commit_sha?: string | null;
                 limit?: number;
             };
             header?: never;
@@ -2828,14 +3748,12 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description Neither repository nor commit_sha given */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
         };
     };
@@ -2907,6 +3825,8 @@ export interface operations {
                 environment?: string | null;
                 limit?: number;
                 cursor?: string | null;
+                /** @description ISO 8601 with offset: only deployments with deployed_at >= since */
+                since?: string | null;
             };
             header?: never;
             path?: never;
@@ -3117,6 +4037,101 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    get_deployment_timeseries_api_v1_deployments__deployment_id__timeseries_get: {
+        parameters: {
+            query?: {
+                service?: string | null;
+            };
+            header?: never;
+            path: {
+                deployment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeploymentTimeseries"];
+                };
+            };
+            /** @description Malformed cursor */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The API key lacks the read scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such deployment for this tenant */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_environments_route_api_v1_environments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeenEnvironmentList"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The API key lacks the read scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -4759,6 +5774,8 @@ export interface operations {
                 service?: string | null;
                 limit?: number;
                 cursor?: string | null;
+                /** @description ISO 8601 with offset: only deployments with deployed_at >= since */
+                since?: string | null;
             };
             header?: never;
             path?: never;
@@ -4815,6 +5832,8 @@ export interface operations {
                 risk_band?: ("LOW" | "MEDIUM" | "HIGH" | "CRITICAL") | null;
                 limit?: number;
                 cursor?: string | null;
+                /** @description ISO 8601 with offset: only assessments created at or after it */
+                since?: string | null;
             };
             header?: never;
             path?: never;
@@ -5112,6 +6131,40 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    stats_overview_api_v1_stats_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverviewStats"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The API key lacks the read scope */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

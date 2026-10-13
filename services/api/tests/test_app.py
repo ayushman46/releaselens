@@ -6,6 +6,7 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from rl_api.app import create_app
 from rl_api.errors import ApiError
@@ -94,7 +95,53 @@ def test_errors_use_json_envelope_with_request_id(client: TestClient) -> None:
     assert resp.json()["error"]["code"] == "teapot"
     resp = client.get("/does-not-exist")
     assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "route_not_found"
+
+
+def test_unknown_route_is_distinguished_from_a_missing_resource(client: TestClient) -> None:
+    """Routing misses answer ``route_not_found``; resource misses (ApiError) keep ``not_found``."""
+    for path in ("/api/v1/nope", "/api/v1/deployments/x/y/z", "/api/v2/deployments"):
+        resp = client.get(path, headers={"x-request-id": "req-404"})
+        assert resp.status_code == 404, path
+        assert resp.json() == {
+            "error": {
+                "code": "route_not_found",
+                "message": "no such route",
+                "request_id": "req-404",
+            }
+        }
+    # A known path with the wrong method is still a 405, not a 404.
+    resp = client.delete("/healthz")
+    assert resp.status_code == 405
+    assert resp.json()["error"]["code"] == "method_not_allowed"
+    # An ApiError 404 from a handler keeps its own code.
+    app = client.app
+
+    @app.get("/missing-thing")  # type: ignore[attr-defined, untyped-decorator]
+    async def missing() -> None:
+        raise ApiError(404, "not_found", "thing not found")
+
+    resp = client.get("/missing-thing")
+    assert resp.status_code == 404
     assert resp.json()["error"]["code"] == "not_found"
+
+
+@pytest.mark.parametrize("configured", [False, True])
+def test_github_status_reports_configuration_without_side_effects(
+    settings: Settings, configured: bool
+) -> None:
+    if configured:
+        settings = settings.model_copy(
+            update={
+                "github_oauth_client_id": "Iv1.unit",
+                "github_oauth_client_secret": SecretStr("unit-secret"),  # gitleaks:allow
+            }
+        )
+    with TestClient(create_app(settings)) as c:
+        resp = c.get("/api/v1/auth/github/status")
+    assert resp.status_code == 200
+    assert resp.json() == {"configured": configured}
+    assert "set-cookie" not in resp.headers  # no OAuth state, no session
 
 
 def test_access_log_is_json_with_trace_and_request_ids(

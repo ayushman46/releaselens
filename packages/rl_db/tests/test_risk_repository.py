@@ -293,3 +293,29 @@ async def test_installations_deliveries_and_pull_requests(sessions: Sessions) ->
         assert await gh.get_pull_request(s, b, "acme/payments", 4) is None
     assert stored is not None
     assert (stored.state, stored.merged, stored.head_sha) == ("closed", True, SHA)
+
+
+async def test_ci_runs_by_commit_sha(sessions: Sessions) -> None:
+    ctx, other = await _tenant(sessions), await _tenant(sessions)
+    sha2 = "b" * 40
+    async with sessions.begin() as s:
+        await risk.upsert_ci_run(s, ctx, _run(1))
+        await risk.upsert_ci_run(s, ctx, _run(2, external_id="gha:1:2"))  # re-run, same commit
+        await risk.upsert_ci_run(s, ctx, _run(3, commit_sha=sha2))
+        await risk.upsert_ci_run(s, ctx, _run(4, repository="acme/other"))
+        await risk.upsert_ci_run(s, other, _run(5))
+    async with sessions() as s:
+        exact = await risk.list_ci_runs(s, ctx, commit_sha=SHA)
+        prefix = await risk.list_ci_runs(s, ctx, commit_sha=SHA[:7])
+        both = await risk.list_ci_runs(s, ctx, "acme/payments", commit_sha=SHA)
+        theirs = await risk.list_ci_runs(s, other, commit_sha=SHA)
+        with pytest.raises(ValueError, match="filter"):
+            await risk.list_ci_runs(s, ctx)
+        for bad in ("ABCDEF1", "abc", "abcdef_%", "g" * 40):
+            with pytest.raises(ValueError, match="hex"):
+                await risk.list_ci_runs(s, ctx, commit_sha=bad)
+    # newest start first; the other repository's build of the same commit is included
+    assert [r.external_id for r in exact] == ["gha:4:1", "gha:1:2", "gha:1:1"]
+    assert [r.id for r in prefix] == [r.id for r in exact]
+    assert [r.external_id for r in both] == ["gha:1:2", "gha:1:1"]
+    assert [r.external_id for r in theirs] == ["gha:5:1"]

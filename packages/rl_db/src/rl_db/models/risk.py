@@ -86,6 +86,8 @@ class CiRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ),
         # Cross-source deduplication (the same workflow run reported by the App and the API).
         Index("ix_ci_runs_tenant_repo_external_id", "tenant_id", "repository", "external_id"),
+        # "CI outcome of this commit" (GET /api/v1/ci-runs?commit_sha=), newest start first.
+        Index("ix_ci_runs_tenant_commit_sha", "tenant_id", "commit_sha", text("started_at DESC")),
         CheckConstraint(
             "status IN ('passed', 'failed', 'errored', 'canceled', 'running')", name="status_known"
         ),

@@ -5,6 +5,7 @@
     python -m rl_api.admin create-org --name "Acme" --slug acme
     python -m rl_api.admin create-key --org acme --scopes deployments:write,read [--name ci]
     python -m rl_api.admin link-github-installation --org acme --installation-id 123 --account acme
+    python -m rl_api.admin add-member --org acme --email dev@example.com --role owner
 
 The database comes from ``--database-url`` or ``RL_DATABASE_URL``. ``create-key`` prints
 the key on stdout, alone, so ``KEY=$(python -m rl_api.admin create-key ...)`` captures it.
@@ -15,6 +16,10 @@ and Check Runs reach that tenant (docs/integrations/GITHUB_APP.md). It is an ope
 purpose: anyone can install a public App, so an installation id alone proves nothing about which
 organization it belongs to. Verify the installation (GitHub → Settings → Installed GitHub Apps →
 Configure: the id is in the URL) before linking it.
+
+``add-member`` gives an existing user (signed up, any verification state) a role in an
+organization; if they are already a member, their role is set to ``--role``. It never creates a
+user: sign up first. Also an operator action, so it is not limited by plan seats.
 """
 
 from __future__ import annotations
@@ -26,11 +31,17 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 
+from rl_api import audit
 from rl_api.apikeys import KNOWN_SCOPES, create_api_key
 from rl_api.settings import Settings
+from rl_core.tenancy import Principal, TenantContext
 from rl_db import create_engine, create_session_factory
+from rl_db.admin.accounts import get_user_by_email
 from rl_db.admin.github import InstallationLinkedElsewhereError, link_installation
 from rl_db.admin.identity import create_organization, get_organization_by_slug
+from rl_db.models import Role
+from rl_db.repositories.audit import SYSTEM_ACTOR, record_audit
+from rl_db.repositories.orgs import add_member, get_member_role, set_member_role
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -63,7 +74,54 @@ def _parser() -> argparse.ArgumentParser:
     gh.add_argument(
         "--account", required=True, help="GitHub account (org or user) the App is installed on"
     )
+
+    member = sub.add_parser("add-member", help="give an existing user a role in an organization")
+    member.add_argument("--org", required=True, help="organization slug")
+    member.add_argument("--email", required=True, help="e-mail address of an existing user")
+    member.add_argument("--role", required=True, choices=[r.value for r in Role])
     return parser
+
+
+async def _add_member(url: str, slug: str, email: str, role: Role) -> int:
+    engine = create_engine(url, pool_size=1)
+    try:
+        async with create_session_factory(engine).begin() as session:
+            org = await get_organization_by_slug(session, slug)
+            if org is None:
+                print(f"error: no organization with slug {slug!r}", file=sys.stderr)
+                return 2
+            user = await get_user_by_email(session, email)
+            if user is None:
+                print("error: no user with that e-mail address (sign up first)", file=sys.stderr)
+                return 2
+            ctx = TenantContext(tenant_id=org.id, principal=Principal.SYSTEM)
+            current = await get_member_role(session, ctx, user.id)
+            details = {"via": "admin_cli", "email": user.email, "role": role.value}
+            if current is None:
+                await add_member(session, ctx, user_id=user.id, role=role)
+                outcome = "added"
+                action = audit.MEMBER_JOINED
+            elif current is role:
+                outcome, action = "unchanged", None
+            else:
+                await set_member_role(session, ctx, user.id, role)
+                outcome = f"changed from {current.value}"
+                action = audit.MEMBER_ROLE_CHANGED
+                details["previous_role"] = current.value
+            if action is not None:
+                await record_audit(
+                    session,
+                    ctx,
+                    action=action,
+                    actor=SYSTEM_ACTOR,
+                    target_type="user",
+                    target_id=str(user.id),
+                    details=details,
+                )
+    finally:
+        await engine.dispose()
+    print(f"member {outcome}: {user.email} is {role.value} of {slug}", file=sys.stderr)
+    return 0
 
 
 async def _link_installation(url: str, slug: str, installation_id: int, account: str) -> int:
@@ -146,6 +204,8 @@ def main(argv: list[str] | None = None) -> int:
     url = args.database_url or Settings().database_url
     if args.command == "create-org":
         return asyncio.run(_create_org(url, args.name, args.slug, args.demo))
+    if args.command == "add-member":
+        return asyncio.run(_add_member(url, args.org, args.email, Role(args.role)))
     if args.command == "link-github-installation":
         return asyncio.run(_link_installation(url, args.org, args.installation_id, args.account))
     scopes = [s for s in args.scopes.split(",") if s.strip()]

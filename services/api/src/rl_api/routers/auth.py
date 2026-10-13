@@ -562,6 +562,21 @@ def _oauth_not_configured() -> ApiError:
     return ApiError(503, "github_oauth_not_configured", "sign-in with GitHub is not configured")
 
 
+class GitHubOAuthStatus(BaseModel):
+    configured: bool
+
+
+@router.get(
+    "/github/status",
+    response_model=GitHubOAuthStatus,
+    summary="Whether sign-in with GitHub is configured (no side effects)",
+)
+async def github_status(settings: SettingsDep) -> GitHubOAuthStatus:
+    """Lets the login page show or hide the GitHub button. Reads configuration only: no
+    session, state, cookie or rate-limit bucket is touched."""
+    return GitHubOAuthStatus(configured=settings.github_oauth_configured)
+
+
 @router.get(
     "/github/authorize",
     status_code=302,

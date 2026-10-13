@@ -389,6 +389,10 @@ async def list_assessments_route(
     risk_band: Annotated[Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"] | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     cursor: Annotated[str | None, Query(max_length=512)] = None,
+    since: Annotated[
+        AwareDatetime | None,
+        Query(description="ISO 8601 with offset: only assessments created at or after it"),
+    ] = None,
 ) -> RiskAssessmentPage:
     settings = _settings(request)
     rows = await list_assessments(
@@ -399,6 +403,7 @@ async def list_assessments_route(
         commit_sha=commit_sha.lower() if commit_sha else None,
         risk_band=risk_band,
         after=_decode_cursor(cursor) if cursor else None,
+        since=since,
     )
     page, more = rows[:limit], len(rows) > limit
     return RiskAssessmentPage(

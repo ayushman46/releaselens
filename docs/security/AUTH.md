@@ -45,7 +45,9 @@ MFA/WebAuthn, CAPTCHA, account lockout notifications, per-user session managemen
   a weak new password rolls back (the token stays usable); success sets the password,
   marks the address verified, retires other reset tokens and **revokes every session**.
 * **GitHub OAuth** (`RL_GITHUB_OAUTH_CLIENT_ID/SECRET`, optional
-  `RL_GITHUB_OAUTH_REDIRECT_URI`; unset → `503 github_oauth_not_configured`):
+  `RL_GITHUB_OAUTH_REDIRECT_URI`; unset → `503 github_oauth_not_configured`).
+  `GET /api/v1/auth/github/status` → `{"configured": bool}` tells the login page whether to show
+  the button; it reads configuration only (no state, cookie, session or rate-limit bucket).
   `GET /api/v1/auth/github/authorize` stores `sha256(state)` with a PKCE S256 verifier
   (10 min) and sets an `HttpOnly` `rl_oauth_state` cookie, then redirects to GitHub.
   `GET /api/v1/auth/github/callback` requires the state to match the cookie (a callback
@@ -101,8 +103,12 @@ caller to `/api/v1/orgs/{org_id}/…`:
    session_required`; key lacks the scope → `403 insufficient_scope`.
 2. Session: no membership in `org_id` → **404**; role below the minimum → `403 forbidden`.
 
-Tenant-implicit routes (`GET /api/v1/deployments[/{id}]`) take a `read` key, or a session
-plus `X-RL-Org: <org id>` validated the same way (missing → `400 org_required`).
+Tenant-implicit routes take a `read` key, or a session plus `X-RL-Org: <org id>` validated the
+same way (missing → `400 org_required`): `GET /api/v1/deployments[/{id}]`,
+`/deployments/{id}/analysis`, `/deployments/{id}/timeseries`, `/regressions`, `/services`,
+`/service-map`, `/environments`, `/stats/overview`, `/risk/assessments[/{id}]`, `/risk/model`
+and `/ci-runs`. Another tenant's resource id answers exactly like a missing one (`404
+not_found`).
 `POST /api/v1/deployments` stays API-key only.
 
 ## 5. RBAC matrix
@@ -158,6 +164,9 @@ Refused requests get `429 rate_limited` with `Retry-After` (seconds).
   includeSubDomains` whenever `RL_ENV≠dev`.
 * **Body limit**: `RL_MAX_BODY_BYTES` (1 MiB) for declared and chunked bodies → `413
   payload_too_large`.
+* **404 codes**: a path no route matches answers `404 route_not_found` (a client or deployment
+  bug); a route that does not find the resource, or finds another tenant's, answers `404
+  not_found`. A known path with the wrong method stays `405 method_not_allowed`.
 * **CORS**: explicit `RL_CORS_ORIGINS` only (a `*` is refused at startup), credentials
   allowed, headers `Authorization, Content-Type, X-Request-ID, X-CSRF-Token, X-RL-Org`,
   exposes `X-Request-ID, Retry-After`.

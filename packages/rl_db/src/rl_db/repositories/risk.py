@@ -10,6 +10,7 @@ function. ``rl_db/tests/test_risk_repository.py`` holds the two implementations 
 
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -33,6 +34,8 @@ from rl_db.models.risk import (
 )
 
 DEFAULT_HISTORY_LIMIT: Final = 200
+FULL_SHA_LEN: Final = 40
+_HEX_SHA: Final = re.compile(r"[0-9a-f]{7,64}")
 MIN_HISTORY_LIMIT: Final = 20  # the longest history window (fail_rate_last_20, z-score)
 
 
@@ -229,16 +232,35 @@ async def load_history(
 
 
 async def list_ci_runs(
-    session: AsyncSession, ctx: TenantContext, repository: str, *, limit: int = 50
+    session: AsyncSession,
+    ctx: TenantContext,
+    repository: str | None = None,
+    *,
+    commit_sha: str | None = None,
+    limit: int = 50,
 ) -> list[CiRun]:
+    """The tenant's CI runs of a repository and/or a commit, newest start first. At least one
+    filter is required (a tenant-wide listing is not what this serves).
+
+    ``commit_sha`` (lower-case hex) of 40+ characters matches exactly; a shorter one, an
+    abbreviated SHA as deployment events may carry, matches runs whose SHA starts with it.
+    """
     if not 1 <= limit <= 1000:
         raise ValueError("limit must be within 1..1000")
-    stmt = (
-        select(CiRun)
-        .where(CiRun.tenant_id == ctx.tenant_id, CiRun.repository == repository)
-        .order_by(CiRun.started_at.desc(), CiRun.id.desc())
-        .limit(limit)
-    )
+    if repository is None and commit_sha is None:
+        raise ValueError("filter by repository, commit_sha or both")
+    stmt = select(CiRun).where(CiRun.tenant_id == ctx.tenant_id)
+    if repository is not None:
+        stmt = stmt.where(CiRun.repository == repository)
+    if commit_sha is not None:
+        if not _HEX_SHA.fullmatch(commit_sha):
+            raise ValueError("commit_sha must be 7-64 lower-case hex characters")
+        stmt = stmt.where(
+            CiRun.commit_sha == commit_sha
+            if len(commit_sha) >= FULL_SHA_LEN
+            else CiRun.commit_sha.startswith(commit_sha, autoescape=True)
+        )
+    stmt = stmt.order_by(CiRun.started_at.desc(), CiRun.id.desc()).limit(limit)
     return list((await session.execute(stmt)).scalars())
 
 
@@ -325,8 +347,10 @@ async def list_assessments(
     commit_sha: str | None = None,
     risk_band: str | None = None,
     after: AssessmentCursor | None = None,
+    since: datetime | None = None,
 ) -> list[RiskAssessment]:
-    """Newest first by ``(created_at, id)``; keyset pagination."""
+    """Newest first by ``(created_at, id)``; keyset pagination. ``since`` keeps assessments
+    created at or after it."""
     if not 1 <= limit <= 1000:
         raise ValueError("limit must be within 1..1000")
     stmt = select(RiskAssessment).where(RiskAssessment.tenant_id == ctx.tenant_id)
@@ -336,6 +360,8 @@ async def list_assessments(
         stmt = stmt.where(RiskAssessment.commit_sha == commit_sha)
     if risk_band is not None:
         stmt = stmt.where(RiskAssessment.risk_band == risk_band)
+    if since is not None:
+        stmt = stmt.where(RiskAssessment.created_at >= since)
     if after is not None:
         stmt = stmt.where(
             tuple_(RiskAssessment.created_at, RiskAssessment.id)

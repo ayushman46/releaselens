@@ -582,3 +582,92 @@ async def test_ci_runs_ingestion_is_idempotent_and_validated(h: Harness) -> None
     runs = listed.json()
     assert [(r["status"], r["duration_s"]) for r in runs] == [("failed", 300.0)]
     assert set(FACTS) <= set(BUILD_INPUT_FIELDS)
+
+
+async def test_ci_runs_by_commit_sha_are_tenant_isolated(h: Harness) -> None:
+    a, b = await _tenant(h), await _tenant(h)
+    sha, other_sha = _sha()[:40], _sha()[:40]
+    start = datetime.now(UTC) - timedelta(hours=2)
+
+    def run(external_id: str, commit: str, status: str, offset_min: int) -> dict[str, Any]:
+        at = start + timedelta(minutes=offset_min)
+        return {
+            "repository": REPO,
+            "commit_sha": commit,
+            "external_id": external_id,
+            "status": status,
+            "started_at": at.isoformat(),
+            "finished_at": (at + timedelta(minutes=4)).isoformat(),
+        }
+
+    async with h.client() as c:
+        for t, body in (
+            (a, run("gha:1:1", sha, "failed", 0)),
+            (a, run("gha:1:2", sha, "passed", 10)),  # the re-run of the same commit
+            (a, run("gha:2:1", other_sha, "passed", 20)),
+            (b, run("gha:1:1", sha, "errored", 30)),  # B built the same commit
+        ):
+            assert (await c.post("/api/v1/ci-runs", headers=t.write, json=body)).status_code == 201
+
+        async def listed(t: Tenant, **params: str) -> list[tuple[str, str]]:
+            resp = await c.get("/api/v1/ci-runs", params=params, headers=t.read)
+            assert resp.status_code == 200, resp.text
+            return [(r["external_id"], r["status"]) for r in resp.json()]
+
+        newest_first = [("gha:1:2", "passed"), ("gha:1:1", "failed")]
+        assert await listed(a, commit_sha=sha) == newest_first
+        assert await listed(a, commit_sha=sha.upper()) == newest_first
+        assert await listed(a, commit_sha=sha[:7]) == newest_first  # abbreviated: prefix match
+        assert await listed(a, commit_sha=sha, repository=REPO) == newest_first
+        assert await listed(a, commit_sha=sha, repository="acme/other") == []
+        assert await listed(a, commit_sha=sha, limit="1") == newest_first[:1]
+        assert await listed(b, commit_sha=sha) == [("gha:1:1", "errored")]
+        assert await listed(b, commit_sha=other_sha) == []
+        assert len(await listed(a, repository=REPO)) == 3
+
+        none = await c.get("/api/v1/ci-runs", headers=a.read)
+        assert none.status_code == 422
+        assert none.json()["error"]["code"] == "validation_error"
+        for bad in ("xyz1234", "abc12", "a" * 65, "%25" * 7):
+            resp = await c.get("/api/v1/ci-runs", params={"commit_sha": bad}, headers=a.read)
+            assert resp.status_code == 422, bad
+        assert (await c.get(f"/api/v1/ci-runs?commit_sha={sha}")).status_code == 401
+
+
+async def test_since_filter_and_overview_risk_counts(h: Harness) -> None:
+    t, other = await _tenant(h), await _tenant(h)
+    async with h.client() as c:
+        bands = []
+        for _ in range(2):
+            created = await c.post("/api/v1/risk/assessments", headers=t.write, json=_body())
+            assert created.status_code == 201, created.text
+            bands.append(created.json()["risk_band"])
+        await c.post("/api/v1/risk/assessments", headers=other.write, json=_body())
+
+        async def count(since: datetime) -> int:
+            resp = await c.get(
+                "/api/v1/risk/assessments", params={"since": since.isoformat()}, headers=t.read
+            )
+            assert resp.status_code == 200, resp.text
+            return len(resp.json()["items"])
+
+        now = datetime.now(UTC)
+        assert await count(now - timedelta(hours=1)) == 2
+        assert await count(now + timedelta(minutes=1)) == 0
+        naive = await c.get(
+            "/api/v1/risk/assessments", params={"since": "2026-01-01T00:00:00"}, headers=t.read
+        )
+        assert naive.status_code == 422
+
+        stats = (await c.get("/api/v1/stats/overview", headers=t.read)).json()
+    by_band = stats["risk_assessments_7d"]
+    assert by_band["total"] == 2  # the other tenant's assessment is not counted
+    assert {band: by_band[band] for band in set(bands)} == {
+        band: bands.count(band) for band in set(bands)
+    }
+    assert sum(by_band[band] for band in ("LOW", "MEDIUM", "HIGH", "CRITICAL")) == 2
+    assert (stats["deployments_7d"], stats["active_regressions"], stats["services_seen_24h"]) == (
+        0,
+        0,
+        0,
+    )
