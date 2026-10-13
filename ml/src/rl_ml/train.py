@@ -250,9 +250,20 @@ def run_training(mart: Mart, cfg: TrainConfig, on_trial: Any = None) -> Training
     test_guard = HeldOutSet("chronological_test", mart.split("test"))
     t = lap("load_and_audit", t)
 
+    # Features that are null for every training row carry no information (in the 2016 release:
+    # num_commits_in_push, description_complexity, repo_age_days → project_age_days, NULL by
+    # design in mart_build_inputs). They are dropped from every model's inputs.
+    all_null = [f for f in ALL_FEATURE_NAMES if bool(train.frame[f].isna().all())]
+
     # ---- 2-3: candidates and selection (validation only)
     outcome = train_candidates(
-        train, val, trials=cfg.trials, seed=cfg.seed, families=cfg.families, on_trial=on_trial
+        train,
+        val,
+        trials=cfg.trials,
+        seed=cfg.seed,
+        families=cfg.families,
+        on_trial=on_trial,
+        exclude=frozenset(all_null),
     )
     final = outcome.select()
     locked_at = datetime.now(UTC).isoformat()
@@ -451,6 +462,7 @@ def run_training(mart: Mart, cfg: TrainConfig, on_trial: Any = None) -> Training
             "features_run_id": mart.run_id,
             "feature_schema_version": FEATURE_SCHEMA_VERSION,
             "notes": list(mart.notes),
+            "mart_files": list(mart.files),
         },
         "config": asdict(cfg) | {"variant": cfg.variant},
         "class_balance": balance,
@@ -460,9 +472,9 @@ def run_training(mart: Mart, cfg: TrainConfig, on_trial: Any = None) -> Training
             "null_rate_train": {
                 name: float(train.frame[name].isna().mean()) for name in ALL_FEATURE_NAMES
             },
-            "always_missing_in_train": [
-                name for name in ALL_FEATURE_NAMES if bool(train.frame[name].isna().all())
-            ],
+            "always_missing_in_train": all_null,
+            "dropped_from_model_inputs": all_null,
+            "drop_rule": "features null for every training row are removed from all model inputs",
         },
         "candidates": [_candidate_row(c, val) for c in outcome.candidates],
         "time_features": outcome.time_feature_decision,

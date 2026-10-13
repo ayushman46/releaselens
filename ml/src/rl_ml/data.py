@@ -14,7 +14,9 @@ on a mart that breaks the history rule.
 
 from __future__ import annotations
 
+import hashlib
 import io
+import json
 import os
 from dataclasses import dataclass, field, replace
 from typing import Any, Final
@@ -117,15 +119,25 @@ def mart_prefix(run_id: str, schema_version: str = FEATURE_SCHEMA_VERSION) -> st
 
 
 def list_feature_runs(client: Any, bucket: str | None = None) -> list[str]:
-    """run_ids that hold at least one Parquet file for the current feature schema version."""
+    """run_ids holding Parquet for the current schema version, oldest → newest (last write)."""
     b = bucket or S3Settings.from_env().bucket_data
     root = f"{FEATURES_ROOT}/schema={FEATURE_SCHEMA_VERSION}/run_id="
-    runs = {
-        k[len(root) :].split("/", 1)[0]
-        for k in _list_keys(client, b, root)
-        if k.endswith(".parquet")
-    }
-    return sorted(runs)
+    newest: dict[str, Any] = {}
+    token: str | None = None
+    while True:
+        kwargs: dict[str, Any] = {"Bucket": b, "Prefix": root}
+        if token:
+            kwargs["ContinuationToken"] = token
+        page = client.list_objects_v2(**kwargs)
+        for o in page.get("Contents", []) or []:
+            key = str(o["Key"])
+            if key.endswith(".parquet"):
+                run = key[len(root) :].split("/", 1)[0]
+                newest[run] = max(newest.get(run, o["LastModified"]), o["LastModified"])
+        if not page.get("IsTruncated"):
+            break
+        token = page.get("NextContinuationToken")
+    return sorted(newest, key=lambda r: (newest[r], r))
 
 
 # ---------------------------------------------------------------- the mart
@@ -139,6 +151,7 @@ class Mart:
     dataset_md5: str | None
     feature_schema_version: str = FEATURE_SCHEMA_VERSION
     notes: tuple[str, ...] = field(default_factory=tuple)
+    files: tuple[dict[str, Any], ...] = field(default_factory=tuple)  # key, sha256, rows
 
     @property
     def is_synthetic(self) -> bool:
@@ -237,19 +250,40 @@ def load_mart(run_id: str, client: Any | None = None, settings: S3Settings | Non
     keys = [k for k in _list_keys(c, s.bucket_data, mart_prefix(run_id)) if k.endswith(".parquet")]
     if not keys:
         raise FileNotFoundError(f"no Parquet under s3://{s.bucket_data}/{mart_prefix(run_id)}")
-    tables = [
-        pq.read_table(io.BytesIO(c.get_object(Bucket=s.bucket_data, Key=k)["Body"].read()))
-        for k in keys
-    ]
-    table = pa.concat_tables(tables, promote_options="default")
-    frame = pl.from_arrow(table)
+    manifest_key = mart_prefix(run_id) + "_manifest.json"
+    manifest: dict[str, Any] | None = None
+    if manifest_key in _list_keys(c, s.bucket_data, manifest_key):
+        manifest = json.loads(c.get_object(Bucket=s.bucket_data, Key=manifest_key)["Body"].read())
+    expected = _manifest_files(manifest)
+    tables, files = [], []
+    for k in keys:
+        body = c.get_object(Bucket=s.bucket_data, Key=k)["Body"].read()
+        sha = hashlib.sha256(body).hexdigest()
+        table = pq.read_table(io.BytesIO(body))
+        name = k.rsplit("/", 1)[-1]
+        if expected is not None:
+            want = expected.get(name)
+            if want is None or want["sha256"] != sha or int(want["rows"]) != table.num_rows:
+                raise MartSchemaError(f"{k} does not match _manifest.json (sha256/rows)")
+        tables.append(table)
+        files.append({"key": k, "sha256": sha, "rows": table.num_rows})
+    if manifest is not None:
+        if manifest.get("feature_schema_version") != FEATURE_SCHEMA_VERSION:
+            raise MartSchemaError(f"manifest schema {manifest.get('feature_schema_version')}")
+        if manifest.get("dataset_version") not in (None, DATASET_MD5):
+            raise MartSchemaError(f"manifest dataset_version {manifest.get('dataset_version')}")
+    frame = pl.from_arrow(pa.concat_tables(tables, promote_options="default"))
     assert isinstance(frame, pl.DataFrame)
-    return prepare_mart(
-        frame,
-        run_id=run_id,
-        source=DATA_SOURCE,
-        dataset_md5=DATASET_MD5,
-    )
+    mart = prepare_mart(frame, run_id=run_id, source=DATA_SOURCE, dataset_md5=DATASET_MD5)
+    note = "manifest verified (sha256 + rows)" if manifest is not None else "no _manifest.json"
+    return replace(mart, files=tuple(files), notes=(*mart.notes, note))
+
+
+def _manifest_files(manifest: dict[str, Any] | None) -> dict[str, dict[str, Any]] | None:
+    if manifest is None:
+        return None
+    entries = manifest.get("files") or ([manifest["file"]] if "file" in manifest else [])
+    return {str(e["path"]).rsplit("/", 1)[-1]: e for e in entries}
 
 
 # ---------------------------------------------------------------- label variants (ADR-0005)

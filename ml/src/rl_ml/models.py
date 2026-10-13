@@ -336,8 +336,11 @@ def train_candidates(
         "xgboost",
     ),
     on_trial: Callable[[str, dict[str, Any]], None] | None = None,
+    exclude: frozenset[str] = frozenset(),
 ) -> TrainingOutcome:
-    feats = tuple(FEATURE_NAMES)
+    """Fit every candidate; ``exclude`` drops features (e.g. all-null in train) from all inputs."""
+    feats = tuple(f for f in FEATURE_NAMES if f not in exclude)
+    feats_time = tuple(f for f in ALL_FEATURE_NAMES if f not in exclude)
     out: list[Candidate] = []
     if "majority_class" in families:
         out.append(_fit_simple("majority_class", MajorityClassModel(), feats, train, val, {}))
@@ -372,7 +375,7 @@ def train_candidates(
     decision: dict[str, Any] = {"rule": "keep time features only if validation PR-AUC improves"}
     time_used = False
     if "xgboost" in families:
-        for name, fs in (("xgboost", feats), ("xgboost_time", tuple(ALL_FEATURE_NAMES))):
+        for name, fs in (("xgboost", feats), ("xgboost_time", feats_time)):
             t0 = time.perf_counter()
             model, params, hist = search_xgboost(
                 train.X(fs),

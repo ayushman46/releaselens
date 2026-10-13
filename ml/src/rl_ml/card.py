@@ -225,6 +225,10 @@ def _data_section(r: dict[str, Any]) -> list[str]:
         f"- Label: {r['label_definition']}.",
         f"- Feature mart run_id `{r['data']['features_run_id']}`, FEATURE_SCHEMA_VERSION "
         f"`{r['data']['feature_schema_version']}`, dataset md5 `{r['data']['dataset_md5']}`.",
+        *[
+            f"- Mart file `{x['key'].rsplit('/', 1)[-1]}`: {f(x['rows'])} rows, sha256 `{x['sha256']}`."
+            for x in r["data"].get("mart_files", [])
+        ],
         "- Split: the mart's global chronological 70/15/15 split (cut dates below).",
         "",
         table(
@@ -240,6 +244,26 @@ def _data_section(r: dict[str, Any]) -> list[str]:
     for n in r["data"].get("notes", []):
         lines.append(f"- Note: {n}.")
     return lines
+
+
+NULL_BY_DESIGN: Final = {
+    "num_commits_in_push": "no push-level commit count in the 2016 release",
+    "description_complexity": "PR title/description tagged uncertain (text may postdate the build)",
+    "project_age_days": "from repo_age_days; gh_first_commit_created_at is a copy of tr_started_at",
+}
+
+
+def _dropped_features(r: dict[str, Any]) -> list[str]:
+    dropped = r.get("feature_coverage", {}).get("dropped_from_model_inputs", [])
+    if not dropped:
+        return ["No feature is null for every training row; all features are model inputs."]
+    rows = [[f"`{n}`", NULL_BY_DESIGN.get(n, "null for every row of this mart")] for n in dropped]
+    return [
+        "Features that are null for every training row are **dropped from all model inputs** "
+        "(NULL by design in the mart, see `data/dbt/models/ml/mart_build_inputs.sql`):",
+        "",
+        table(["feature", "why it is null"], rows),
+    ]
 
 
 def _candidates_section(r: dict[str, Any]) -> list[str]:
@@ -645,15 +669,7 @@ def render_results(res: dict[str, dict[str, Any]]) -> str:
                 f"{f(r['leakage_audit'].get('min_gap_seconds'), 0)} s). Feature list ∩ FORBIDDEN_INPUTS = ∅. "
                 "Also covered by `ml/tests/test_leakage.py`.",
                 "",
-                "Features that are missing for every training row carry no signal in this mart: "
-                + (
-                    ", ".join(
-                        f"`{n}`"
-                        for n in r.get("feature_coverage", {}).get("always_missing_in_train", [])
-                    )
-                    or "none"
-                )
-                + ".",
+                *_dropped_features(r),
             ],
         ),
         ("3. Candidates (validation)", _candidates_section(r)),
