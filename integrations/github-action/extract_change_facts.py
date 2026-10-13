@@ -1069,7 +1069,15 @@ def _codebase_facts(f: _Facts, git: Git, head: str, cls: Classifier, opts: Optio
     f.set("test_cases_per_kloc", per_kloc(counts.test_cases, counts.sloc))
     f.set("asserts_per_kloc", per_kloc(counts.asserts, counts.sloc))
     if counts.sloc == 0:
-        f.null(SLOC_FACTS[1:], f"no non-test {lang.name} lines at head (division by zero)")
+        # No training build has sloc 0 (TravisTorrent rows are Java projects with code), so 0
+        # would be an extreme out-of-domain value that dominates the score. The repository has
+        # no code in the model's language: say so and report the size facts as unknown.
+        f.set("sloc", None)
+        f.null(SLOC_FACTS, f"no non-test {lang.name} lines at head")
+        f.warnings.append(
+            f"no {lang.name} source at head: this repository is outside the risk model's "
+            f"training domain ({lang.name} projects), so its score is of limited use"
+        )
     if opts.cache_file is not None:
         try:
             save_cache(opts.cache_file, lang, {k: cache[k] for k in used})

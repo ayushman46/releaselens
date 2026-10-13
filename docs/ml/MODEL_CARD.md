@@ -44,6 +44,7 @@ Overall discrimination is **strong** (ROC-AUC 0.881). Full details: `docs/ml/RES
 
 - **CI failure ≠ outage.** The label is a Travis CI build failing or erroring. It says nothing about production incidents, deployment regressions or user impact.
 - **Travis-era transfer risk.** Training data are open-source Java projects on Travis CI, 2011–2015. Modern CI (GitHub Actions), other languages, private codebases, monorepos and today's tooling may behave differently; performance on a tenant's repositories is unknown until measured on their history.
+- **Java only.** The change-fact extractor and the training data are Java. A repository with no Java source gets its size facts reported as unknown, with a warning, because no training build has 0 lines; its score is of limited use (seen live on this repository, which is Python: `docs/demo/DEMO_SCRIPT.md`).
 - **Feature fidelity.** At serving time change facts are recomputed from git by the GitHub Action; deviations from TravisTorrent's definitions (`docs/data/FEATURE_DEFINITIONS.md`) are measured in M5, not assumed away.
 - **Label noise.** `errored` builds are often infrastructure failures that pre-build features cannot explain; see the errored-excluded sensitivity run.
 - **Persistence vs new breakage.** Overall PR-AUC is 2.91× the base rate, but after a passing build it is 2.61× (ROC-AUC 0.743, moderate) and with no history 1.72× (ROC-AUC 0.724, moderate). Much of the score reflects the project's recent build outcomes (a broken build tends to stay broken) rather than the risk of the change itself.

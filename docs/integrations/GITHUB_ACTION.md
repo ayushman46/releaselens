@@ -100,8 +100,8 @@ commit is used.
 | `files_added` / `files_deleted` / `files_modified` | Unique paths with raw status `A` / `D` / `M` across the built commits. A path can be in two sets (added in one commit, modified in a later one). Renames (`R`), copies and type changes count in none. |
 | `src_files` / `doc_files` / `other_files` | Unique touched paths (rename destinations included). Programming files (source + test), markup/prose, and everything else, from a pinned extension table derived from Linguist. |
 | `tests_added` / `tests_deleted` | Net diff from the parent of the oldest built commit (the previous build on a linear walk) to head, restricted to the language's test files. `+` / `−` lines matching `@Test` or `void test…(`. Comment lines are skipped and string literals blanked. |
-| `sloc` | Non-blank, comment-stripped lines of the language's **non-test** files tracked at head. |
-| `test_lines_per_kloc` / `test_cases_per_kloc` / `asserts_per_kloc` | Test-file code lines / test-case lines / assert lines, per 1,000 `sloc`, rounded to 4 decimals. `null` when `sloc` is 0. |
+| `sloc` | Non-blank, comment-stripped lines of the language's **non-test** files tracked at head. `null` (with a warning) when there are none: such a repository is outside the model's training domain, and 0 is a value no training build has. |
+| `test_lines_per_kloc` / `test_cases_per_kloc` / `asserts_per_kloc` | Test-file code lines / test-case lines / assert lines, per 1,000 `sloc`, rounded to 4 decimals. `null` when `sloc` is unknown. |
 | `num_all_built_commits` | Number of built commits. |
 | `commits_on_files_touched` | Distinct non-merge commits reachable from head (`--full-history`) with committer date in [start − 90 d, start] that touched any path of the build (both sides of renames), minus the built commits. |
 | `team_size` | Distinct lower-cased, mailmap-normalised author emails (`%aE`) of commits reachable from head in the same window, merges included (mergers count), minus the built commits. |

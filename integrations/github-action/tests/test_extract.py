@@ -503,14 +503,17 @@ def test_work_caps_turn_facts_null_not_partial(tmp_path: Path) -> None:
     assert "sloc" in diag["unavailable"]
 
 
-def test_sloc_zero_makes_ratios_null_not_zero(tmp_path: Path) -> None:
+def test_no_source_in_the_language_makes_size_facts_unknown_not_zero(tmp_path: Path) -> None:
+    """Seen live: the Java extractor on a Python repository reported sloc 0, which no training
+    build has, and that one value drove the score to HIGH."""
     r = Repo(tmp_path / "r")
     r.write("README.md", "hello\n")
     head = r.commit("c1", T0)
     facts, diag = run(r, head, at=T0)
-    assert facts["sloc"] == 0
+    assert facts["sloc"] is None
     assert facts["test_lines_per_kloc"] is None
-    assert "division by zero" in diag["unavailable"]["test_lines_per_kloc"]
+    assert "no non-test java lines" in diag["unavailable"]["sloc"].lower()
+    assert any("outside the risk model's training domain" in w for w in diag["warnings"])
 
 
 def test_blob_cache_is_keyed_by_blob_id_and_counter_version(tmp_path: Path) -> None:

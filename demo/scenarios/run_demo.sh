@@ -75,6 +75,9 @@ log "4/7 k6: ${RATE} req/s for ${TOTAL_MINUTES} min (baseline ${BASELINE_MINUTES
 sleep $((BASELINE_MINUTES * 60))
 
 # ---------------------------------------------------------------- 5. pre-deploy risk assessment
+# Illustrates the API only: this repository is Python and the model is trained on Java builds,
+# so the extractor reports its size facts as unknown and the score is out of domain
+# (docs/demo/DEMO_SCRIPT.md, "Measured control run").
 log "5/7 pre-deployment risk assessment (change facts extracted from this repo's HEAD by the GitHub Action extractor)"
 FACTS=$(python3 integrations/github-action/extract_change_facts.py --repo . --head HEAD --previous HEAD~1 --language java 2>/dev/null || echo '{}')
 RISK=$(curl -s -o "$OUT_DIR/$RUN_ID.risk.json" -w '%{http_code}' -X POST "$API/api/v1/risk/assessments" \
