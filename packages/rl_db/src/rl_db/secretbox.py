@@ -34,6 +34,10 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 VERSION: Final = "v1"
+# The master key the API and worker fall back to when RL_ENV is dev or test and
+# RL_SECRET_KEY is unset. Public by design: it protects only local throwaway data, and both
+# services refuse it when RL_ENV=prod.
+DEV_MASTER_KEY: Final = "releaselens-dev-only-secret-key-not-for-production"  # gitleaks:allow
 MIN_MASTER_KEY_LEN: Final = 32
 _NONCE_BYTES: Final = 12
 _ENCRYPTION_LABEL: Final = b"releaselens/secretbox/aes-256-gcm/v1"

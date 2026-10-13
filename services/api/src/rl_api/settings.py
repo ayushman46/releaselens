@@ -15,9 +15,10 @@ from typing import Annotated, Literal, Self
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-# Used only when RL_ENV is dev or test and RL_SECRET_KEY is unset. Public by design: it
-# protects nothing but local throwaway data.
-DEV_SECRET_KEY = "releaselens-dev-only-secret-key-not-for-production"  # noqa: S105 gitleaks:allow
+from rl_db.secretbox import DEV_MASTER_KEY
+
+# Used only when RL_ENV is dev or test and RL_SECRET_KEY is unset (shared with the worker).
+DEV_SECRET_KEY = DEV_MASTER_KEY
 
 IPNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
 

@@ -5,6 +5,10 @@ Runs side by side in one asyncio loop:
 * the ``deployment.events`` consumer (always);
 * the outbox relay (unless ``RL_OUTBOX_ENABLED=false``);
 * the analysis job runner, only when job handlers are registered (M8 registers them);
+* the notifier (M10, unless ``RL_NOTIFIER_ENABLED=false``): the ``analysis.results``
+  consumer and the Slack/e-mail dispatcher;
+* housekeeping (M10, unless ``RL_MAINTENANCE_ENABLED=false``): plan retention and expired
+  auth/rate-limit rows;
 * a database probe and the health server (``/healthz``, ``/readyz``).
 
 SIGTERM/SIGINT set a stop event. Each component finishes its in-flight unit of work (the
@@ -24,16 +28,22 @@ from collections.abc import Coroutine
 from datetime import timedelta
 from typing import Any
 
+import httpx
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from rl_core.obs import configure_logging
 from rl_db import create_engine, create_session_factory
+from rl_db.secretbox import SecretBox
 from rl_worker import __version__
 from rl_worker.consumers.deployments import DeploymentConsumer
 from rl_worker.health import HealthServer
 from rl_worker.jobs import JobRunner, default_registry
 from rl_worker.kafka import AsyncProducer
+from rl_worker.maintenance import Maintenance
+from rl_worker.notify.channels import SlackSender, SmtpEmailSender
+from rl_worker.notify.consumer import AnalysisResultsConsumer
+from rl_worker.notify.dispatcher import NotificationDispatcher
 from rl_worker.outbox import OutboxRelay
 from rl_worker.retry import Backoff
 from rl_worker.settings import WorkerSettings
@@ -95,11 +105,34 @@ async def run(settings: WorkerSettings, stop: asyncio.Event) -> int:
         poll_timeout_s=settings.consumer_poll_timeout_s,
     )
     probe = _DatabaseProbe(engine)
+    backoff = Backoff(
+        base_s=settings.retry_base_s,
+        cap_s=max(settings.retry_cap_s, settings.retry_base_s),
+        max_attempts=settings.retry_max_attempts,
+    )
+    notifier: AnalysisResultsConsumer | None = None
+    http_client: httpx.AsyncClient | None = None
+    if settings.notifier_enabled:
+        notifier = AnalysisResultsConsumer(
+            bootstrap_servers=settings.kafka_bootstrap,
+            sessions=sessions,
+            producer=producer,
+            client_id=f"{settings.service_name}-{settings.worker_id}-notifier",
+            group_id=settings.notifier_group_id,
+            backoff=backoff,
+            poll_timeout_s=settings.consumer_poll_timeout_s,
+        )
+        # Slack calls: bounded time, never follow a redirect to wherever it points.
+        http_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(settings.slack_timeout_s), follow_redirects=False
+        )
 
     health = HealthServer(settings.health_host, settings.health_port)
     health.register("postgres", lambda: probe.ok)
     health.register("deployments_consumer", lambda: consumer.ready)
     health.register("kafka_producer", lambda: producer.healthy)
+    if notifier is not None:
+        health.register("notifier_consumer", lambda: notifier.ready)
     await health.start()
 
     components: dict[str, Coroutine[Any, Any, None]] = {
@@ -114,6 +147,43 @@ async def run(settings: WorkerSettings, stop: asyncio.Event) -> int:
             poll_interval_s=settings.outbox_poll_interval_s,
         )
         components["outbox-relay"] = relay.run(stop)
+    if notifier is not None and http_client is not None:
+        components["notifier-consumer"] = notifier.run(stop)
+        dispatcher = NotificationDispatcher(
+            sessions,
+            worker_id=settings.worker_id,
+            slack=SlackSender(http_client),
+            email=SmtpEmailSender(
+                host=settings.smtp_host,
+                port=settings.smtp_port,
+                sender=settings.mail_from,
+                username=settings.smtp_username,
+                password=(
+                    settings.smtp_password.get_secret_value() if settings.smtp_password else None
+                ),
+                starttls=settings.smtp_starttls,
+                timeout_s=settings.smtp_timeout_s,
+            ),
+            secret_box=SecretBox(
+                settings.master_secret(),
+                [s.get_secret_value() for s in settings.secret_key_previous],
+            ),
+            web_base_url=settings.web_base_url,
+            allow_any_slack_host=settings.allow_any_slack_host,
+            batch_size=settings.notification_batch_size,
+            poll_interval_s=settings.notification_poll_interval_s,
+            lease=timedelta(seconds=settings.notification_lease_s),
+            backoff=Backoff(
+                base_s=settings.notification_retry_base_s,
+                cap_s=max(settings.notification_retry_cap_s, settings.notification_retry_base_s),
+                max_attempts=6,
+            ),
+        )
+        components["notification-dispatcher"] = dispatcher.run(stop)
+    if settings.maintenance_enabled:
+        components["maintenance"] = Maintenance(
+            sessions, interval_s=settings.maintenance_interval_s
+        ).run(stop)
     registry = default_registry()
     if len(registry):
         runner = JobRunner(
@@ -163,6 +233,8 @@ async def run(settings: WorkerSettings, stop: asyncio.Event) -> int:
                 )
     finally:
         await health.stop()
+        if http_client is not None:
+            await http_client.aclose()
         await asyncio.to_thread(producer.close, settings.kafka_delivery_timeout_s)
         await engine.dispose()
         log.info("worker stopped", extra={"exit_code": exit_code})
