@@ -1,0 +1,29 @@
+[project]
+name = "rl-ml"
+version = "0.1.0"
+description = "ReleaseLens CI-failure risk model: training, evaluation, calibration gate, explanations, MLflow registry"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "boto3>=1.35",
+    "matplotlib>=3.9",
+    "mlflow==3.16.1",
+    "optuna==5.0.0",
+    "pandas>=2.2",
+    "polars>=1.44,<2.0",
+    "psycopg[binary]>=3.2",
+    "pyarrow>=17",
+    "rl-core",
+    "scikit-learn==1.9.1",
+    "shap==0.53.0",
+    # ADR-0014. The macOS wheel needs the OpenMP runtime: `brew install libomp`.
+    "xgboost==3.4.1 ; sys_platform == 'darwin'",
+    "xgboost-cpu==3.4.1 ; sys_platform != 'darwin'",
+]
+
+[project.scripts]
+rl-ml-train = "rl_ml.train:main"
+rl-ml-promote = "rl_ml.registry:main"
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"

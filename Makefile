@@ -34,7 +34,7 @@ PIPELINE_CONF = $(shell DATASET='$(DATASET)' CONF='$(CONF)' python3 -c 'import j
 	c.update({"dataset": d} if d else {}); print(json.dumps(c) if c else "")')
 
 PY_SRC := packages/rl_core/src packages/rl_db/src services/api/src services/worker/src \
-	data/pipeline/src demo/services/src integrations/github-action
+	data/pipeline/src demo/services/src integrations/github-action ml/src
 
 .PHONY: help
 help: ## Show this help
@@ -76,11 +76,11 @@ typecheck: ## mypy (strict for rl_core / rl_db)
 
 .PHONY: test
 test: ## Unit tests (no Docker needed; the Airflow DAG tests run via pipeline-test-dag)
-	$(UV) run pytest -m "not integration" packages services data demo integrations
+	$(UV) run pytest -m "not integration" packages services data demo integrations ml
 
 .PHONY: test-integration
 test-integration: doctor ## Integration tests (testcontainers: Postgres, Kafka, S3)
-	$(TC_ENV) $(UV) run pytest -m integration packages services data demo
+	$(TC_ENV) $(UV) run pytest -m integration packages services data demo ml
 
 .PHONY: check
 check: lint typecheck test ## Lint + typecheck + unit tests
