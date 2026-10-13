@@ -3166,7 +3166,7 @@
    "challenger_test_pr_auc": 0.8112282805579645,
    "champion_version": null,
    "model_card": {
-    "path": "/Users/ayush/Downloads/releaselens/releaselens/.claude/worktrees/agent-ac96dff39debc0085/docs/ml/MODEL_CARD.md",
+    "path": "docs/ml/MODEL_CARD.md",
     "names_version": true
    },
    "promoted": true,

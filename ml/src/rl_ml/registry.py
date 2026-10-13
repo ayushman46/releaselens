@@ -371,7 +371,11 @@ def promote(
     card = card_path or repo_root() / "docs" / "ml" / "MODEL_CARD.md"
     marker = f"{MODEL_NAME}/{v}"
     card_ok = card.is_file() and marker in card.read_text()
-    decision["model_card"] = {"path": str(card), "names_version": card_ok}
+    try:  # repo-relative, so recorded decisions do not embed a local checkout path
+        shown = str(card.resolve().relative_to(repo_root()))
+    except ValueError:
+        shown = card.name
+    decision["model_card"] = {"path": shown, "names_version": card_ok}
     if not card_ok:
         reasons.append(f"{card} missing or does not name {marker} (run python -m rl_ml.card)")
 
