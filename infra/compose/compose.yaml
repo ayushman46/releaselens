@@ -318,6 +318,144 @@ services:
       start_period: 60s
     mem_limit: ${AIRFLOW_TRIGGERER_MEM_LIMIT:-512m}
 
+  # ------------------------------------------------------------------ mail (M10: verification / reset / alerts)
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    profiles: [core, data, demo]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${RL_MAILPIT_UI_HOST_PORT:-28025}:8025"
+      - "127.0.0.1:${RL_MAILPIT_SMTP_HOST_PORT:-21025}:1025"
+    mem_limit: 64m
+
+  # ------------------------------------------------------------------ mlflow (M4, data profile)
+  # Tracking server + model registry: Postgres backend (database "mlflow"), artifacts in the local
+  # S3 bucket. Runs from the shared image (mlflow ships with the rl-ml workspace member).
+  mlflow:
+    <<: *python-service
+    profiles: [data]
+    command:
+      - mlflow
+      - server
+      - --backend-store-uri
+      - postgresql+psycopg://${POSTGRES_USER:-rlens}:${POSTGRES_PASSWORD:-rlens-dev-password}@postgres:5432/mlflow
+      - --artifacts-destination
+      - s3://${RL_S3_BUCKET_MLFLOW:-releaselens-mlflow}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --allowed-hosts
+      - mlflow:5000,localhost:25000,127.0.0.1:25000
+    environment:
+      <<: [*python-env, *s3-env]
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${RL_S3_ACCESS_KEY:-rlens}
+      AWS_SECRET_ACCESS_KEY: ${RL_S3_SECRET_KEY:-rlens-dev-secret}
+      AWS_DEFAULT_REGION: ${RL_S3_REGION:-us-east-1}
+    ports: ["127.0.0.1:${RL_MLFLOW_HOST_PORT:-25000}:5000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    mem_limit: 512m
+
+  # ------------------------------------------------------------------ demo (M7, spec §11.1)
+  #   k6 ─► gateway ─► orders ─┬─► inventory
+  #                            └─► payment ─► fraud
+  # Each service is a real FastAPI process emitting real OTel spans to the collector, which
+  # exports OTLP/HTTP to ReleaseLens' /v1/traces with a tenant API key (RL_DEMO_INGEST_KEY).
+  # "Deploying" payment:v2 = recreating the payment container with the RL_DEMO_PAYMENT_* knobs
+  # (demo/scenarios/run_demo.sh does this).
+  otel-collector:
+    # Reuses the image already cached on the dev machine (disk budget, ADR-0014 note); the config
+    # binds receivers to 0.0.0.0 explicitly, which newer releases also require.
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    profiles: [demo]
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    environment:
+      RL_INGEST_ENDPOINT: http://api:8000
+      RL_INGEST_KEY: ${RL_DEMO_INGEST_KEY:-unset-run-demo-script-first}
+    volumes:
+      - ../otel/collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:${RL_OTEL_GRPC_HOST_PORT:-24317}:4317"
+      - "127.0.0.1:${RL_OTEL_HTTP_HOST_PORT:-24318}:4318"
+    depends_on:
+      api: { condition: service_healthy }
+    mem_limit: 192m
+
+  gateway: &demo-service
+    <<: *python-service
+    profiles: [demo]
+    command: ["python", "-m", "rl_demo"]
+    environment: &demo-env
+      RL_DEMO_SERVICE: gateway
+      RL_DEMO_VERSION: v1
+      RL_DEMO_ENVIRONMENT: demo
+      RL_DEMO_SEED: "1"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_BSP_SCHEDULE_DELAY: "1000"
+    ports: ["127.0.0.1:${RL_DEMO_GATEWAY_HOST_PORT:-28100}:8000"]
+    depends_on:
+      otel-collector: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    mem_limit: 160m
+
+  orders:
+    <<: *demo-service
+    environment:
+      <<: *demo-env
+      RL_DEMO_SERVICE: orders
+      RL_DEMO_SEED: "2"
+    ports: []
+
+  inventory:
+    <<: *demo-service
+    environment:
+      <<: *demo-env
+      RL_DEMO_SERVICE: inventory
+      RL_DEMO_SEED: "3"
+    ports: []
+
+  payment:
+    <<: *demo-service
+    environment:
+      <<: *demo-env
+      RL_DEMO_SERVICE: payment
+      RL_DEMO_SEED: "4"
+      RL_DEMO_VERSION: ${RL_DEMO_PAYMENT_VERSION:-v1}
+      RL_DEMO_EXTRA_LATENCY_MS: ${RL_DEMO_PAYMENT_EXTRA_LATENCY_MS:-0}
+      RL_DEMO_ERROR_RATE: ${RL_DEMO_PAYMENT_ERROR_RATE:-0}
+    ports: []
+
+  fraud:
+    <<: *demo-service
+    environment:
+      <<: *demo-env
+      RL_DEMO_SERVICE: fraud
+      RL_DEMO_SEED: "5"
+      RL_DEMO_VERSION: ${RL_DEMO_FRAUD_VERSION:-v1}
+      RL_DEMO_EXTRA_LATENCY_MS: ${RL_DEMO_FRAUD_EXTRA_LATENCY_MS:-0}
+      RL_DEMO_ERROR_RATE: ${RL_DEMO_FRAUD_ERROR_RATE:-0}
+    ports: []
+
+  k6:
+    image: grafana/k6:2.3.0
+    profiles: [demo]
+    restart: "no"
+    volumes:
+      - ../../demo/k6:/scripts:ro
+    environment:
+      TARGET: http://gateway:8000
+    mem_limit: 256m
+
 volumes:
   pg-data:
   minio-data:
