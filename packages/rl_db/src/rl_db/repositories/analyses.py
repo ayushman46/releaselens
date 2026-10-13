@@ -41,9 +41,10 @@ _SPAN_FILTER: Final = (
     "tenant_id = $1 AND (environment = $2 OR environment IS NULL) "
     "AND start_time >= $3 AND start_time <= $4"
 )
-_COUNT_SPANS: Final = f"SELECT count(*) FROM spans WHERE {_SPAN_FILTER}"  # noqa: S608
+# Only module constants are interpolated below; every value is a bound parameter ($1..$5).
+_COUNT_SPANS: Final = f"SELECT count(*) FROM spans WHERE {_SPAN_FILTER}"  # noqa: S608  # nosec B608
 _LOAD_SPANS: Final = (
-    "SELECT trace_id, span_id, parent_span_id, service, service_version, environment, name, "  # noqa: S608
+    "SELECT trace_id, span_id, parent_span_id, service, service_version, environment, name, "  # noqa: S608  # nosec B608
     "kind, start_ns, end_ns, status_code, http_route, http_status "
     f"FROM spans WHERE {_SPAN_FILTER} {{sample}} ORDER BY start_ns, trace_id, span_id"
 )
@@ -102,8 +103,12 @@ async def load_analysis_spans(
     args = (ctx.tenant_id, environment, start, upper)
     matched = int(await driver.fetchval(_COUNT_SPANS, *args))
     threshold = sample_threshold(matched, max_spans)
-    sample = "" if threshold is None else f"AND {_HASH32} < {int(threshold)}"
-    rows = await driver.fetch(_LOAD_SPANS.format(sample=sample), *args)
+    if threshold is None:
+        rows = await driver.fetch(_LOAD_SPANS.format(sample=""), *args)
+    else:
+        rows = await driver.fetch(
+            _LOAD_SPANS.format(sample=f"AND {_HASH32} < $5"), *args, int(threshold)
+        )
     tenant = str(ctx.tenant_id)
     spans = [
         Span(
