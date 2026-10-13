@@ -13,14 +13,14 @@
 | M2 | Historical ingestion | ✅ done | primary 5_3_2016 + secondary final-2017; deterministic Parquet; idempotent S3 load; Airflow 3.3.2 DAG |
 | M3 | dbt + analytics | ✅ done | 94 dbt tests incl. SQL oracle for history windows; FINDINGS.md (44 numbers independently re-derived) |
 | M4 | ML | ✅ done | champion release_risk_ci/3 (XGBoost): test PR-AUC 0.811 / ROC 0.881 vs base 0.279; calibration gate passed; MODEL_CARD/RESULTS generated |
-| M5 | Live risk | ⏳ GitHub Action ✅ (57 tests); risk endpoint + GitHub App next | — |
+| M5 | Live risk | ✅ done | GitHub Action (57 tests), `POST /api/v1/risk/assessments` with SHAP, cold-start model (test PR-AUC 0.537, no probability), GitHub App Check Runs (fixture mode, B1) |
 | M6 | Deployment events | ✅ done | 379 unit + 87 integration at merge; 12 review defects fixed |
-| M7 | Telemetry + demo | ✅ ingest/consumer/rollups/compose demo profile; ⏳ live demo run | e2e test: payment = probable origin (HIGH) through the full pipeline |
+| M7 | Telemetry + demo | ✅ done | live payment run: REGRESSED HIGH, probable origin payment (HIGH); docs/demo/DEMO_SCRIPT.md |
 | M8 | Regression engine | ✅ done | control false alarms 2/200; job handlers wired |
 | M9 | Graph + triage | ✅ done | payment HIGH 30/30, fraud HIGH 30/30 seeds |
 | M10 | SaaS layer | ✅ done | 374 tests incl. 231-case cross-tenant/RBAC matrix; ADR-0019..0021; RLS deferred to M12 (Q13) |
-| M11 | Frontend | ⏳ M11a shell/marketing ✅; wiring to real APIs next | 272 vitest tests |
-| M12 | Hardening & launch | ⬜ | — |
+| M11 | Frontend | ✅ done | every page on real APIs; 353 vitest tests; Playwright suite written but not yet run (no browsers installed: disk; docs/web/E2E.md) |
+| M12 | Hardening & launch | ⏳ in progress | RLS (ADR-0023) ✅; model-loader hardening ✅; k6 benchmarks, control/fraud live runs, DONE.md next |
 
 Legend: ⬜ not started · ⏳ in progress · ✅ done (acceptance demonstrated by commands in `PROGRESS.md`) · ⛔ blocked (see `BLOCKERS.md`)
 
