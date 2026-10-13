@@ -1,7 +1,10 @@
-"""``python -m rl_pipeline <task> [--params-json '{...}' | --params-file in.json]``
+"""``python -m rl_pipeline <task> [--dataset KEY] [--params-json '{...}' | --params-file in.json]``
 
-Logs go to stderr (JSON lines by default, ``RL_LOG_FORMAT=console`` for humans); the task's
-result dict is printed as one JSON object on the **last stdout line**. Exit code 1 on failure.
+``--dataset`` selects a registered dataset spec (``list_datasets`` shows them; default: the
+primary ``travistorrent-5-3-2016``); it is the same as ``"dataset"`` in the params and must not
+contradict it. Logs go to stderr (JSON lines by default, ``RL_LOG_FORMAT=console`` for humans);
+the task's result dict is printed as one JSON object on the **last stdout line**. Exit code 1 on
+failure.
 """
 
 from __future__ import annotations
@@ -49,10 +52,17 @@ def main(argv: list[str] | None = None) -> int:
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--params-json", default="{}", help="JSON object passed to the task")
     group.add_argument("--params-file", help="file containing the JSON object")
+    parser.add_argument("--dataset", help="dataset key (default: the primary dataset)")
     args = parser.parse_args(argv)
 
     configure_cli_logging()
     params = _parse_params(args)
+    if args.dataset:
+        if params.get("dataset", args.dataset) != args.dataset:
+            raise SystemExit(
+                f"--dataset {args.dataset!r} contradicts params dataset {params['dataset']!r}"
+            )
+        params["dataset"] = args.dataset
     try:
         result = TASKS[args.task](params)
     except Exception:

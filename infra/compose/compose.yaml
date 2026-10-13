@@ -3,7 +3,8 @@
 #
 #   make up-core      → postgres, kafka (+topics), migrate, api, worker, web
 #   make up-data      → postgres, minio (+buckets)                      (M2; mlflow lands in M4)
-#   make pipeline     → one-shot `airflow dags test historical_pipeline` (profile data, ADR-0013)
+#   make pipeline     → one-shot `airflow dags test historical_pipeline` (profile data, ADR-0013;
+#                       DATASET=<key> picks the release, default the primary 5_3_2016, ADR-0017)
 #   make up-airflow   → full Airflow 3 deployment (profile airflow-full; needs ≥ 8 GiB for Docker)
 #   make up-demo      → + otel-collector, demo services                 (added in M7)
 #
@@ -48,7 +49,8 @@ x-airflow: &airflow
     RL_ENV: ${RL_ENV:-dev}
     RL_LOG_LEVEL: ${RL_LOG_LEVEL:-INFO}
     RL_LOG_FORMAT: ${RL_LOG_FORMAT:-json}
-    RL_DATASET_DIR: /datasets/travistorrent
+    # Parent of every dataset's download dir; rl_pipeline resolves <dir>/<dataset subdir>.
+    RL_DATASETS_DIR: /datasets
     RL_LAKE_DIR: /lake
     # DuckDB runs inside the task's container: keep it well under that container's mem_limit
     # (it spills sorts to RL_LAKE_DIR when it hits the limit).
@@ -66,8 +68,10 @@ x-airflow: &airflow
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "True"
     AIRFLOW__LOGGING__LOGGING_LEVEL: ${RL_LOG_LEVEL:-INFO}
   volumes:
-    - ${RL_DATASET_HOST_DIR:-../../data/lake/downloads/travistorrent-figshare-19314170}:/datasets/travistorrent:ro
+    # Host downloads dir (one sub-directory per registered dataset), read-only.
+    - ${RL_DATASETS_HOST_DIR:-../../data/lake/downloads}:/datasets:ro
     - ../../data/airflow/dags:/opt/airflow/dags:ro  # dev loop: DAG edits need no rebuild
+    - ../../data/dbt:/opt/airflow/dbt:ro  # dbt project (RL_DBT_PROJECT_DIR); work dir is /lake/dbt
     - lake:/lake
     - airflow-logs:/opt/airflow/logs
   depends_on:

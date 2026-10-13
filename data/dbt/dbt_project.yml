@@ -1,0 +1,84 @@
+# ReleaseLens analytics + ML-input models (M3a, ADR-0006 / ADR-0017).
+#
+#   staging       -> tables in the local DuckDB file (<RL_LAKE_DIR>/dbt/releaselens.duckdb)
+#   intermediate  -> tables in the local DuckDB file
+#   marts, ml     -> Parquet on S3 ("external"), one file per model and run:
+#                      <output_root>/marts/<model>/run_id=<run_id>/part-00000.parquet
+#                      <output_root>/features/release_features/schema=<v>/run_id=<run_id>/part-00000.parquet
+#
+# Always run through rl_pipeline (`python -m rl_pipeline dbt_build_all`, the DAG tasks): it sets
+# the RL_* environment, the vars below, writable target/log paths and the DuckDB spill cap.
+name: releaselens
+version: "0.1.0"
+config-version: 2
+require-dbt-version: [">=1.12.0", "<1.13.0"]
+
+profile: releaselens
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+# target/, logs/ and dbt_packages/ are redirected under <RL_LAKE_DIR>/dbt by rl_pipeline.dbt
+# (DBT_TARGET_PATH, DBT_LOG_PATH, DBT_PACKAGES_INSTALL_PATH); these defaults only apply to a
+# bare `dbt` call from this directory (git-ignored).
+clean-targets: ["target", "logs", "dbt_packages"]
+packages-install-path: "{{ env_var('RL_DBT_PACKAGES_DIR', 'dbt_packages') }}"
+
+flags:
+  send_anonymous_usage_stats: false
+  use_colors: false
+  partial_parse: true
+
+vars:
+  # md5 of the primary source file = the raw dataset version (ADR-0004/0017). rl_pipeline passes
+  # the version it located/converted; this default is the registered primary md5.
+  dataset_version: "4713d8b73b667a2c375b89c20f531fc0"
+  # Identifies one build of the marts/features (path segment run_id=<run_id>). Path-safe.
+  run_id: "manual"
+  # Raw Parquet root (rl_pipeline.s3.RAW_PREFIX) and output root (bucket). The fixture target
+  # passes local directories instead.
+  raw_root: "s3://{{ env_var('RL_S3_BUCKET_DATA', 'releaselens-data') }}/raw/travistorrent"
+  output_root: "s3://{{ env_var('RL_S3_BUCKET_DATA', 'releaselens-data') }}"
+  # rl_core.features.FEATURE_SCHEMA_VERSION; passed by rl_pipeline, and mart_build_features fails
+  # if it differs from the installed rl_core (the output path must name the real version).
+  feature_schema_version: "1.0.0"
+  # Chronological split (ADR-0005 label; M4 trains on it): oldest 70% / next 15% / newest 15% of
+  # the labelled builds by started_at.
+  split_train_fraction: 0.70
+  split_validation_fraction: 0.15
+  # Sanity bounds for the overall label rate (label_rate_between test).
+  label_rate_min: 0.05
+  label_rate_max: 0.60
+
+models:
+  releaselens:
+    staging:
+      +materialized: table
+    intermediate:
+      +materialized: table
+    marts:
+      +materialized: external
+      +meta:
+        rl_output: marts
+      +options:
+        compression: zstd
+        row_group_size: 122880
+      # the run_id=/schema= path segments are not columns of the models
+      +parquet_read_options:
+        union_by_name: false
+        hive_partitioning: false
+    ml:
+      +materialized: external
+      +meta:
+        rl_output: marts
+      +options:
+        compression: zstd
+        row_group_size: 122880
+      # the run_id=/schema= path segments are not columns of the models
+      +parquet_read_options:
+        union_by_name: false
+        hive_partitioning: false
+
+data_tests:
+  releaselens:
+    +severity: error

@@ -1,8 +1,9 @@
 """Change / test / codebase / process / time features — vectorised, NaN for "unknown".
 
 Inputs use the canonical *build input* names (``BUILD_INPUT_FIELDS``). The offline pipeline maps
-TravisTorrent's 2017 column names onto them in dbt (``ml/mart_build_inputs``); the online path
-maps the GitHub Action payload onto them. Booleans are encoded 1.0/0.0.
+TravisTorrent's 2016-release column names onto them in dbt (``ml/mart_build_inputs``, ADR-0017);
+the online path maps the GitHub Action payload onto them (docs/data/FEATURE_DEFINITIONS.md).
+Booleans are encoded 1.0/0.0.
 """
 
 from __future__ import annotations

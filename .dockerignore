@@ -21,3 +21,9 @@ mlartifacts
 **/*.duckdb
 .env
 **/.env
+.claude
+
+# dbt work dirs of a bare `dbt` call (rl_pipeline puts them under RL_LAKE_DIR/dbt)
+data/dbt/target
+data/dbt/logs
+data/dbt/dbt_packages

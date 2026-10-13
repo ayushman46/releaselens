@@ -72,3 +72,6 @@ data/airflow/standalone_admin_password.txt
 
 # --- Load testing / benchmarks raw output ---
 demo/k6/out/
+
+# --- Claude Code agent worktrees / local settings ---
+.claude/

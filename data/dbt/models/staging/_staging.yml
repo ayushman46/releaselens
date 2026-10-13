@@ -1,0 +1,145 @@
+version: 2
+
+models:
+  - name: stg_travis_job_rows
+    description: >
+      Every raw Java job row (view over the source; no deduplication) plus is_listed_in_build and
+      the preference ranks used to pick canonical rows. The build-level consistency tests live
+      here because they compare a build's job rows with each other.
+    columns:
+      - name: raw_row
+        data_tests: [not_null, unique]
+      - name: tr_build_id
+        data_tests: [not_null]
+      - name: tr_job_id
+        data_tests: [not_null]
+    data_tests:
+      # (d) Build-level fields are constant within a build, over ALL its job rows (NULL mixed with
+      # a value counts as a disagreement). These are exactly the raw columns stg_travis_builds
+      # takes from the canonical row, so every job row of a build would give the same build row.
+      - consistent_within_build:
+          arguments:
+            group_by: tr_build_id
+            columns:
+              - gh_project_name
+              - gh_lang
+              - git_commit
+              - git_branch
+              - gh_is_pr
+              - gh_pull_req_num
+              - tr_jobs
+              - tr_status
+              - tr_duration
+              - tr_started_at
+              - tr_ci_latency
+              - gh_src_churn
+              - gh_test_churn
+              - gh_files_added
+              - gh_files_deleted
+              - gh_files_modified
+              - gh_tests_added
+              - gh_tests_deleted
+              - gh_src_files
+              - gh_doc_files
+              - gh_other_files
+              - gh_commits_on_files_touched
+              - gh_sloc
+              - gh_test_lines_per_kloc
+              - gh_test_cases_per_kloc
+              - gh_asserts_cases_per_kloc
+              - git_num_commits
+              - gh_team_size
+              - gh_by_core_team_member
+              - gh_description_complexity
+          name: build_level_columns_consistent_over_all_job_rows
+      # tr_build_number follows the JOB (a foreign row carries its own build's number) and two
+      # shifted Java rows have cast-failure NULLs in tr_num_jobs / git_num_committers: these three
+      # must agree over the build's LISTED rows, ignoring those NULLs.
+      - consistent_within_build:
+          arguments:
+            group_by: tr_build_id
+            row_filter: is_listed_in_build
+            null_aware: false
+            columns: [tr_build_number, tr_num_jobs, git_num_committers]
+          name: build_number_jobs_committers_consistent_over_listed_job_rows
+
+  - name: stg_travis_jobs
+    description: >
+      One row per Travis job (tr_job_id): the row listed in its own build's tr_jobs, else the
+      lowest dump row. Job-level columns only; placeholders and negative counts are NULL.
+    columns:
+      - name: job_id
+        data_tests: [not_null, unique]
+      - name: build_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_travis_builds')
+                field: build_id
+      - name: travis_prev_build_id
+        description: tr_prev_build with the -1 placeholder as NULL. Job-level; not a reliable link.
+      - name: tests_ok
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "tests_ok is null or tests_ok >= 0"
+
+  - name: stg_travis_builds
+    description: >
+      One row per Travis build of the Java subset, typed and normalised: status, label
+      (1 failed|errored / 0 passed / NULL canceled|started), started_at (timestamptz UTC),
+      duration_s, finished_at_upper, is_pr, project; -1 / negative ci latency -> NULL.
+    data_tests:
+      - no_duplicate_builds:
+          arguments:
+            column_name: build_id
+            compare_to: source('travistorrent', 'java_jobs')
+            compare_column: tr_build_id
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (duration_s is null and finished_at_upper is null)
+              or finished_at_upper = started_at + to_seconds(duration_s)
+          name: stg_travis_builds_finished_at_upper_is_start_plus_duration
+      - expression_is_true:
+          arguments:
+            expression: >-
+              (status in ('failed', 'errored') and label = 1)
+              or (status = 'passed' and label = 0)
+              or (status in ('canceled', 'started') and label is null)
+          name: stg_travis_builds_label_follows_status
+    columns:
+      - name: build_id
+        data_tests: [not_null, unique]
+      - name: project
+        data_tests: [not_null]
+      - name: language
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["java"]
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["passed", "failed", "errored", "canceled", "started"]
+      - name: label
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+                quote: false
+      - name: started_at
+        data_tests: [not_null]
+      - name: duration_s
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "duration_s is null or duration_s >= 0"
+      - name: ci_latency_quality
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["ok", "placeholder", "negative"]

@@ -1,0 +1,67 @@
+version: 2
+
+models:
+  - name: int_build_history
+    description: >
+      NAIVE previous build per project by started_at, for analytics only. Not leakage-safe:
+      the leakage-safe history is rl_core.features.history (ml/mart_build_features).
+    columns:
+      - name: build_id
+        data_tests: [not_null, unique]
+      - name: naive_build_seq
+        data_tests: [not_null]
+    data_tests:
+      - no_duplicate_builds:
+          arguments:
+            column_name: build_id
+            compare_to: ref('stg_travis_builds')
+
+  - name: int_change_profile
+    description: Total churn (src + test) and test-share buckets per build.
+    columns:
+      - name: build_id
+        data_tests: [not_null, unique]
+      - name: churn_bucket
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["0–100", "101–500", "501–1,000", "1,001–5,000", ">5,000", "unknown"]
+      - name: test_ratio_bucket
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - "no line churn"
+                  - "0% (source only)"
+                  - "1–25%"
+                  - "26–50%"
+                  - "51–75%"
+                  - "76–99%"
+                  - "100% (tests only)"
+                  - "unknown"
+    data_tests:
+      - no_duplicate_builds:
+          arguments:
+            column_name: build_id
+            compare_to: ref('stg_travis_builds')
+
+  - name: int_build_timing
+    description: Start hour / weekday (UTC) and duration per build.
+    columns:
+      - name: build_id
+        data_tests: [not_null, unique]
+      - name: hour_utc
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "hour_utc between 0 and 23"
+      - name: weekday_iso
+        data_tests:
+          - expression_is_true:
+              arguments:
+                expression: "weekday_iso between 1 and 7"
+    data_tests:
+      - no_duplicate_builds:
+          arguments:
+            column_name: build_id
+            compare_to: ref('stg_travis_builds')
