@@ -24,6 +24,11 @@ Casts are strict (:data:`rl_pipeline.schema.STRICT_PATTERNS` plus the spec's per
 overrides): a malformed value is NULL and a cast failure, never silently rounded or reinterpreted.
 The CSV is never decompressed to disk; DuckDB reads the gzip stream directly.
 
+SQL safety: every value (paths, null tokens, cast patterns, the timestamp format, the partition
+value, COPY options) is a bound parameter (:class:`rl_pipeline.schema.SqlParams`); column names
+come from the dataset spec and pass :func:`rl_pipeline.schema.sql_ident` (allowlisted against the
+spec's columns) before they reach a statement.
+
 Disk: the per-language ``ORDER BY`` spills to ``<out_root>/.duckdb_tmp-<pid>``. Measured in review
 on the full file (memory_limit 1GB, 4 threads, 2026-10-13): **peak spill 1,267,624 KiB
 (~1.2 GiB)**, peak ``out_root`` usage 1,380,616 KiB including the staged Parquet. The spill is
@@ -32,8 +37,6 @@ output estimate - reserve)``, so a conversion fails cleanly with :class:`Insuffi
 instead of eating the host's last free space. Work directories of crashed runs (dead pid) are
 swept on the next call; a failed run removes its own.
 """
-
-# ruff: noqa: S608 - SQL is assembled from schema constants; every value goes through sql_literal()
 
 from __future__ import annotations
 
@@ -56,9 +59,11 @@ from rl_pipeline.hashing import sha256_file
 from rl_pipeline.schema import (
     NULL_TOKENS,
     STRICT_PATTERNS,
+    SUPPORTED_TYPES,
     TIMESTAMP_FORMAT,
+    SqlParams,
     read_header,
-    sql_literal,
+    sql_ident,
     validate_header,
 )
 
@@ -109,15 +114,15 @@ def connect(
     limits: DuckDBLimits, temp_dir: Path | None = None, *, max_temp_bytes: int | None = None
 ) -> duckdb.DuckDBPyConnection:
     con = duckdb.connect(":memory:")
-    con.execute(f"SET memory_limit = {sql_literal(limits.memory_limit)}")
-    con.execute(f"SET threads = {int(limits.threads)}")
+    con.execute("SET memory_limit = $v", {"v": limits.memory_limit})
+    con.execute("SET threads = $v", {"v": int(limits.threads)})
     con.execute("SET preserve_insertion_order = true")
     con.execute("SET enable_progress_bar = false")
     if temp_dir is not None:
         temp_dir.mkdir(parents=True, exist_ok=True)
-        con.execute(f"SET temp_directory = {sql_literal(str(temp_dir))}")
+        con.execute("SET temp_directory = $v", {"v": str(temp_dir)})
     if max_temp_bytes is not None:
-        con.execute(f"SET max_temp_directory_size = {sql_literal(f'{int(max_temp_bytes)}B')}")
+        con.execute("SET max_temp_directory_size = $v", {"v": f"{int(max_temp_bytes)}B"})
     return con
 
 
@@ -173,21 +178,26 @@ def sweep_stale_work_dirs(root: Path) -> list[str]:
     return removed
 
 
-def _ident(name: str) -> str:
-    return '"' + name.replace('"', '""') + '"'
+def _ident(name: str, spec: DatasetSpec | None = None) -> str:
+    """A validated identifier: a plain name and, with ``spec``, one of the spec's columns."""
+    return sql_ident(name, spec.names if spec is not None else None)
 
 
-def _raw_source(csv_path: Path, spec: DatasetSpec) -> str:
-    """read_csv with no type sniffing: every column VARCHAR, names from the expected schema."""
-    cols = ", ".join(f"{sql_literal(n)}: 'VARCHAR'" for n in spec.names)
+def _raw_source(csv_path: Path, spec: DatasetSpec, params: SqlParams) -> str:
+    """read_csv with no type sniffing: every column VARCHAR, names from the expected schema.
+
+    The path and the ``columns`` struct (name -> 'VARCHAR', in file order) are bound parameters.
+    """
+    path = params(str(csv_path))
+    columns = params(dict.fromkeys(spec.names, "VARCHAR"))
     return (
-        f"read_csv({sql_literal(str(csv_path))}, header=true, auto_detect=false, "
-        f"delim=',', quote='\"', escape='\"', compression='gzip', columns={{{cols}}})"
+        f"read_csv({path}, header=true, auto_detect=false, "
+        f"delim=',', quote='\"', escape='\"', compression='gzip', columns={columns})"
     )
 
 
-def _non_missing(name: str, null_tokens: tuple[str, ...] = NULL_TOKENS) -> str:
-    tokens = ", ".join(sql_literal(t) for t in null_tokens)
+def _non_missing(name: str, params: SqlParams, null_tokens: tuple[str, ...] = NULL_TOKENS) -> str:
+    tokens = ", ".join(params(t) for t in null_tokens)
     raw = _ident(name)
     return f"CASE WHEN {raw} IN ({tokens}) THEN NULL ELSE {raw} END"
 
@@ -196,6 +206,7 @@ def typed_expr(
     name: str,
     duck_type: str,
     *,
+    params: SqlParams,
     pattern: str | None = None,
     null_tokens: tuple[str, ...] = NULL_TOKENS,
     timestamp_format: str = TIMESTAMP_FORMAT,
@@ -204,32 +215,36 @@ def typed_expr(
 
     Strict: a value must fully match ``pattern`` (default: :data:`STRICT_PATTERNS` for its type)
     before it is cast. Overrides only ever *widen the accepted spelling* of an exact value (e.g.
-    ``"12.0"`` for an integer), never the value itself.
+    ``"12.0"`` for an integer), never the value itself. The null tokens, the pattern and the
+    timestamp format are bound through ``params`` (the statement's :class:`SqlParams`).
     """
-    nn = _non_missing(name, null_tokens)
+    if duck_type not in SUPPORTED_TYPES:
+        raise ValueError(f"unsupported column type {duck_type!r}")
+    nn = _non_missing(name, params, null_tokens)
     if duck_type == "VARCHAR":
         return nn
     if duck_type == "BOOLEAN":
         return f"CASE upper({nn}) WHEN 'TRUE' THEN TRUE WHEN 'FALSE' THEN FALSE END"
-    guard = f"regexp_full_match({nn}, {sql_literal(pattern or STRICT_PATTERNS[duck_type])})"
+    guard = f"regexp_full_match({nn}, {params(pattern or STRICT_PATTERNS[duck_type])})"
     if duck_type == "TIMESTAMP":
-        return f"CASE WHEN {guard} THEN TRY_STRPTIME({nn}, {sql_literal(timestamp_format)}) END"
+        return f"CASE WHEN {guard} THEN TRY_STRPTIME({nn}, {params(timestamp_format)}) END"
     return f"CASE WHEN {guard} THEN TRY_CAST({nn} AS {duck_type}) END"
 
 
-def spec_typed_expr(spec: DatasetSpec, name: str) -> str:
+def spec_typed_expr(spec: DatasetSpec, name: str, params: SqlParams) -> str:
     duck_type = spec.types[name]
     return typed_expr(
         name,
         duck_type,
+        params=params,
         pattern=spec.pattern_for(name, duck_type),
         null_tokens=spec.null_tokens,
         timestamp_format=spec.timestamp_format,
     )
 
 
-def _typed_select(spec: DatasetSpec) -> str:
-    return ", ".join(f"{spec_typed_expr(spec, n)} AS {_ident(n)}" for n in spec.names)
+def _typed_select(spec: DatasetSpec, params: SqlParams) -> str:
+    return ", ".join(f"{spec_typed_expr(spec, n, params)} AS {_ident(n, spec)}" for n in spec.names)
 
 
 # ---------------------------------------------------------------- profiling + gate
@@ -237,34 +252,42 @@ def profile_raw(
     con: duckdb.DuckDBPyConnection, csv_path: Path, spec: DatasetSpec
 ) -> dict[str, Any]:
     """One streaming pass: rows per language, per-column non-missing and cast-failure counts."""
+    # Column names come from the spec (DatasetSpec checks its key columns against the schema) and
+    # pass _ident's identifier check; every value is a bound parameter of `params`, so the
+    # f-strings only ever splice validated identifiers and fixed SQL.
+    params = SqlParams()
     aggs: list[str] = ["count(*) AS __rows"]
     for name, duck_type in spec.columns:
-        nn = _non_missing(name, spec.null_tokens)
+        nn = _non_missing(name, params, spec.null_tokens)
         aggs.append(f"count({nn}) AS {_ident('nn__' + name)}")
         if duck_type != "VARCHAR":
+            typed = spec_typed_expr(spec, name, params)
             aggs.append(
-                f"count(*) FILTER (WHERE ({nn}) IS NOT NULL AND ({spec_typed_expr(spec, name)}) "
-                f"IS NULL) AS {_ident('fail__' + name)}"
+                f"count(*) FILTER (WHERE ({nn}) IS NOT NULL AND ({typed}) IS NULL) "
+                f"AS {_ident('fail__' + name)}"
             )
-    lang = _non_missing(spec.partition_column, spec.null_tokens)
-    source = _raw_source(csv_path, spec)
-    sql = (
-        f"SELECT {lang} AS __lang, {', '.join(aggs)} FROM {source} "
-        "GROUP BY ALL ORDER BY __lang NULLS FIRST"
+    lang = _non_missing(spec.partition_column, params, spec.null_tokens)
+    source = _raw_source(csv_path, spec, params)
+    cur = con.execute(
+        f"SELECT {lang} AS __lang, {', '.join(aggs)} FROM {source} "  # noqa: S608  # nosec B608 # identifiers: sql_ident allowlist; values: bound params
+        "GROUP BY ALL ORDER BY __lang NULLS FIRST",
+        params.values,
     )
-    cur = con.execute(sql)
     names = [d[0] for d in cur.description]
     rows = [dict(zip(names, r, strict=True)) for r in cur.fetchall()]
 
-    job_id = spec_typed_expr(spec, spec.job_id_column)
-    build_id = spec_typed_expr(spec, spec.build_id_column)
-    unique = spec_typed_expr(spec, spec.unique_column)
+    key_params = SqlParams()
+    job_id = spec_typed_expr(spec, spec.job_id_column, key_params)
+    build_id = spec_typed_expr(spec, spec.build_id_column, key_params)
+    unique = spec_typed_expr(spec, spec.unique_column, key_params)
+    key_source = _raw_source(csv_path, spec, key_params)
     key_row = con.execute(
-        f"SELECT count({job_id}) - count(DISTINCT {job_id}), "
+        f"SELECT count({job_id}) - count(DISTINCT {job_id}), "  # noqa: S608  # nosec B608 # identifiers: sql_ident allowlist; values: bound params
         f"count(*) FILTER (WHERE {job_id} IS NULL), "
         f"count(*) FILTER (WHERE {build_id} IS NULL), "
         f"count({unique}) - count(DISTINCT {unique}), "
-        f"count(*) FILTER (WHERE {unique} IS NULL) FROM {source}"
+        f"count(*) FILTER (WHERE {unique} IS NULL) FROM {key_source}",
+        key_params.values,
     ).fetchone()
     assert key_row is not None
 
@@ -433,19 +456,27 @@ def _write_partitions(
 ) -> list[dict[str, Any]]:
     """One sorted, typed Parquet file per language under ``staging``; verified after writing."""
     files: list[dict[str, Any]] = []
-    order = ", ".join(_ident(c) for c in spec.sort_key)
+    order = ", ".join(_ident(c, spec) for c in spec.sort_key)
+    partition = _ident(spec.partition_column, spec)
     for lang in sorted(profile["rows_per_lang"]):
         rel = f"lang={lang}/{PART_FILENAME}"
         target = staging / rel
         target.parent.mkdir(parents=True, exist_ok=True)
+        params = SqlParams()
+        select = _typed_select(spec, params)
+        source = _raw_source(csv_path, spec, params)
+        where = f"{partition} = {params(lang)}"
+        options = (
+            f"FORMAT parquet, COMPRESSION {params(COMPRESSION)}, "
+            f"ROW_GROUP_SIZE {params(ROW_GROUP_SIZE)}"
+        )
         con.execute(
-            f"COPY (SELECT {_typed_select(spec)} FROM {_raw_source(csv_path, spec)} "
-            f"WHERE {_ident(spec.partition_column)} = {sql_literal(lang)} ORDER BY {order}) "
-            f"TO {sql_literal(str(target))} (FORMAT parquet, COMPRESSION {COMPRESSION}, "
-            f"ROW_GROUP_SIZE {ROW_GROUP_SIZE})"
+            f"COPY (SELECT {select} FROM {source} WHERE {where} ORDER BY {order}) "  # noqa: S608  # nosec B608 # identifiers: sql_ident allowlist; values: bound params
+            f"TO {params(str(target))} ({options})",
+            params.values,
         )
         row = con.execute(
-            f"SELECT count(*) FROM read_parquet({sql_literal(str(target))})"
+            "SELECT count(*) FROM read_parquet($path)", {"path": str(target)}
         ).fetchone()
         rows = int(row[0]) if row else -1
         if rows != profile["rows_per_lang"][lang]:

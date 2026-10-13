@@ -39,17 +39,22 @@ and counts as a cast failure in the conversion's quality gate. Bump
 * 12 rows (2 Java) have shifted trailing fields: a ``tr_failed_tests`` value with unescaped quotes
   and commas spills into the following columns. Their non-parsable values become NULL and are
   counted as cast failures (well below the 0.1% gate); the rows are kept (raw stays faithful).
-"""
 
-# ruff: noqa: S608 - SQL is assembled from schema constants; every value goes through sql_literal()
+**SQL safety** (every module of this package): values (paths, patterns, null tokens, literals) are
+always bound as DuckDB parameters (:class:`SqlParams`); identifiers (column and table names from
+the fixed schemas above) cannot be bound, so they go through :func:`sql_ident`, which accepts only
+plain identifiers, optionally from an allowlist, and raises otherwise.
+"""
 
 from __future__ import annotations
 
 import difflib
 import hashlib
 import json
-from collections.abc import Mapping, Sequence
+import re
+from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
+from typing import Final
 
 import duckdb
 
@@ -243,16 +248,56 @@ def schema_fingerprint(
     return hashlib.sha256(blob).hexdigest()
 
 
-def sql_literal(value: str) -> str:
-    """Single-quoted SQL string literal (DuckDB has no bind parameters for table functions)."""
-    return "'" + value.replace("'", "''") + "'"
+_IDENT_RE: Final = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def sql_ident(name: str, allowed: Collection[str] | None = None) -> str:
+    """``name`` as a double-quoted SQL identifier, after validating it.
+
+    Identifiers cannot be bound as parameters, so every statement that interpolates a column or
+    table name validates it here: it must be a plain identifier (``[A-Za-z_][A-Za-z0-9_]*``, which
+    every column of the registered schemas is) and, when ``allowed`` is given, one of those names.
+    Anything else raises :class:`ValueError` before a statement is built.
+    """
+    if not _IDENT_RE.fullmatch(name):
+        raise ValueError(f"not a plain SQL identifier: {name!r}")
+    if allowed is not None and name not in allowed:
+        raise ValueError(f"SQL identifier {name!r} is not one of the expected names")
+    return f'"{name}"'
+
+
+class SqlParams:
+    """Named DuckDB parameters (``$p0``, ``$p1``, ...) collected while one statement is assembled.
+
+    ``params(value)`` returns the placeholder for ``value`` (equal values share one placeholder);
+    keyword arguments pre-register named parameters (``SqlParams(csv=path)`` -> ``$csv``). Execute
+    the statement with ``con.execute(sql, params.values)``: DuckDB rejects unused parameters, so use
+    one instance per statement.
+    """
+
+    __slots__ = ("values",)
+
+    def __init__(self, **named: object) -> None:
+        for key in named:
+            if not _IDENT_RE.fullmatch(key) or re.fullmatch(r"p[0-9]+", key):
+                raise ValueError(f"invalid parameter name {key!r}")
+        self.values: dict[str, object] = dict(named)
+
+    def __call__(self, value: object) -> str:
+        for key, existing in self.values.items():
+            if type(existing) is type(value) and existing == value:
+                return f"${key}"
+        key = f"p{len(self.values)}"
+        self.values[key] = value
+        return f"${key}"
 
 
 def read_header(con: duckdb.DuckDBPyConnection, csv_path: Path) -> list[str]:
     """Raw header names exactly as written in the file (no DuckDB name normalisation)."""
     row = con.execute(
-        f"SELECT * FROM read_csv({sql_literal(str(csv_path))}, header=false, all_varchar=true, "
-        "delim=',', quote='\"', escape='\"', compression='gzip') LIMIT 1"
+        "SELECT * FROM read_csv($csv, header=false, all_varchar=true, "
+        "delim=',', quote='\"', escape='\"', compression='gzip') LIMIT 1",
+        {"csv": str(csv_path)},
     ).fetchone()
     if row is None:
         raise SchemaMismatchError(f"{csv_path} is empty (no header row)")

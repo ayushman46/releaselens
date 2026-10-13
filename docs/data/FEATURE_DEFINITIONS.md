@@ -36,12 +36,12 @@ built SHA instead.
 | `team_size` | `gh_team_size` | Distinct developers who committed (non-PR) or merged PRs in the 3 months before the build. TravisTorrent used GHTorrent logins. | Distinct mailmap-normalised author emails in the last 90 days. |
 | `by_core_team_member` | `gh_by_core_team_member` | 1 if the build's authors are all in the team above. | Same, by email. |
 | `sloc` | `gh_sloc` | Executable lines (comment- and blank-stripped) of the language's files at the trigger commit. | A lightweight per-language counter (Java: strip `//` and `/* */` comments and blank lines). |
-| `test_lines_per_kloc` / `test_cases_per_kloc` / `asserts_per_kloc` | `gh_test_lines_per_kloc` / `gh_test_cases_per_kloc` / `gh_asserts_cases_per_kloc` | Test lines / test cases / assert statements per 1,000 `sloc`. (In the 2016 release these are ratios; measured median test lines per kloc ≈ 442.) | Same counters. |
-| `num_all_built_commits` | `git_num_commits` (verify in DATA_DICTIONARY) | Number of built commits (§1). | `rev-list` count with the merge-stop rule. |
+| `test_lines_per_kloc` / `test_cases_per_kloc` / `asserts_per_kloc` | `gh_test_lines_per_kloc` / `gh_test_cases_per_kloc` / `gh_asserts_cases_per_kloc` | Test lines / test cases / assert statements per 1,000 `sloc`. (In the 2016 release these are ratios; measured median test lines per kloc on Java: ≈ 342 per build, the grain the model trains on, and ≈ 442 over job rows.) | Same counters. |
+| `num_all_built_commits` | `git_num_commits` (approximate; evidence in DATA_DICTIONARY and PIPELINE §8.4: the length of `git_commits`, which never contains the built commit and is offset by one against the previous build's commit) | Number of built commits (§1). | `rev-list` count with the merge-stop rule. |
 | `num_commits_in_push` | not present in the 2016 release | — | Not used by the model (NULL in training). |
 | `is_pr` | `gh_is_pr` | Pull-request build. | `github.event_name == pull_request`. |
 | `description_complexity` | `gh_description_complexity` | PR title + description word count. | **Excluded** (tagged *uncertain*: the stored text may postdate the build). |
-| `repo_age_days` | derived from `gh_first_commit_created_at` (verify) | Days since the repository's first commit at build start. | `git log --reverse --format=%ct | head -1` on a full checkout. |
+| `repo_age_days` | not available in the 2016 release (`gh_first_commit_created_at` is a copy of `tr_started_at` in UK local time, DATA_DICTIONARY → Evidence) | Days since the repository's first commit at build start. | NULL for every training build, so `project_age_days` carries no learned signal. The Action does compute it (`integrations/github-action/extract_change_facts.py`): M4 must drop the feature (and serving must then ignore it) or keep it knowing every training value was missing. |
 
 ## 3. Never inputs
 

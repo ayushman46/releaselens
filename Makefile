@@ -34,7 +34,7 @@ PIPELINE_CONF = $(shell DATASET='$(DATASET)' CONF='$(CONF)' python3 -c 'import j
 	c.update({"dataset": d} if d else {}); print(json.dumps(c) if c else "")')
 
 PY_SRC := packages/rl_core/src packages/rl_db/src services/api/src services/worker/src \
-	data/pipeline/src demo/services/src integrations/github-action
+	data/pipeline/src data/analysis/src demo/services/src integrations/github-action
 
 .PHONY: help
 help: ## Show this help
@@ -159,6 +159,22 @@ dbt-build: doctor ## dbt deps + build staging/intermediate/marts/ml on the host 
 .PHONY: dbt-fixture
 dbt-fixture: ## dbt build on the SYNTHETIC fixture: local Parquet, no S3 (what CI runs)
 	$(UV) run --no-sync python -m rl_pipeline dbt_build_fixture
+
+# ------------------------------------------------------------------ analytics (M3b, spec §7.5)
+# Run id of the dbt build whose marts/features the report reads (s3://releaselens-data/...).
+ANALYTICS_RUN_ID ?= m3-run1
+ANALYTICS_DUCKDB ?= data/lake/dbt/releaselens.duckdb
+
+.PHONY: analytics-report
+analytics-report: ## M3b report: docs/analytics/{findings.json,FINDINGS.md} + S3 reports/analytics/ (ANALYTICS_RUN_ID=<id>)
+	@curl -fsS -o /dev/null "http://localhost:$${RL_MINIO_HOST_PORT:-29000}/minio/health/live" \
+		|| { echo "✗ object store not reachable on :$${RL_MINIO_HOST_PORT:-29000} (make up-data)"; exit 1; }
+	$(UV) run --no-sync python -m rl_analysis report --run-id $(ANALYTICS_RUN_ID) \
+		$(if $(wildcard $(ANALYTICS_DUCKDB)),--duckdb-path $(ANALYTICS_DUCKDB))
+
+.PHONY: test-analysis
+test-analysis: ## Analytics unit tests (SYNTHETIC marts fixture; no S3 needed)
+	$(UV) run pytest -m "not integration" data/analysis
 
 .PHONY: pipeline-test-dag
 pipeline-test-dag: $(COMPOSE_DIR)/.env doctor ## DAG integrity checks (mypy + pytest) inside the Airflow image; no DB/S3 needed

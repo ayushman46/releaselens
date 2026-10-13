@@ -9,6 +9,7 @@ failing dbt test fails the task.
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -110,6 +111,9 @@ def test_feature_snapshot_report_and_manifest(fixture_run: dict[str, Any]) -> No
     }
     assert report["label_rate"] == 0.5
     assert report["history_after_start_violations"] == 0
+    # every fixture build finishes (start + duration) before the next split's first start
+    assert report["cutpoints"]["n_train_not_finished_before_validation_start"] == 0
+    assert report["cutpoints"]["n_validation_not_finished_before_test_start"] == 0
     assert report["columns"][:5] == ["build_id", "project", "started_at", "label", "split"]
     assert set(ALL_FEATURE_NAMES) <= set(report["columns"])
     manifest = json.loads(Path(step["manifest_location"]).read_text(encoding="utf-8"))
@@ -181,3 +185,43 @@ def test_failing_dbt_test_fails_the_task(
     failed = [n for n in err.value.summary["nodes"] if n["status"] == "fail"]
     assert len(failed) == 1
     assert failed[0]["name"].startswith("label_rate_between_fct_builds")
+
+
+def _compiled_test(work: Path, prefix: str) -> str:
+    found = sorted((work / "dbt" / "target" / "compiled").rglob(f"{prefix}*.sql"))
+    assert len(found) == 1, found
+    return found[0].read_text(encoding="utf-8")
+
+
+def test_leakage_oracle_runs_and_catches_a_window_the_audit_misses(
+    fixture_run: dict[str, Any], tmp_path: Path
+) -> None:
+    """history_window_matches_inputs passes on the real output and fails on a leaked window.
+
+    The tampered row counts one more past build than had finished (what admitting a build that
+    finished at/after the prediction moment does): rl_core's own audit column is unchanged, so
+    finished_before_started still passes, while the oracle (recomputed from mart_build_inputs)
+    fails.
+    """
+    nodes = fixture_run["steps"]["build_feature_snapshot"]["dbt"]["nodes"]
+    oracle_nodes = [n for n in nodes if n["name"].startswith("history_window_matches_inputs")]
+    assert [n["status"] for n in oracle_nodes] == ["pass"]
+
+    work = Path(fixture_run["work_dir"])
+    oracle = _compiled_test(work, "history_window_matches_inputs_")
+    audit = _compiled_test(work, "finished_before_started_")
+    db = tmp_path / "releaselens_fixture.duckdb"  # same file stem = same catalog name
+    shutil.copyfile(work / "dbt" / "releaselens_fixture.duckdb", db)
+    con = duckdb.connect(str(db))
+    con.execute("SET TimeZone = 'UTC'")
+    con.execute("CREATE TABLE tampered AS SELECT * FROM main.mart_build_features")
+    con.execute("DROP VIEW main.mart_build_features")
+    con.execute("ALTER TABLE tampered RENAME TO mart_build_features")
+    assert con.execute(oracle).fetchall() == []
+    assert con.execute(audit).fetchall() == []
+    con.execute(
+        "UPDATE main.mart_build_features SET history_size = history_size + 1 "
+        "WHERE build_id = (SELECT max(build_id) FROM main.mart_build_features)"
+    )
+    assert len(con.execute(oracle).fetchall()) == 1
+    assert con.execute(audit).fetchall() == []  # the self-reported audit cannot see it

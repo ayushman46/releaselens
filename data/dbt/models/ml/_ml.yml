@@ -12,10 +12,14 @@ models:
           arguments:
             column_name: build_id
             compare_to: ref('stg_travis_builds')
+      # rl_core's finished-before rule is only as good as this input: finished_at must be the
+      # conservative upper bound started_at + duration (NULL = unknown finish = never history)
       - expression_is_true:
           arguments:
-            expression: "finished_at is null or finished_at >= started_at"
-          name: mart_build_inputs_finished_not_before_started
+            expression: >-
+              (finished_at is null and duration_s is null)
+              or (duration_s >= 0 and finished_at = started_at + to_seconds(duration_s))
+          name: mart_build_inputs_finished_at_is_the_upper_bound
       - expression_is_true:
           arguments:
             expression: "failed is not distinct from label"
@@ -26,6 +30,15 @@ models:
               num_commits_in_push is null and description_complexity is null
               and repo_age_days is null
           name: mart_build_inputs_unavailable_inputs_are_null
+      # no -1 (or other negative) placeholder reaches rl_core as a real count/ratio
+      - expression_is_true:
+          arguments:
+            expression: >-
+              coalesce(least(src_churn, test_churn, files_added, files_deleted, files_modified,
+              tests_added, tests_deleted, src_files, doc_files, other_files, sloc,
+              test_lines_per_kloc, test_cases_per_kloc, asserts_per_kloc, num_all_built_commits,
+              team_size, commits_on_files_touched, duration_s), 0) >= 0
+          name: mart_build_inputs_no_negative_placeholders
     columns:
       - name: build_id
         data_tests: [not_null, unique]
@@ -49,11 +62,14 @@ models:
           arguments:
             expression: "n_train + n_validation + n_test = n_labelled_builds"
           name: split_cutpoints_partition_every_labelled_build
+      # strictly ordered cut points and three non-empty splits (equal cut points would leave
+      # validation empty; NULL cut points fail too)
       - expression_is_true:
           arguments:
             expression: >-
-              first_started_at <= validation_start_at and validation_start_at <= test_start_at
+              first_started_at < validation_start_at and validation_start_at < test_start_at
               and test_start_at <= last_started_at
+              and n_train > 0 and n_validation > 0 and n_test > 0
           name: split_cutpoints_are_chronological
 
   - name: mart_build_features
@@ -73,6 +89,12 @@ models:
             column_name: build_id
             compare_to: ref('mart_build_inputs')
             compare_filter: label is not null
+      # (a') independent leakage oracle: rl_core's history window (history_size) and its audit
+      # column must equal a plain-SQL recount over mart_build_inputs of the project's builds that
+      # had an outcome and finished strictly before started_at (see the test's header)
+      - history_window_matches_inputs:
+          arguments:
+            inputs: ref('mart_build_inputs')
       # (b) overall label rate within sane bounds (the measured rate is in the task summary)
       - label_rate_between:
           arguments:

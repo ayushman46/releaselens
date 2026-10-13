@@ -296,13 +296,15 @@ model or test fails the stage, and the task raises `DbtStageError` with the fail
 | Stage (DAG task) | Selection | Materialised as | Data tests |
 |---|---|---|---:|
 | `dbt_deps` | — | (no packages yet; `dbt deps` logs "No packages were found") | — |
-| `dbt_build_staging` | `source:travistorrent staging` | tables (+ one view) in `<RL_LAKE_DIR>/dbt/releaselens.duckdb` | 29 |
+| `dbt_build_staging` | `source:travistorrent staging` | tables (+ one view) in `<RL_LAKE_DIR>/dbt/releaselens.duckdb` | 30 |
 | `dbt_build_intermediate` | `intermediate` | tables in the DuckDB file | 14 |
 | `dbt_build_marts` | `marts` | Parquet: `s3://releaselens-data/marts/<model>/run_id=<run_id>/part-00000.parquet` | 27 |
-| `build_feature_snapshot` | `ml` | Parquet: `marts/<model>/run_id=<run_id>/` (inputs, cut points) and `features/release_features/schema=<FEATURE_SCHEMA_VERSION>/run_id=<run_id>/part-00000.parquet` + a deterministic `_manifest.json` | 21 |
+| `build_feature_snapshot` | `ml` | Parquet: `marts/<model>/run_id=<run_id>/` (inputs, cut points) and `features/release_features/schema=<FEATURE_SCHEMA_VERSION>/run_id=<run_id>/part-00000.parquet` + a deterministic `_manifest.json` | 23 |
 
 - `--indirect-selection buildable`: a test that spans layers (e.g. `fct_builds` against
-  `stg_travis_builds`) runs in the stage that builds its last parent. All 91 data tests run once.
+  `stg_travis_builds`) runs in the stage that builds its last parent. All 94 data tests run once.
+- A stage whose selection builds no model fails (`DbtStageError`): otherwise it would "succeed"
+  and the measurement (and, for `ml`, the manifest) would describe an older file of the same run id.
 - **Profiles** (`data/dbt/profiles.yml`, in the repo, no secrets): target `dev` reads the raw
   Parquet with httpfs and an S3 secret built from `RL_S3_ACCESS_KEY` / `RL_S3_SECRET_KEY` /
   `RL_S3_REGION` / `RL_S3_ENDPOINT` (scheme stripped to host:port, `url_style path`, `use_ssl`
@@ -312,17 +314,25 @@ model or test fails the stage, and the task raises `DbtStageError` with the fail
   conversion's guard, `InsufficientDiskError` when nothing fits). Target `fixture` uses the same
   settings on local Parquet only (no extension, no S3).
 - **Vars** (set by the runner): `dataset_version` (md5 of the primary file), `run_id` (the Airflow
-  run id or `DBT_RUN_ID`, sanitised to `[A-Za-z0-9._-]`), `raw_root`, `output_root`,
+  run id or `DBT_RUN_ID`; an id that is already path-safe is kept as is, any other is cleaned to
+  `[A-Za-z0-9._-]` **plus `-` and 10 hex digits of the original id's sha256**, so two different
+  run ids such as `a:b` and `a/b`, or two long ids sharing a 128-character prefix, never share an
+  output prefix (unless an id is deliberately set to another id's sanitised form, hash
+  included); Airflow's `manual__2026-10-13T03:00:00+00:00` becomes
+  `manual__2026-10-13T03_00_00_00_00-<10 hex>`), `raw_root`, `output_root`,
   `feature_schema_version` (from the installed `rl_core`; `mart_build_features` raises if they
   differ). Overridable through task params `vars`: label-rate bounds and split fractions.
 - Work dir `<RL_LAKE_DIR>/dbt` (DuckDB file, `target/`, `logs/`, `dbt_packages/`): the project
   directory stays read-only (in the Airflow image it is `/opt/airflow/dbt`). Usage stats are off.
 - Output files: one per model and run, `run_id=` and `schema=` are path segments only (reads use
-  `hive_partitioning = false`). A re-run with the same `run_id` overwrites with identical bytes.
+  `hive_partitioning = false`). Every S3 key the dbt stages write contains `run_id=<run_id>`
+  (verified on the bucket listing, §8.7), so a run never writes into another run's prefix. A re-run
+  with the **same** `run_id` (an Airflow retry, or `make dbt-build` with an id used before)
+  overwrites that run's files; with unchanged code and data the bytes are identical (§8.7).
 - Only the primary dataset has dbt models. `make pipeline DATASET=travistorrent-final-2017-01-25`
   skips the five dbt tasks (exit code 99 → `skip_on_exit_code`).
 
-### 8.2 Models (rows from the real build, run `m3a-run2`)
+### 8.2 Models (rows from the real build; identical in runs `m3a-run2`, `m3-run1`, `m3-review1/2`)
 
 | Layer | Model | Grain | Rows |
 |---|---|---|---:|
@@ -353,6 +363,16 @@ model or test fails the stage, and the task raises `DbtStageError` with the fail
   (canonical row: listed first, then lowest `tr_job_id`, `row`), so the 78 builds that have no
   listed row of their own are kept: 128,819 builds, exactly the source's distinct `tr_build_id`s
   (`no_duplicate_builds` test against the source).
+  Re-verified in review (2026-10-13) against an independent recomputation on the raw Parquet: the
+  kept row equals the expected one (listed first, else lowest `row`) for all 234,391 job ids
+  (0 differences in row or build), no job id is listed in more than one build, and every kept
+  job's build exists in `stg_travis_builds`.
+- **`build_number` of the 78 builds without a listed row is NULL.** A foreign row carries the
+  build number of the job's real build: on all 21,573 foreign rows whose job is listed in another
+  build, `tr_build_number` equals that owner build's number, and it differs from the host build's
+  own listed rows on 21,142 of 21,680 foreign rows in builds that have listed rows. `tr_num_jobs`
+  and `git_num_committers` of foreign rows agree with the host build's listed rows (0
+  differences), so they stay. Tested by `(build_number is null) = (n_listed_job_rows = 0)`.
 - **Build-level consistency (test (d)).** `consistent_within_build` on `stg_travis_job_rows`
   proves on every run that the 30 raw build-level columns `stg_travis_builds` takes from the
   canonical row are identical over **all** job rows of every build (NULL mixed with a value counts
@@ -430,9 +450,30 @@ assigned by timestamp (ties never straddle a cut). Measured (identical in both r
 
 - The overall label rate 29.03% is inside the `label_rate_between` bounds [0.05, 0.60] (tested on
   `fct_builds` and `mart_build_features`).
+- **Cut points (review, 2026-10-13).** The last train start is 2015-01-10 07:40:01 and the last
+  validation start 2015-04-17 18:31:15, both strictly before the next cut; exactly one labelled
+  build starts at each cut timestamp, so no tie straddles a cut (655 start timestamps are shared
+  by 2+ labelled builds elsewhere). `split_cutpoints_are_chronological` now requires strictly
+  ordered cut points and three non-empty splits (the former `<=` version accepted equal cut points,
+  i.e. an empty validation split).
+- **Label availability at the cuts** (new `split_cutpoints` columns, also in the manifest): a
+  build's outcome is observable at its upper-bound finish. 9 train builds have no finish time (no
+  duration) and 0 train builds finish at or after `validation_start_at` (latest train finish
+  2015-01-10 08:03:40); 8 validation builds finish at or after `test_start_at` (latest validation
+  finish 2015-04-17 20:47:39). Start times are strictly ordered; M4 may purge these 9 + 8 builds
+  if it needs an embargo.
 - Leakage audit: 128,169 rows have history inputs; `max_history_input_finished_at < started_at`
   holds for all of them (dbt test `finished_before_started`, re-checked by the task: 0
-  violations).
+  violations). That audit column is computed by rl_core itself, separately from the features, so
+  it cannot reveal a history window that admitted a build finishing at or after the prediction
+  moment. The new test `history_window_matches_inputs` recomputes the window from
+  `mart_build_inputs` in plain SQL (builds of the project with an outcome that finished strictly
+  before `started_at`): `history_size` and the audit column equal it on all 128,617 rows. In the
+  review the same oracle was extended by hand (ASOF join and per-project ranks, ties broken like
+  rl_core) to `prev_build_failed` and `prev_build_duration` (0 differences on the 128,169 rows
+  with history) and to `fail_rate_last_5`, `fail_rate_last_20` (|difference| <= 1e-12) and
+  `builds_since_last_failure` (exact): 0 differences on all 128,617 rows.
+  The SQL is a test oracle only; every feature value still comes from rl_core (ADR-0006).
 - Missing values (NULL) among the 128,617 rows: `num_commits_in_push`, `description_complexity`
   and `project_age_days` on all rows (§8.4); the history features on the 448 rows without a
   finished earlier build (`prev_build_failed`, `fail_rate_last_5/20`, `prev_build_duration`; the
@@ -445,7 +486,7 @@ assigned by timestamp (ties never straddle a cut). Measured (identical in both r
 
 ### 8.6 Tests
 
-91 data tests: `unique`/`not_null` on every key, `accepted_values` (status, label, language,
+94 data tests: `unique`/`not_null` on every key, `accepted_values` (status, label, language,
 buckets, split), `relationships` (`fct_builds.project → dim_project`,
 `fct_builds.started_date → dim_time`, `stg_travis_jobs.build_id → stg_travis_builds`), and the
 custom generic tests in `data/dbt/tests/generic/`:
@@ -453,10 +494,24 @@ custom generic tests in `data/dbt/tests/generic/`:
 | Test | Asserts |
 |---|---|
 | `finished_before_started` (a) | rl_core audit column < `started_at` on every `mart_build_features` row |
+| `history_window_matches_inputs` (a') | independent oracle: `history_size` and the audit column equal a plain-SQL recount over `mart_build_inputs` of the project's builds with an outcome that finished strictly before `started_at` (§8.5) |
 | `label_rate_between` (b) | share of label 1 among labelled rows within [`label_rate_min`, `label_rate_max`] |
 | `no_duplicate_builds` (c) | one non-NULL row per build, and (optionally) exactly the build ids of a reference relation (staging vs source, intermediates/marts/ml vs staging, features vs labelled inputs) |
 | `consistent_within_build` (d) | build-level columns agree over a build's job rows (§8.3) |
-| `expression_is_true` | row invariants: finish = start + duration, label follows status, split follows the cut points, CI contains the rate, percentiles ordered, … |
+| `expression_is_true` | row invariants: finish = start + duration (staging and `mart_build_inputs`), no negative placeholder among the rl_core inputs, label follows status, `build_number` NULL exactly for builds without a listed row, strictly ordered cut points with three non-empty splits, split follows the cut points, CI contains the rate, percentiles ordered, … |
+
+**Every custom test can fail (review, 2026-10-13).** The compiled SQL of all 31 custom test
+nodes of run `m3-review2` was executed against an in-memory copy of every relation they read
+(the dbt DuckDB file attached read-only, the raw Java Parquet materialised): each returns 0 rows
+on the real data, and each of 39 targeted mutations (one or two per node, each rolled back) makes
+its test return rows, 39 of 39. Two mutations show why tests were strengthened: raising one row's
+`history_size` by 1 (a window that admitted one more build) leaves `finished_before_started` at 0
+rows while `history_window_matches_inputs` returns it; equal validation and test cut points
+(an empty validation split) pass the former `<=` chronology expression and fail the new one.
+`test_dbt_fixture.py::test_leakage_oracle_runs_and_catches_a_window_the_audit_misses` repeats the
+first one on the fixture in CI. Tests that hold by construction of their model (e.g.
+`failed is not distinct from label`, the three NULL inputs, finish = start + duration) are kept as
+regression guards; the mutations prove their SQL detects a violation.
 
 `dbt build` fails on a failing test: the first real run failed on
 `mart_build_reliability_interval_contains_rate` (51 rows): without rl_core's clamping, the
@@ -480,7 +535,7 @@ Timings from the task summary (`elapsed_s` per stage) and `/usr/bin/time -l`.
 |---|---:|---|---:|---|
 | `m3a-run1` | 9.90 s | 0.13 / 2.49 / 0.39 / 1.16 / 2.32 | 1.02 GB | 106 PASS/OK (15 models, 91 tests), 0 errors |
 | `m3a-run2` | 9.64 s | 0.13 / 2.39 / 0.40 / 1.09 / 2.18 | 0.94 GB | same |
-| `m3a-run2` again (after a runner change) | 9.15 s | 0.14 / 2.30 / 0.49 / 0.78 / 2.11 | RSS_PLACEHOLDER | same; all 9 files overwritten with identical bytes |
+| `m3a-run2` again (after a runner change) | 9.15 s | 0.14 / 2.30 / 0.49 / 0.78 / 2.11 | not recorded | same; all 9 files overwritten with identical bytes |
 
 Outputs (bytes and sha256 **identical in both runs**; only the `run_id=` path differs):
 
@@ -500,6 +555,29 @@ The two `_manifest.json` files (2,722 bytes each) differ only in `run_id` and th
 The DuckDB file measured 80 MB after run 1 and 28,848,128 bytes after run 2; `target/` 2.8 MB,
 `logs/` 0.8 MB. No credential appears in `target/`, `logs/`
 or the console output (grep for the secret: 0 hits).
+
+**Review rebuilds (2026-10-13, after the review fixes).** `m3-run1` (an earlier run of the same
+models, already in the bucket) has the same sha256 as `m3a-run1/2` for all 9 files. Two new runs
+on the real data, `RL_DUCKDB_MAX_TEMP_MIB=128`, timed with `/usr/bin/time -l` while other jobs
+loaded the host (hence slower than above):
+
+| Run | Command | Wall | deps / staging / intermediate / marts / ml (s) | Peak RSS | dbt nodes |
+|---|---|---:|---|---:|---|
+| `m3-review1` | `make MIN_FREE_GB=1 dbt-build DBT_RUN_ID=m3-review1` | 47.61 s | 0.80 / 11.45 / 3.11 / 3.37 / 9.91 | 1,006,731,264 B | 109 PASS/OK (15 models, 94 tests), 0 errors |
+| `m3-review2` | `uv run --no-sync python -m rl_pipeline dbt_build_all --params-json '{"run_id": "m3-review2"}'`¹ | 57.63 s | 0.77 / 14.29 / 3.08 / 4.15 / 20.59 | 936,984,576 B | same |
+
+¹ The command `make dbt-build` runs after `doctor`; `doctor` refused with `MIN_FREE_GB=1` because
+other jobs had left the host just under 1 GiB free, so the same command was run directly (the
+runner's own disk guard still applied).
+
+All 9 files of `m3-review1` and `m3-review2` have identical sha256 and size. Against `m3-run1`,
+8 of 9 are identical (`fct_builds`, the five other marts, `mart_build_inputs` and the features
+file, sha256 `384f66b66bde7416957c189aeccd9f55e369bbb7d9acf726492371a1a25569a5`, 7,362,393 bytes:
+the review changed no feature value); `split_cutpoints` differs because of its two new columns
+(2,348 bytes, sha256 prefix `107cdb89fb2391a9`). The two review manifests (2,837 bytes) differ
+only in `run_id` and the input locations. The bucket holds 51 dbt objects, each under a
+`run_id=` segment. The DuckDB file is 28,848,128 bytes after the review runs; `target/` 2,976 KiB,
+`logs/` 2,920 KiB; the secret appears in none of them nor in the console output (0 files).
 
 ### 8.8 What the marts show (descriptive; associations, not causes)
 
@@ -542,3 +620,29 @@ one build in five (an upper bound overstates it). rl_core's finished-before rule
   depends on free disk. A full parse takes about 1 s.
 - `make dbt-build` runs on the host with `--no-sync` (the current workspace venv). The DuckDB
   httpfs extension is installed into `~/.duckdb` on first use (the images bake it in).
+- **The finish-time upper bound is an assumption for multi-job builds.** `finished_at =
+  started_at + tr_duration` bounds the wall-clock finish when a build's jobs run in parallel or
+  back to back. If jobs waited in Travis' queue between each other (concurrency limits), the real
+  finish could be later than that bound, and the finished-before rule would admit a build whose
+  outcome was not yet known. The release has no finish time, so this cannot be measured here.
+  Exposure: 51,685 of 128,819 builds have more than one job, and for 6,233 of the 128,169 feature
+  rows with history the most recent eligible build is such a build whose bound lies less than
+  10 minutes before the row's start (17,726 rows when that build may have any job count).
+- **SQL safety (bandit B608).** Since the review, every value in `rl_pipeline`'s DuckDB SQL (paths,
+  null tokens, cast patterns, the timestamp format, partition values, COPY options, the S3 secret)
+  is a bound parameter (`SqlParams`, or a DuckDB relation where a view cannot take parameters).
+  Identifiers come from the fixed schemas and pass `schema.sql_ident` (plain-identifier regex,
+  allowlisted against the spec's columns where they are spliced); the statements that splice them
+  carry `# nosec B608` on the flagged line. `bandit -ll` reports 0 issues for `data/pipeline`.
+  Output unchanged (2026-10-13): the 2016 release re-converted with the refactored code into a
+  scratch lake (`RL_DUCKDB_MEMORY_LIMIT=4GB`, 47.85 s) gives exactly the published sha256 for both
+  Parquet files and `_manifest.json` (`ff8cc162…dc20`, `a8cb2629…3d3a`, `59544c06…b3e`, §6.1), and
+  its data dictionary rebuilt from that output (with the UTC cross-check) is byte-identical to
+  `DATA_DICTIONARY.md` and `data_dictionary.json`. The 2017 source file was no longer in
+  `data/lake/downloads/travistorrent-figshare-19314170/` (the directory was emptied at
+  10:20:30 local time, outside this review), so the 2017 release was not re-converted; instead its
+  dictionary was rebuilt with the refactored code from the published Parquet (copied from the
+  bucket into a scratch dir) and is byte-identical to `DATA_DICTIONARY_final_2017.md` and
+  `data_dictionary_final_2017.json`, and both SYNTHETIC fixtures (2016 and 2017 layouts) convert
+  to byte-identical Parquet, manifests and dictionaries with the code before and after the
+  refactor. All scratch output was deleted.

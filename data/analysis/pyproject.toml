@@ -1,0 +1,24 @@
+[project]
+name = "rl-analysis"
+version = "0.1.0"
+description = "ReleaseLens M3b analytics: statistical findings (spec §7.5) from the dbt marts and the feature mart"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "rl-core",
+    # Exact pin, same as rl-pipeline (ADR-0014): DuckDB 2.0 is due ~2026-10-21.
+    "duckdb==1.5.6",
+    "polars>=1.44,<2.0",
+    "numpy>=2.0",
+    "scipy>=1.14",
+    # Holm adjustment (statsmodels.stats.multitest); exact pin of the current stable release.
+    "statsmodels==0.15.0",
+    "boto3>=1.35",
+    "pydantic-settings>=2.6",
+]
+
+[project.scripts]
+rl-analysis = "rl_analysis.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"

@@ -27,6 +27,7 @@ COPY services/api/pyproject.toml services/api/pyproject.toml
 COPY services/worker/pyproject.toml services/worker/pyproject.toml
 COPY data/pipeline/pyproject.toml data/pipeline/pyproject.toml
 COPY demo/services/pyproject.toml demo/services/pyproject.toml
+COPY data/analysis/pyproject.toml data/analysis/pyproject.toml
 RUN uv sync --frozen --no-dev --all-packages --no-install-workspace && rm -rf /root/.cache
 
 # DuckDB's httpfs extension (s3:// reads/writes), fetched once per dependency set rather than on
@@ -40,6 +41,7 @@ COPY packages packages
 COPY services services
 COPY data/pipeline data/pipeline
 COPY demo/services demo/services
+COPY data/analysis data/analysis
 RUN uv sync --frozen --no-dev --all-packages --no-editable && rm -rf /root/.cache
 
 # ---------------------------------------------------------------- runtime

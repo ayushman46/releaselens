@@ -15,6 +15,7 @@ members = [
     "services/api",
     "services/worker",
     "data/pipeline",
+    "data/analysis",
     "demo/services",
 ]
 
@@ -24,6 +25,7 @@ rl-db = { workspace = true }
 rl-api = { workspace = true }
 rl-worker = { workspace = true }
 rl-pipeline = { workspace = true }
+rl-analysis = { workspace = true }
 rl-demo = { workspace = true }
 
 [dependency-groups]
@@ -42,6 +44,7 @@ dev = [
     "rl-api",
     "rl-worker",
     "rl-pipeline",
+    "rl-analysis",
     "rl-demo",
 ]
 
@@ -82,11 +85,12 @@ mypy_path = [
     "services/api/src",
     "services/worker/src",
     "data/pipeline/src",
+    "data/analysis/src",
     "demo/services/src",
 ]
 
 [[tool.mypy.overrides]]
-module = ["rl_core.*", "rl_db.*"]
+module = ["rl_core.*", "rl_db.*", "rl_analysis.*"]
 strict = true
 
 # ---------------------------------------------------------------- pytest
@@ -102,7 +106,7 @@ filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
 
 [tool.coverage.run]
 branch = true
-source = ["rl_core", "rl_db", "rl_api", "rl_worker", "rl_pipeline", "rl_demo"]
+source = ["rl_core", "rl_db", "rl_api", "rl_worker", "rl_pipeline", "rl_analysis", "rl_demo"]
 
 [[tool.mypy.overrides]]
 # confluent-kafka ships py.typed but re-exports admin classes without __all__.

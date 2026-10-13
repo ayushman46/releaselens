@@ -30,8 +30,6 @@ Only the primary dataset has dbt models (ADR-0017); any other dataset raises
 :class:`DbtNotApplicableError` (the DAG turns it into a skip).
 """
 
-# ruff: noqa: S608 - SQL is assembled from model names and locations through sql_literal()
-
 from __future__ import annotations
 
 import contextlib
@@ -53,7 +51,7 @@ from rl_core.features.schema import ALL_FEATURE_NAMES, FEATURE_SCHEMA_VERSION
 from rl_pipeline import datasets as _datasets
 from rl_pipeline import s3 as _s3
 from rl_pipeline.convert import DuckDBLimits, temp_budget
-from rl_pipeline.schema import sql_literal
+from rl_pipeline.schema import sql_ident
 from rl_pipeline.settings import PipelineSettings
 
 log = logging.getLogger("rl_pipeline.dbt")
@@ -82,6 +80,7 @@ OVERRIDABLE_VARS: Final = frozenset(
     {"label_rate_min", "label_rate_max", "split_train_fraction", "split_validation_fraction"}
 )
 _RUN_ID_RE: Final = re.compile(r"[^A-Za-z0-9._-]+")
+_RUN_ID_HASH_CHARS: Final = 10
 _SAFE_SEGMENT_RE: Final = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
@@ -116,13 +115,27 @@ class DbtStageError(RuntimeError):
 
 
 def sanitize_run_id(run_id: str | None) -> str:
-    """A path-safe run id: Airflow's ``manual__2026-10-13T03:00:00+00:00`` -> ``manual__2026-...``.
+    """A path-safe run id; distinct ids stay distinct (outputs are keyed by it).
 
-    Runs of characters outside ``[A-Za-z0-9._-]`` become one ``_``; leading dots/dashes and
-    underscores are dropped; at most 128 characters. Empty -> ``manual``.
+    An id that is already path-safe (``[A-Za-z0-9][A-Za-z0-9._-]*``, at most 128 characters) is
+    returned unchanged, so sanitising is idempotent and a task's result carries its id forward.
+    Otherwise runs of characters outside ``[A-Za-z0-9._-]`` become one ``_``, leading dots, dashes
+    and underscores are dropped, and ``-`` plus the first 10 hex digits of the original id's
+    sha256 are appended (the cleaned part is cut to fit 128 characters): Airflow's
+    ``manual__2026-10-13T03:00:00+00:00`` -> ``manual__2026-10-13T03_00_00_00_00-<hash>``. Without
+    the hash, ids such as ``a:b`` and ``a/b`` (or two long ids sharing a 128-character prefix)
+    would share one output prefix and the later run would overwrite the earlier one. (Only an id
+    deliberately set to another id's sanitised form, hash included, can still collide.) Empty ->
+    ``manual``.
     """
-    cleaned = _RUN_ID_RE.sub("_", (run_id or "").strip()).lstrip("._-")[:128]
-    return cleaned or "manual"
+    raw = (run_id or "").strip()
+    if not raw:
+        return "manual"
+    if _SAFE_SEGMENT_RE.fullmatch(raw):
+        return raw
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:_RUN_ID_HASH_CHARS]
+    cleaned = _RUN_ID_RE.sub("_", raw).lstrip("._-")[: 127 - _RUN_ID_HASH_CHARS]
+    return f"{cleaned}-{digest}" if cleaned else f"run-{digest}"
 
 
 def _require_safe(value: str, name: str) -> str:
@@ -383,6 +396,12 @@ def build_stage(ctx: DbtContext, stage: Stage) -> dict[str, Any]:
         "buildable",
     )
     models = _models_in(result)
+    if not models:
+        # A selector that matches nothing would "succeed" and leave an older file under the same
+        # run id to be reported (and, for ml, a manifest to be written over it).
+        raise DbtStageError(
+            f"dbt build --select {' '.join(SELECTORS[stage])} built no model", result
+        )
     return {
         **ctx.summary(),
         "stage": stage,
@@ -420,24 +439,23 @@ def _connect(ctx: DbtContext) -> duckdb.DuckDBPyConnection:
     # instance per file and process and refuses a second one with a different access mode.
     con = duckdb.connect(str(ctx.duckdb_path))
     con.execute("SET TimeZone = 'UTC'")
-    con.execute(f"SET memory_limit = {sql_literal(ctx.settings.duckdb_memory_limit)}")
+    con.execute("SET memory_limit = $v", {"v": ctx.settings.duckdb_memory_limit})
     if ctx.target == "dev":
         s = ctx.settings
-        endpoint = re.sub(r"^https?://", "", s.s3_endpoint)
         con.execute("LOAD httpfs")
         con.execute(
-            "CREATE OR REPLACE TEMPORARY SECRET rl_s3_measure (TYPE s3, "
-            f"KEY_ID {sql_literal(s.s3_access_key)}, "
-            f"SECRET {sql_literal(s.s3_secret_key.get_secret_value())}, "
-            f"REGION {sql_literal(s.s3_region)}, ENDPOINT {sql_literal(endpoint)}, "
-            f"URL_STYLE 'path', USE_SSL {'true' if s.s3_endpoint.startswith('https') else 'false'})"
+            "CREATE OR REPLACE TEMPORARY SECRET rl_s3_measure (TYPE s3, KEY_ID $key_id, "
+            "SECRET $secret, REGION $region, ENDPOINT $endpoint, URL_STYLE 'path', "
+            "USE_SSL $use_ssl)",
+            {
+                "key_id": s.s3_access_key,
+                "secret": s.s3_secret_key.get_secret_value(),
+                "region": s.s3_region,
+                "endpoint": re.sub(r"^https?://", "", s.s3_endpoint),
+                "use_ssl": s.s3_endpoint.startswith("https"),
+            },
         )
     return con
-
-
-def _parquet(location: str) -> str:
-    """``read_parquet`` of one output file; ``run_id=``/``schema=`` path segments are no columns."""
-    return f"read_parquet({sql_literal(location)}, hive_partitioning = false)"
 
 
 def _sha256_and_size(ctx: DbtContext, location: str) -> tuple[str, int]:
@@ -466,12 +484,17 @@ def measure_outputs(ctx: DbtContext, models: list[str], *, external: bool) -> li
             item: dict[str, Any] = {"model": model}
             if external:
                 location = ctx.output_location(model)
-                row = con.execute(f"SELECT count(*) FROM {_parquet(location)}").fetchone()
+                row = con.execute(
+                    "SELECT count(*) FROM read_parquet($path, hive_partitioning = false)",
+                    {"path": location},
+                ).fetchone()
                 sha, size = _sha256_and_size(ctx, location)
                 item |= {"location": location, "rows": int(row[0]) if row else -1}
                 item |= {"bytes": size, "sha256": sha}
             else:
-                row = con.execute(f'SELECT count(*) FROM main."{model}"').fetchone()
+                # model names come from dbt's results; sql_ident rejects anything but a plain name
+                table = sql_ident(model)
+                row = con.execute(f"SELECT count(*) FROM main.{table}").fetchone()  # noqa: S608  # nosec B608 # identifier: sql_ident (dbt model name)
                 item["rows"] = int(row[0]) if row else -1
             out.append(item)
     finally:
@@ -483,29 +506,37 @@ def feature_snapshot_report(ctx: DbtContext) -> dict[str, Any]:
     """Cut points, rows and label balance per split of the feature snapshot just written."""
     features = ctx.output_location(FEATURES_MODEL)
     cuts = ctx.output_location(SPLIT_MODEL)
+    # Locations are bound as $path; run_id=/schema= path segments are not columns.
     con = _connect(ctx)
     try:
         cut_row = con.execute(
             "SELECT n_labelled_builds, strftime(first_started_at, '%Y-%m-%dT%H:%M:%SZ'), "
             "strftime(validation_start_at, '%Y-%m-%dT%H:%M:%SZ'), "
             "strftime(test_start_at, '%Y-%m-%dT%H:%M:%SZ'), "
-            "strftime(last_started_at, '%Y-%m-%dT%H:%M:%SZ'), n_train, n_validation, n_test "
-            f"FROM {_parquet(cuts)}"
+            "strftime(last_started_at, '%Y-%m-%dT%H:%M:%SZ'), n_train, n_validation, n_test, "
+            "n_train_not_finished_before_validation_start, "
+            "n_validation_not_finished_before_test_start "
+            "FROM read_parquet($path, hive_partitioning = false)",
+            {"path": cuts},
         ).fetchone()
         splits = con.execute(
             "SELECT split, count(*), sum(label), "
             "strftime(min(started_at), '%Y-%m-%dT%H:%M:%SZ'), "
             "strftime(max(started_at), '%Y-%m-%dT%H:%M:%SZ') "
-            f"FROM {_parquet(features)} GROUP BY split ORDER BY split"
+            "FROM read_parquet($path, hive_partitioning = false) GROUP BY split ORDER BY split",
+            {"path": features},
         ).fetchall()
         audit = con.execute(
             "SELECT count(*) FILTER (WHERE max_history_input_finished_at IS NOT NULL), "
             "count(*) FILTER (WHERE max_history_input_finished_at >= epoch_us(started_at) / 1e6) "
-            f"FROM {_parquet(features)}"
+            "FROM read_parquet($path, hive_partitioning = false)",
+            {"path": features},
         ).fetchone()
-        columns = [
-            r[0] for r in con.execute(f"DESCRIBE SELECT * FROM {_parquet(features)}").fetchall()
-        ]
+        described = con.execute(
+            "DESCRIBE SELECT * FROM read_parquet($path, hive_partitioning = false)",
+            {"path": features},
+        ).fetchall()
+        columns = [r[0] for r in described]
     finally:
         con.close()
     if cut_row is None or audit is None:
@@ -536,6 +567,10 @@ def feature_snapshot_report(ctx: DbtContext) -> dict[str, Any]:
             "n_train": int(cut_row[5]),
             "n_validation": int(cut_row[6]),
             "n_test": int(cut_row[7]),
+            # labelled builds whose (upper-bound) finish is unknown or not before the next split's
+            # first start: their outcome was not yet observable when that split began
+            "n_train_not_finished_before_validation_start": int(cut_row[8]),
+            "n_validation_not_finished_before_test_start": int(cut_row[9]),
         },
         "splits": per_split,
         "rows": total,

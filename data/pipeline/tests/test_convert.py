@@ -22,7 +22,7 @@ from rl_pipeline.convert import (
 from rl_pipeline.datasets import TT_FINAL_2017 as V17
 from rl_pipeline.hashing import md5_file
 from rl_pipeline.schema import FINAL_2017_NAMES as EXPECTED_NAMES
-from rl_pipeline.schema import SchemaMismatchError
+from rl_pipeline.schema import SchemaMismatchError, SqlParams, sql_ident
 from rl_pipeline.testing import build_rows, write_csv_gz
 
 
@@ -194,12 +194,51 @@ def test_version_must_be_md5(tmp_path: Path, fixture_csv: Path) -> None:
 
 
 def test_typed_expr_shapes() -> None:
-    assert typed_expr("x", "VARCHAR").startswith("CASE WHEN")
-    assert "TRY_STRPTIME" in typed_expr("x", "TIMESTAMP")
-    assert "TRY_CAST" in typed_expr("x", "BIGINT")
-    assert "regexp_full_match" in typed_expr("x", "BIGINT")
-    assert "regexp_full_match" in typed_expr("x", "TIMESTAMP")
-    assert "'TRUE' THEN TRUE" in typed_expr("x", "BOOLEAN")
+    def expr(duck_type: str) -> str:
+        return typed_expr("x", duck_type, params=SqlParams())
+
+    assert expr("VARCHAR").startswith("CASE WHEN")
+    assert "TRY_STRPTIME" in expr("TIMESTAMP")
+    assert "TRY_CAST" in expr("BIGINT")
+    assert "regexp_full_match" in expr("BIGINT")
+    assert "regexp_full_match" in expr("TIMESTAMP")
+    assert "'TRUE' THEN TRUE" in expr("BOOLEAN")
+
+
+def test_typed_expr_binds_every_value() -> None:
+    """Null tokens, the pattern and the timestamp format are parameters, never SQL text."""
+    params = SqlParams()
+    sql = typed_expr("x", "TIMESTAMP", params=params, pattern="[0-9']+", null_tokens=("NA", "it's"))
+    assert "'NA'" not in sql
+    assert "it's" not in sql
+    assert "%Y" not in sql
+    assert set(params.values.values()) == {"NA", "it's", "[0-9']+", "%Y-%m-%d %H:%M:%S"}
+    con = connect(DuckDBLimits("256MB", 1))
+    rows = con.execute(
+        f"SELECT {sql} FROM (VALUES ('12'), ('NA'), ('it''s'), ('1x')) t(x)",
+        params.values,
+    ).fetchall()
+    assert rows == [(None,)] * 4  # 12 / 1x fail the timestamp format, NA / it's are null tokens
+
+
+@pytest.mark.parametrize("name", ['x"; DROP TABLE t; --', "a b", "1x", "", "x.y"])
+def test_identifiers_are_validated(name: str) -> None:
+    with pytest.raises(ValueError, match="identifier"):
+        typed_expr(name, "BIGINT", params=SqlParams())
+    with pytest.raises(ValueError, match="identifier"):
+        sql_ident(name)
+
+
+def test_sql_ident_allowlist_and_params() -> None:
+    assert sql_ident("tr_build_id", {"tr_build_id"}) == '"tr_build_id"'
+    with pytest.raises(ValueError, match="expected names"):
+        sql_ident("tr_job_id", {"tr_build_id"})
+    params = SqlParams(path="/a")
+    assert params("x") == params("x") == "$p1"  # equal values share one placeholder
+    assert params(1) == "$p2"  # ...but only with the same type
+    assert params("/a") == "$path"
+    with pytest.raises(ValueError, match="parameter name"):
+        SqlParams(p0="clash")
 
 
 # ---------------------------------------------------------------- review hardening

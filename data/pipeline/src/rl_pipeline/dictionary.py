@@ -17,9 +17,10 @@ booleans their TRUE share; the only categorical values shown are ``gh_lang`` and
 Optional: ``crosscheck_dir`` = the monperrus ``travistorrent-java-ci-build-dataset`` archive
 (``*/repo-data-travis.csv`` with explicit-UTC ``started_at``). The builder then joins it on the
 build id and reports how many start times, statuses and durations agree (the UTC check).
-"""
 
-# ruff: noqa: S608 - SQL is assembled from schema constants; every value goes through sql_literal()
+SQL safety: file paths and literals are bound parameters (or DuckDB relations); column names come
+from the dataset spec and pass :func:`rl_pipeline.schema.sql_ident` before they reach a statement.
+"""
 
 from __future__ import annotations
 
@@ -36,7 +37,7 @@ import duckdb
 
 from rl_pipeline.convert import PART_FILENAME, DuckDBLimits, connect, read_manifest, temp_budget
 from rl_pipeline.datasets import PRIMARY, SECONDARY, DatasetSpec
-from rl_pipeline.schema import sql_literal
+from rl_pipeline.schema import sql_ident
 
 log = logging.getLogger("rl_pipeline.dictionary")
 
@@ -44,13 +45,15 @@ JAVA = "java"
 _NUMERIC = {"BIGINT", "INTEGER", "DOUBLE"}
 MOSTLY_ZERO_THRESHOLD = 0.95
 _IN_OWN = "__in_own_jobs"
+_TABLES = frozenset({"java_jobs", "java_builds"})
 _SHORT = {PRIMARY: "2016", SECONDARY: "2017"}
 _ARCHIVE_GLOB = "*/repo-data-travis.csv"
 _UTC_PATTERN = r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} UTC"
 
 
 def _q(name: str) -> str:
-    return '"' + name.replace('"', '""') + '"'
+    """A validated, quoted identifier (schema column names and the helper column only)."""
+    return sql_ident(name)
 
 
 def _num(value: Any) -> Any:
@@ -63,8 +66,10 @@ def _num(value: Any) -> Any:
     return value
 
 
-def _one(con: duckdb.DuckDBPyConnection, sql: str) -> tuple[Any, ...]:
-    row = con.execute(sql).fetchone()
+def _one(
+    con: duckdb.DuckDBPyConnection, sql: str, params: dict[str, object] | None = None
+) -> tuple[Any, ...]:
+    row = con.execute(sql, params).fetchone()
     assert row is not None
     return row
 
@@ -99,22 +104,24 @@ def _setup_views(con: duckdb.DuckDBPyConnection, local_dir: Path, spec: DatasetS
     java_file = local_dir / f"lang={JAVA}" / PART_FILENAME
     if not java_file.is_file():
         raise FileNotFoundError(f"{java_file} missing: the dictionary is measured on Java")
-    con.execute(
-        "CREATE OR REPLACE VIEW jobs AS SELECT * FROM "
-        f"read_parquet({sql_literal(glob)}, hive_partitioning=false)"
+    # Views cannot take prepared parameters: the Parquet sources (paths) and the Java filter (a
+    # literal) are DuckDB relations, so no value is spliced into SQL text.
+    con.read_parquet(glob, hive_partitioning=False).create_view("jobs", replace=True)
+    java_src = con.read_parquet(str(java_file), hive_partitioning=False).filter(
+        duckdb.ColumnExpression(spec.partition_column) == duckdb.ConstantExpression(JAVA)
     )
+    java_src.create_view("java_src", replace=True)
     job = _q(spec.job_id_column)
+    in_own = _q(_IN_OWN)
     con.execute(
-        f"CREATE OR REPLACE VIEW java_jobs AS SELECT *, "
-        f"coalesce(list_contains({_jobs_list(spec)}, {job}), false) AS {_IN_OWN} FROM "
-        f"read_parquet({sql_literal(str(java_file))}, hive_partitioning=false) "
-        f"WHERE {_q(spec.partition_column)} = {sql_literal(JAVA)}"
+        f"CREATE OR REPLACE TEMP VIEW java_jobs AS SELECT *, "  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
+        f"coalesce(list_contains({_jobs_list(spec)}, {job}), false) AS {in_own} FROM java_src"
     )
     order = f"{job}"
     if _prefers_listed_job(spec):
-        order = f"(NOT {_IN_OWN}), {job}, {_q(spec.unique_column)}"
+        order = f"(NOT {in_own}), {job}, {_q(spec.unique_column)}"
     con.execute(
-        "CREATE OR REPLACE TEMP TABLE java_builds AS SELECT * FROM java_jobs "
+        "CREATE OR REPLACE TEMP TABLE java_builds AS SELECT * FROM java_jobs "  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
         f"QUALIFY row_number() OVER (PARTITION BY {_q(spec.build_id_column)} ORDER BY {order}) = 1"
     )
 
@@ -124,15 +131,16 @@ def _counts(con: duckdb.DuckDBPyConnection, spec: DatasetSpec) -> dict[str, Any]
     agg = (
         f"count(*), count(DISTINCT {job}), count(DISTINCT {build}), count(DISTINCT gh_project_name)"
     )
-    total = _one(con, f"SELECT {agg} FROM jobs")
+    total = _one(con, f"SELECT {agg} FROM jobs")  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
     by_lang = con.execute(
-        f"SELECT {_q(spec.partition_column)}, {agg} FROM jobs GROUP BY 1 ORDER BY 1"
+        f"SELECT {_q(spec.partition_column)}, {agg} FROM jobs GROUP BY 1 ORDER BY 1"  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
     ).fetchall()
-    java = _one(con, f"SELECT {agg} FROM java_jobs")
+    java = _one(con, f"SELECT {agg} FROM java_jobs")  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
     started = _q(spec.started_at_column)
-    rng = _one(con, f"SELECT min({started}), max({started}) FROM java_builds")
+    rng = _one(con, f"SELECT min({started}), max({started}) FROM java_builds")  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
+    label = _q(spec.label_column)
     labels = con.execute(
-        f"SELECT {_q(spec.label_column)}, count(*) FROM java_builds GROUP BY 1 ORDER BY 2 DESC, 1"
+        f"SELECT {label}, count(*) FROM java_builds GROUP BY 1 ORDER BY 2 DESC, 1"  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
     ).fetchall()
     keys = ("jobs", "distinct_job_ids", "builds", "projects")
     return {
@@ -169,7 +177,7 @@ def _varying_builds(
         sums = ", ".join(f"sum({_q(n)})" for n in part)
         row = _one(
             con,
-            f"SELECT {sums} FROM (SELECT {flags} FROM java_jobs "
+            f"SELECT {sums} FROM (SELECT {flags} FROM java_jobs "  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
             f"GROUP BY {_q(spec.build_id_column)})",
         )
         out.update({n: int(v or 0) for n, v in zip(part, row, strict=True)})
@@ -180,7 +188,7 @@ def _column_profile(
     con: duckdb.DuckDBPyConnection, spec: DatasetSpec, name: str, duck_type: str
 ) -> dict[str, Any]:
     doc = spec.column_docs[name]
-    table = "java_jobs" if doc.grain == "job" else "java_builds"
+    table = sql_ident("java_jobs" if doc.grain == "job" else "java_builds", _TABLES)
     col = _q(name)
     exprs = ["count(*)", f"count(*) - count({col})", f"count(DISTINCT {col})"]
     with_stats = duck_type in _NUMERIC | {"TIMESTAMP"} and doc.role != "identifier"
@@ -192,7 +200,7 @@ def _column_profile(
     with_zero = duck_type in _NUMERIC and doc.role != "identifier"
     if with_zero:
         exprs.append(f"avg(({col} = 0)::INTEGER)")
-    row = _one(con, f"SELECT {', '.join(exprs)} FROM {table}")
+    row = _one(con, f"SELECT {', '.join(exprs)} FROM {table}")  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
     n, nulls, distinct = int(row[0]), int(row[1]), int(row[2])
     out: dict[str, Any] = {
         "rows_measured": n,
@@ -362,7 +370,7 @@ def _evidence_5_3_2016(con: duckdb.DuckDBPyConnection, spec: DatasetSpec) -> dic
     job, build = _q(spec.job_id_column), _q(spec.build_id_column)
     dups = _one(
         con,
-        f"SELECT count(*), count(*) FILTER (WHERE n > 1), count(*) FILTER (WHERE nb > 1), "
+        f"SELECT count(*), count(*) FILTER (WHERE n > 1), count(*) FILTER (WHERE nb > 1), "  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
         f"count(*) FILTER (WHERE n > 1 AND k = 1), count(*) FILTER (WHERE n > 1 AND k = 0), "
         f"sum(n) FILTER (WHERE n > 1) FROM (SELECT {job}, count(*) AS n, "
         f"count(DISTINCT {build}) AS nb, count(*) FILTER (WHERE {_IN_OWN}) AS k "
@@ -370,7 +378,7 @@ def _evidence_5_3_2016(con: duckdb.DuckDBPyConnection, spec: DatasetSpec) -> dic
     )
     listed = _one(
         con,
-        f"SELECT count(*) FILTER (WHERE {_IN_OWN}), count(*), "
+        f"SELECT count(*) FILTER (WHERE {_IN_OWN}), count(*), "  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
         f"(SELECT count(*) FROM (SELECT {build} FROM java_jobs GROUP BY 1 "
         f"HAVING NOT bool_or({_IN_OWN}))) FROM java_jobs",
     )
@@ -466,7 +474,7 @@ def _invariants_5_3_2016(
     job, build = _q(spec.job_id_column), _q(spec.build_id_column)
     rows = _one(
         con,
-        f"SELECT count(*), count(DISTINCT {job}), count(*) FILTER (WHERE NOT {_IN_OWN}), "
+        f"SELECT count(*), count(DISTINCT {job}), count(*) FILTER (WHERE NOT {_IN_OWN}), "  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
         f"count(*) FILTER (WHERE tr_num_jobs <> len({_jobs_list(spec)})), "
         "count(*) FILTER (WHERE tr_num_jobs IS NOT NULL AND tr_jobs IS NOT NULL), "
         "count(*) FILTER (WHERE tr_prev_build = -1), "
@@ -598,28 +606,29 @@ def utc_crosscheck(
     files = sorted(archive_dir.glob(_ARCHIVE_GLOB))
     if not files:
         raise FileNotFoundError(f"no {_ARCHIVE_GLOB} under {archive_dir}")
-    listing = "[" + ", ".join(sql_literal(str(f)) for f in files) + "]"
     con.execute(
         "CREATE OR REPLACE TEMP TABLE archive_raw AS SELECT build_id, status, duration, "
-        f"started_at FROM read_csv({listing}, header=true, all_varchar=true, "
-        "union_by_name=true)"
+        "started_at FROM read_csv($files, header=true, all_varchar=true, union_by_name=true)",
+        {"files": [str(f) for f in files]},
     )
     raw = _one(
         con,
-        "SELECT count(*), count(*) FILTER (WHERE regexp_full_match(started_at, "
-        f"{sql_literal(_UTC_PATTERN)})) FROM archive_raw",
+        "SELECT count(*), count(*) FILTER (WHERE regexp_full_match(started_at, $utc)) "
+        "FROM archive_raw",
+        {"utc": _UTC_PATTERN},
     )
     con.execute(
         "CREATE OR REPLACE TEMP TABLE archive AS SELECT DISTINCT TRY_CAST(build_id AS BIGINT) AS b,"
         " status, TRY_CAST(duration AS BIGINT) AS dur, "
         "strptime(replace(started_at, ' UTC', ''), '%Y-%m-%d %H:%M:%S') AS st FROM archive_raw "
-        f"WHERE regexp_full_match(started_at, {sql_literal(_UTC_PATTERN)})"
+        "WHERE regexp_full_match(started_at, $utc)",
+        {"utc": _UTC_PATTERN},
     )
     started, build = _q(spec.started_at_column), _q(spec.build_id_column)
     label, duration = _q(spec.label_column), _q(spec.duration_column)
     joined = _one(
         con,
-        f"SELECT count(*), count(*) FILTER (WHERE j.{started} = a.st), "
+        f"SELECT count(*), count(*) FILTER (WHERE j.{started} = a.st), "  # noqa: S608  # nosec B608 # identifiers: sql_ident (schema names); no values spliced
         f"count(*) FILTER (WHERE abs(epoch(j.{started}) - epoch(a.st)) IN (3600, 7200)), "
         f"count(*) FILTER (WHERE j.{label} = a.status), "
         f"count(*) FILTER (WHERE j.{duration} = a.dur), count(DISTINCT j.gh_project_name) "

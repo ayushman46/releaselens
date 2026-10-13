@@ -5,7 +5,8 @@
 -- constant across all of a build's job rows; the consistent_within_build tests on
 -- stg_travis_job_rows prove it on every run (tr_build_number, tr_num_jobs and git_num_committers
 -- are only constant across the build's LISTED rows: foreign rows carry their own build's number,
--- and two shifted rows have cast-failure NULLs).
+-- and two shifted rows have cast-failure NULLs). build_number is therefore NULL for the 78 builds
+-- whose rows are all foreign.
 --
 -- Semantics (ADR-0005 / ADR-0017, docs/data/DATA_DICTIONARY.md):
 --   status       lower(trim(tr_status)): passed | failed | errored | canceled | started
@@ -46,7 +47,10 @@ select
     c.git_branch as branch,
     c.gh_is_pr as is_pr,
     c.gh_pull_req_num as pull_request_number,
-    c.tr_build_number as build_number,
+    -- A foreign row carries the build number of the job's real build (measured: equal to the
+    -- owner build's number on all 21,573 foreign rows whose job is listed elsewhere), so a build
+    -- without a listed row of its own (78 builds) has no trustworthy number: NULL.
+    case when p.n_listed_job_rows > 0 then c.tr_build_number end as build_number,
     c.tr_num_jobs as num_jobs,
     c.tr_jobs_count as num_jobs_listed,
     p.n_job_rows,
