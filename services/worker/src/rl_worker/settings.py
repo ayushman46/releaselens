@@ -18,7 +18,8 @@ def _default_worker_id() -> str:
 
 
 class WorkerSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="RL_", extra="ignore")
+    # env_ignore_empty: compose passes unset optional secrets as "" (meaning "not set").
+    model_config = SettingsConfigDict(env_prefix="RL_", extra="ignore", env_ignore_empty=True)
 
     env: Literal["dev", "test", "prod"] = "dev"
     service_name: str = "releaselens-worker"
