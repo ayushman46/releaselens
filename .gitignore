@@ -76,3 +76,4 @@ demo/k6/out/
 # --- Claude Code agent worktrees / local settings ---
 .claude/
 demo/scenarios/out/
+bench/out/
