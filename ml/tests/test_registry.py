@@ -121,3 +121,33 @@ def test_tags_carry_dataset_and_schema_versions(trained_run) -> None:
     assert t["synthetic"] == "true"
     assert t["test_set_evaluations"] == "1"
     assert t["leakage_audit"] == "passed"
+
+
+def test_record_promotion_updates_results_and_card(trained_run, tmp_path: Path) -> None:
+    import json
+
+    from rl_ml.data import DATA_SOURCE, DATASET_MD5
+
+    r = json.loads(json.dumps(trained_run.results))
+    # fixture only: dress the synthetic run up as a real one so the generator accepts it
+    r["data"] |= {"source": DATA_SOURCE, "synthetic": False, "dataset_md5": DATASET_MD5}
+    r["registry"] = {
+        "run_id": "abc",
+        "registered_model": MODEL_NAME,
+        "version": "7",
+        "alias": "challenger",
+    }
+    (tmp_path / "results").mkdir()
+    (tmp_path / "results" / "failed_or_errored.json").write_text(json.dumps(r))
+    decision = {
+        "model": MODEL_NAME,
+        "version": "7",
+        "promoted": True,
+        "champion_version": None,
+        "leakage_tests": {"passed": True, "summary": "12 passed"},
+    }
+    written = registry.record_promotion(decision, tmp_path)
+    assert tmp_path / "MODEL_CARD.md" in written
+    assert "promoted to **`champion`**" in (tmp_path / "MODEL_CARD.md").read_text()
+    stored = json.loads((tmp_path / "results" / "failed_or_errored.json").read_text())
+    assert stored["registry"]["promotion"]["leakage_tests_passed"] is True

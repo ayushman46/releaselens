@@ -584,7 +584,35 @@ def _sensitivity_section(res: dict[str, dict[str, Any]]) -> list[str]:
             "heuristic rule test PR-AUC",
             lambda r: r["test"]["reference_candidates"].get("heuristic_rule", {}).get("pr_auc"),
         ),
-        row("cold-start test PR-AUC", lambda r: r["test"]["cold_start"]["pr_auc"]),
+        row("cold-start test PR-AUC (history masked)", lambda r: r["test"]["cold_start"]["pr_auc"]),
+        row(
+            "no-history model test PR-AUC",
+            lambda r: (r["test"].get("cold_start_no_history_model") or {}).get("pr_auc"),
+        ),
+        row(
+            "after a passing build: base rate",
+            lambda r: (
+                (r["test"].get("by_previous_outcome") or {})
+                .get("previous_passed", {})
+                .get("base_rate")
+            ),
+        ),
+        row(
+            "after a passing build: PR-AUC",
+            lambda r: (
+                (r["test"].get("by_previous_outcome") or {})
+                .get("previous_passed", {})
+                .get("pr_auc")
+            ),
+        ),
+        row(
+            "after a passing build: ROC-AUC",
+            lambda r: (
+                (r["test"].get("by_previous_outcome") or {})
+                .get("previous_passed", {})
+                .get("roc_auc")
+            ),
+        ),
         row(
             "held-out projects PR-AUC (test window)",
             lambda r: (
@@ -661,7 +689,16 @@ def _timings(r: dict[str, Any]) -> list[str]:
 def _registry(r: dict[str, Any]) -> str:
     reg = r.get("registry") or {}
     if reg.get("version"):
-        return f"MLflow run `{reg['run_id']}`, registered as `{reg['registered_model']}/{reg['version']}` (alias `{reg['alias']}` at registration)."
+        text = f"MLflow run `{reg['run_id']}`, registered as `{reg['registered_model']}/{reg['version']}` (alias `{reg['alias']}` at registration)"
+        promo = reg.get("promotion") or {}
+        if promo.get("promoted"):
+            before = promo.get("champion_version")
+            text += (
+                f"; promoted to **`champion`** (previous champion: "
+                f"{'version ' + str(before) if before else 'none'}; leakage tests passed: "
+                f"{'yes' if promo.get('leakage_tests_passed') else 'no'})"
+            )
+        return text + "."
     if reg.get("run_id"):
         return f"MLflow run `{reg['run_id']}` (not registered)."
     return "Not logged to MLflow."

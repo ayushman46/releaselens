@@ -433,6 +433,7 @@ def main(argv: list[str] | None = None) -> int:
     pr = sub.add_parser("promote", help="promote a model version to champion (checks criteria)")
     pr.add_argument("--version", required=True)
     pr.add_argument("--card", type=Path, default=None)
+    pr.add_argument("--docs-dir", type=Path, default=None, help="default: docs/ml")
     sub.add_parser("show", help="aliases and versions")
     args = p.parse_args(argv)
     if args.cmd == "show":
@@ -445,7 +446,29 @@ def main(argv: list[str] | None = None) -> int:
         log.error("promotion refused: %s", exc)
         return 1
     sys.stdout.write(json.dumps(decision, indent=1) + "\n")
+    for path in record_promotion(decision, args.docs_dir):
+        log.info("recorded promotion in %s", path)
     return 0
+
+
+def record_promotion(decision: dict[str, Any], docs_dir: Path | None = None) -> list[Path]:
+    """Add the promotion decision to the matching results JSON and regenerate the docs."""
+    from rl_ml import card
+    from rl_ml.train import repo_root
+
+    d = docs_dir or repo_root() / "docs" / "ml"
+    changed = False
+    for p in sorted((d / "results").glob("*.json")):
+        res = json.loads(p.read_text())
+        reg = res.get("registry") or {}
+        if str(reg.get("version")) == str(decision["version"]):
+            reg["promotion"] = {k: v for k, v in decision.items() if k != "leakage_tests"} | {
+                "leakage_tests_passed": decision["leakage_tests"]["passed"]
+            }
+            res["registry"] = reg
+            p.write_text(json.dumps(res, indent=1))
+            changed = True
+    return card.write_docs(d) if changed else []
 
 
 if __name__ == "__main__":
