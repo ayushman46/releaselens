@@ -72,3 +72,13 @@ def test_load_mart_verifies_the_manifest(synthetic_mart) -> None:
     assert "manifest verified (sha256 + rows)" in m.notes
     with pytest.raises(MartSchemaError, match="manifest"):
         load_mart("r1", client=_store(synthetic_mart, corrupt=True), settings=settings)
+
+
+def test_no_history_diagnostic_model_excludes_history_features(trained_run) -> None:
+    from rl_ml.splits import COLD_START_MASKED
+
+    nh = trained_run.results["test"].get("cold_start_no_history_model")
+    feats = trained_run.final.features
+    assert nh is not None
+    assert nh["features"] == len([f for f in feats if f not in COLD_START_MASKED])
+    assert 0.0 <= nh["pr_auc"] <= 1.0

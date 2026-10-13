@@ -271,12 +271,20 @@ _XGB_SEARCHED = (
 )
 
 
-def refit(c: Candidate, train: Mart, val: Mart, *, seed: int) -> Candidate:
-    """Same family and hyper-parameters, fitted on other rows (cross-project experiment).
+def refit(
+    c: Candidate,
+    train: Mart,
+    val: Mart,
+    *,
+    seed: int,
+    features: tuple[str, ...] | None = None,
+) -> Candidate:
+    """Same family and hyper-parameters, fitted on other rows or another feature subset
+    (cross-project experiment, no-history diagnostic).
 
     XGBoost re-runs early stopping on the given validation rows; nothing is re-searched.
     """
-    feats = c.features
+    feats = c.features if features is None else features
     if c.name == "majority_class":
         return _fit_simple(c.name, MajorityClassModel(), feats, train, val, {})
     if c.name == "heuristic_rule":

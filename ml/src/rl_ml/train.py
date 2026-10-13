@@ -291,6 +291,18 @@ def run_training(mart: Mart, cfg: TrainConfig, on_trial: Any = None) -> Training
     }
     t = lap("validation_artifacts", t)
 
+    # Day-one diagnostic: the same family/hyper-parameters refit WITHOUT history features.
+    # Masking history on the history-trained model (spec cold start) depends on how the trees
+    # route NaN, learned from the ~0.3% of rows without history, so it is fragile; a model that
+    # never saw history is the more reliable day-one estimate. Not a selection candidate.
+    no_hist_feats = tuple(f for f in final.features if f not in _cold_masked())
+    no_hist = (
+        refit(final, train, val, seed=cfg.seed, features=no_hist_feats)
+        if final.name not in ("majority_class", "heuristic_rule")
+        else None
+    )
+    t = lap("no_history_model", t)
+
     # ---- 5: the single test-set evaluation
     def evaluate_test(test: Mart) -> dict[str, Any]:
         X = test.X(final.features)
@@ -306,6 +318,14 @@ def run_training(mart: Mart, cfg: TrainConfig, on_trial: Any = None) -> Training
         out["per_project"] = per_project_pr_auc(test.y, s, projects, cfg.min_project_builds)
         out["cold_start"] = summarize(test.y, final.score(cold_start(X)))
         out["cold_start"]["masked_features"] = [f for f in X.columns if f in _cold_masked()]
+        if no_hist is not None:
+            out["cold_start_no_history_model"] = summarize(
+                test.y, no_hist.score(test.X(no_hist.features))
+            ) | {
+                "features": len(no_hist.features),
+                "val_pr_auc": no_hist.val_pr_auc,
+                "note": "same family + hyper-parameters, trained without history features",
+            }
         sel = cal_choice["selected"]
         gates = {
             m: gate(test.y, c.predict(s), validation_base_rate=val_base)

@@ -147,10 +147,17 @@ def _headline(r: dict[str, Any]) -> list[str]:
             + (": predicting *new* breakage is much harder." if persistence else ".")
         )
     cold = r["test"]["cold_start"]
+    nh = r["test"].get("cold_start_no_history_model")
     lines += [
-        f"- Without build history (cold start) PR-AUC is {f(cold['pr_auc'])} "
+        f"- Without build history (cold start, history masked) PR-AUC is {f(cold['pr_auc'])} "
         f"({f(cold['pr_auc_over_base_rate'], 2)}× base) and ROC-AUC {f(cold['roc_auc'])}: "
-        f"**{verdict(cold['roc_auc'])}**.",
+        f"**{verdict(cold['roc_auc'])}**"
+        + (
+            f"; a model trained without history features reaches PR-AUC {f(nh['pr_auc'])} / "
+            f"ROC-AUC {f(nh['roc_auc'])} (**{verdict(nh['roc_auc'])}**)."
+            if nh
+            else "."
+        ),
         f"- Calibrated probability exposed: **{'yes' if r['test']['probability_exposed'] else 'no'}** "
         f"(ADR-0012 gate, {r['test']['calibration']['selected_method']} calibration).",
     ]
@@ -535,6 +542,24 @@ def _cold_section(r: dict[str, Any]) -> list[str]:
         f"(vs {f(t['pr_auc'])} with history), ROC-AUC {f(c['roc_auc'])} (vs {f(t['roc_auc'])}), "
         f"PR-AUC / base rate {f(c['pr_auc_over_base_rate'], 2)}. This estimates day-one performance for a "
         "tenant without build history in ReleaseLens.",
+        *_no_history_lines(r),
+    ]
+
+
+def _no_history_lines(r: dict[str, Any]) -> list[str]:
+    nh = r["test"].get("cold_start_no_history_model")
+    if not nh:
+        return []
+    c = r["test"]["cold_start"]
+    return [
+        "",
+        "Caveat: masking history on a model trained *with* history depends on how its trees route "
+        "missing values, learned from the few training rows without history, so that number is "
+        "fragile (it moves between near-equivalent models). A diagnostic model with the same family "
+        f"and hyper-parameters trained **without** history features ({nh['features']} features, not a "
+        f"selection candidate) scores PR-AUC {f(nh['pr_auc'])} / ROC-AUC {f(nh['roc_auc'])} on the same "
+        f"test rows (masked final model: {f(c['pr_auc'])} / {f(c['roc_auc'])}). A day-one tenant should "
+        "be served by such a no-history model, not by masking.",
     ]
 
 
@@ -740,7 +765,9 @@ def _history_limitation(r: dict[str, Any]) -> str:
         )
     return (
         "- **History dependence and variance.** The model needs the tenant's own build history in "
-        f"ReleaseLens (cold start ROC-AUC {f(r['test']['cold_start']['roc_auc'])}); {xp}. Per-project "
+        f"ReleaseLens (cold start ROC-AUC {f(r['test']['cold_start']['roc_auc'])} with history masked, "
+        f"{f((r['test'].get('cold_start_no_history_model') or {}).get('roc_auc'))} for a model trained "
+        f"without history); {xp}. Per-project "
         f"PR-AUC varies widely (IQR {f(pp.get('pr_auc_p25'))}–{f(pp.get('pr_auc_p75'))} over "
         f"{f(pp.get('projects_eligible'))} projects)."
     )
@@ -823,7 +850,11 @@ def render_model_card(res: dict[str, dict[str, Any]]) -> str:
                     "held-out projects PR-AUC (test window)",
                     f"{f(cp.get('pr_auc'))} (base rate {f(cp.get('base_rate'))})",
                 ],
-                ["cold start (no history) PR-AUC", f(cold["pr_auc"])],
+                ["cold start (history masked) PR-AUC", f(cold["pr_auc"])],
+                [
+                    "no-history model (diagnostic) PR-AUC",
+                    f((r["test"].get("cold_start_no_history_model") or {}).get("pr_auc")),
+                ],
                 [
                     "after a passing build (new breakage) PR-AUC",
                     "{} (base rate {})".format(
