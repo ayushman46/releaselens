@@ -38,13 +38,25 @@ This file is the contract between components. Change it only together with every
 | `RL_S3_BUCKET_MLFLOW` | `releaselens-mlflow` | mlflow |
 | `RL_MLFLOW_TRACKING_URI` | `http://mlflow:5000` | ml, api |
 | `RL_SMTP_HOST` / `RL_SMTP_PORT` | `mailpit` / `1025` | worker, api |
+| `RL_SMTP_USERNAME` / `RL_SMTP_PASSWORD` / `RL_SMTP_STARTTLS` / `RL_MAIL_FROM` | unset / unset / `false` / `ReleaseLens <no-reply@releaselens.local>` | worker, api |
+| `RL_SECRET_KEY` (+ `RL_SECRET_KEY_PREVIOUS`, comma-separated) | ≥ 32 random chars; **required when `RL_ENV=prod`** (dev/test fall back to a public dev key) | api, worker |
+| `RL_WEB_BASE_URL` / `RL_API_BASE_URL` | `http://localhost:23000` / `http://localhost:28000` | api (links, redirects), worker (alert links) |
+| `RL_TRUSTED_PROXIES` | CIDRs whose `X-Forwarded-For` is believed, e.g. `10.0.0.0/8` | api |
+| `RL_COOKIE_DOMAIN`, `RL_ACCESS_TOKEN_TTL_S`, `RL_REFRESH_TOKEN_TTL_S`, `RL_SESSION_MAX_AGE_S` | unset, `900`, `1209600`, `2592000` | api |
+| `RL_ARGON2_TIME_COST` / `_MEMORY_KIB` / `_PARALLELISM`, `RL_PASSWORD_HASH_CONCURRENCY` | `3` / `65536` / `4`, `2` | api |
+| `RL_RATE_LIMIT_ENABLED`, `RL_RATE_LIMIT_{AUTH,LOGIN_ACCOUNT,INGEST}_{BURST,PER_MINUTE}` | `true`; see docs/security/AUTH.md §6 | api |
+| `RL_MAX_BODY_BYTES` | `1048576` | api |
+| `RL_GITHUB_OAUTH_CLIENT_ID` / `_CLIENT_SECRET` / `_REDIRECT_URI` | unset (→ 503) | api |
+| `RL_STRIPE_SECRET_KEY` / `RL_STRIPE_WEBHOOK_SECRET` / `RL_STRIPE_PRICE_TEAM` | unset (→ 503); test-mode keys only | api |
+| `RL_NOTIFIER_ENABLED`, `RL_NOTIFIER_GROUP_ID`, `RL_NOTIFICATION_*`, `RL_SLACK_TIMEOUT_S`, `RL_HOUSEKEEPING_ENABLED`, `RL_HOUSEKEEPING_INTERVAL_S` (M10 housekeeping; `RL_MAINTENANCE_INTERVAL_S` is the M7 span-partition loop) | `true`, `rl-notifier`, see `rl_worker.settings`, `5`, `true`, `3600` | worker |
 | `RL_DATASETS_DIR` | `/datasets` (one sub-directory per registered dataset, `rl_pipeline.datasets`) | pipeline |
 | `RL_LAKE_DIR` | `/lake` (Parquet staging, DuckDB spill, dbt work dir `<lake>/dbt`) | pipeline |
 | `RL_DBT_PROJECT_DIR` | `/opt/airflow/dbt` (default `<repo>/data/dbt`; read-only, see docs/data/PIPELINE.md §8) | pipeline |
 | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` | standard OTel | all (self-telemetry, demo) |
 
 Secrets never have defaults in code outside `RL_ENV=dev|test`. `.env.example` is committed,
-and `.env` is git-ignored.
+and `.env` is git-ignored. Empty values count as unset (`env_ignore_empty`), so compose can pass
+optional secrets through as `${VAR:-}`.
 
 ## 3. Compose (`infra/compose/compose.yaml`, project name `rlens`)
 
@@ -60,7 +72,7 @@ are all overridable in `.env`.
 | `api` | core | 8000 | 28000 | `rlens/python` |
 | `worker` | core | 8001 (health) | 28001 | `rlens/python` |
 | `web` | core | 3000 | 23000 | `rlens/web` |
-| `mailpit` | core | 1025 / 8025 | 21025 / 28025 | `axllent/mailpit` |
+| `mailpit` | core | 1025 / 8025 | 21025 / 28025 (127.0.0.1 only) | `axllent/mailpit:v1.31.3` |
 | `minio` + `minio-init` | data | 9000 / 9001 | 29000 / 29001 | per ADR-0009 |
 | `mlflow` | data | 5000 | 25000 | `rlens/python` (`mlflow server`) |
 | `airflow` | data | 8080 | 28080 | `rlens/airflow` (ADR-0013) |

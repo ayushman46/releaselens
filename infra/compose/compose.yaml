@@ -24,6 +24,21 @@ x-python-service: &python-service
     RL_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-rlens}:${POSTGRES_PASSWORD:-rlens-dev-password}@postgres:5432/${POSTGRES_DB:-rlens}
     RL_KAFKA_BOOTSTRAP: kafka:9092
 
+# M10 SaaS settings shared by api and worker. RL_SECRET_KEY is deliberately absent: in
+# RL_ENV=dev both fall back to a public development key; set a real one (>= 32 chars) in
+# .env for anything else. Stripe / GitHub OAuth stay unset until BLOCKERS.md B2 / B5.
+x-saas-env: &saas-env
+  RL_SMTP_HOST: mailpit
+  RL_SMTP_PORT: "1025"
+  RL_WEB_BASE_URL: http://localhost:${RL_WEB_HOST_PORT:-23000}
+  RL_API_BASE_URL: http://localhost:${RL_API_HOST_PORT:-28000}
+  RL_SECRET_KEY: ${RL_SECRET_KEY:-}
+  RL_STRIPE_SECRET_KEY: ${RL_STRIPE_SECRET_KEY:-}
+  RL_STRIPE_WEBHOOK_SECRET: ${RL_STRIPE_WEBHOOK_SECRET:-}
+  RL_STRIPE_PRICE_TEAM: ${RL_STRIPE_PRICE_TEAM:-}
+  RL_GITHUB_OAUTH_CLIENT_ID: ${RL_GITHUB_OAUTH_CLIENT_ID:-}
+  RL_GITHUB_OAUTH_CLIENT_SECRET: ${RL_GITHUB_OAUTH_CLIENT_SECRET:-}
+
 # S3 client settings for everything that talks to the local object store (rl_pipeline, ml).
 x-s3-env: &s3-env
   RL_S3_ENDPOINT: http://minio:9000
@@ -160,8 +175,10 @@ services:
     profiles: [core, data, demo]
     command: ["python", "-m", "rl_api"]
     environment:
-      <<: *python-env
+      <<: [*python-env, *saas-env]
       RL_CORS_ORIGINS: ${RL_CORS_ORIGINS:-http://localhost:23000}
+      # Dev only: uvicorn trusts X-Forwarded-For from anyone. Production sets this and
+      # RL_TRUSTED_PROXIES to the load balancer's range (docs/security/AUTH.md §6).
       RL_FORWARDED_ALLOW_IPS: "*"
     ports: ["${RL_API_HOST_PORT:-28000}:8000"]
     depends_on:
@@ -179,10 +196,13 @@ services:
     <<: *python-service
     profiles: [core, data, demo]
     command: ["python", "-m", "rl_worker"]
+    environment:
+      <<: [*python-env, *saas-env]
     ports: ["${RL_WORKER_HOST_PORT:-28001}:8001"]
     depends_on:
       migrate: { condition: service_completed_successfully }
       kafka-init: { condition: service_completed_successfully }
+      mailpit: { condition: service_started }
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/readyz', timeout=3).status == 200 else 1)"]
       interval: 10s
@@ -190,6 +210,21 @@ services:
       retries: 12
       start_period: 10s
     mem_limit: 256m
+
+  mailpit:
+    # SMTP sink for verification, reset, invitation and alert e-mails (UI on 28025).
+    image: axllent/mailpit:v1.31.3
+    profiles: [core, data, demo]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${RL_MAILPIT_SMTP_HOST_PORT:-21025}:1025"
+      - "127.0.0.1:${RL_MAILPIT_UI_HOST_PORT:-28025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    mem_limit: 64m
 
   web:
     image: rlens/web:dev

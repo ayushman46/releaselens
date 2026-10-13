@@ -17,7 +17,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, BeforeValidator, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +25,8 @@ from rl_api.auth import require_scope
 from rl_api.deps import get_producer, get_session
 from rl_api.errors import ApiError
 from rl_api.kafka import EventProducer, ProduceError
+from rl_api.principal import require_tenant_read
+from rl_api.ratelimit import limit_api_key
 from rl_core.events import (
     DEPLOYMENT_EVENTS,
     V2_ONLY_FIELDS,
@@ -43,6 +45,7 @@ from rl_db.repositories import (
     list_analysis_jobs,
     list_deployments,
 )
+from rl_db.repositories.billing import increment_usage, month_start
 
 log = logging.getLogger("rl_api.deployments")
 
@@ -56,6 +59,11 @@ _ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     401: {"description": "Missing or invalid API key"},
     403: {"description": "The API key lacks the required scope"},
 }
+
+# One callable, so FastAPI authenticates the key once per request (dependency caching).
+_write_scope = require_scope("deployments:write")
+# Ingest is rate limited per API key (token bucket in Postgres, RL_RATE_LIMIT_INGEST_*).
+_ingest = limit_api_key(_write_scope, "ingest")
 
 
 def _reject_bool(value: Any) -> Any:
@@ -140,12 +148,14 @@ def _payload(body: DeploymentCreate) -> DeploymentPayloadV1:
     summary="Record a completed deployment",
     responses={
         **_ERROR_RESPONSES,
+        429: {"description": "Rate limit for this API key exceeded; see Retry-After"},
         503: {"description": "The event bus did not acknowledge the event; retry"},
     },
 )
 async def create_deployment(
     body: DeploymentCreate,
-    ctx: Annotated[TenantContext, Depends(require_scope("deployments:write"))],
+    request: Request,
+    ctx: Annotated[TenantContext, Depends(_ingest)],
     producer: Annotated[EventProducer, Depends(get_producer)],
 ) -> DeploymentAccepted:
     if body.deployed_at > datetime.now(UTC) + MAX_FUTURE_SKEW:
@@ -188,7 +198,20 @@ async def create_deployment(
             "offset": delivery.offset,
         },
     )
+    await _count_usage(request, ctx)
     return DeploymentAccepted(event_id=envelope.event_id)
+
+
+async def _count_usage(request: Request, ctx: TenantContext) -> None:
+    """Monthly ``deployments`` usage counter. Bookkeeping must never fail an accepted
+    event, so errors are logged and swallowed."""
+    try:
+        async with request.app.state.db_sessions.begin() as session:
+            await increment_usage(
+                session, ctx, "deployments", period_start=month_start(datetime.now(UTC).date())
+            )
+    except Exception:
+        log.warning("could not record deployment usage", exc_info=True)
 
 
 def _encode_cursor(row: Deployment) -> str:
@@ -225,7 +248,7 @@ def _decode_cursor(cursor: str) -> DeploymentCursor:
     responses=_ERROR_RESPONSES,
 )
 async def list_deployments_route(
-    ctx: Annotated[TenantContext, Depends(require_scope("read"))],
+    ctx: Annotated[TenantContext, Depends(require_tenant_read)],
     session: Annotated[AsyncSession, Depends(get_session)],
     service: Annotated[str | None, Query(max_length=200)] = None,
     environment: Annotated[str | None, Query(max_length=64)] = None,
@@ -251,7 +274,7 @@ async def list_deployments_route(
 )
 async def get_deployment_route(
     deployment_id: uuid.UUID,
-    ctx: Annotated[TenantContext, Depends(require_scope("read"))],
+    ctx: Annotated[TenantContext, Depends(require_tenant_read)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> DeploymentDetail:
     row = await get_deployment(session, ctx, deployment_id)

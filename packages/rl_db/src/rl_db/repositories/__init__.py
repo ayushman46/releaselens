@@ -18,7 +18,12 @@ from rl_db.repositories.analyses import (
     load_analysis_spans,
     upsert_analysis,
 )
-from rl_db.repositories.api_keys import insert_api_key, list_api_keys, revoke_api_key
+from rl_db.repositories.api_keys import (
+    get_api_key,
+    insert_api_key,
+    list_api_keys,
+    revoke_api_key,
+)
 from rl_db.repositories.deployments import (
     DEFAULT_POST_WINDOW_END,
     DeploymentCursor,
@@ -42,6 +47,7 @@ __all__ = [
     "SpanWriteResult",
     "add_outbox_event",
     "analysis_schedule",
+    "get_api_key",
     "get_deployment",
     "insert_api_key",
     "latest_environment_analysis",

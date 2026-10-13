@@ -1,4 +1,4 @@
-"""Identity & tenancy tables (M1 baseline; extended in M10).
+"""Identity & tenancy tables (M1 baseline; invitations added in M10).
 
 Tenant-owned tables carry ``tenant_id NOT NULL`` referencing ``organizations.id`` and every
 index on them leads with ``tenant_id`` (ADR-0010).
@@ -119,3 +119,37 @@ class ApiKey(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             name="scopes_known",
         ),
     )
+
+
+class Invitation(UUIDPrimaryKeyMixin, Base):
+    """An invitation to join an organization, bound to one email address.
+
+    Only ``sha256(token)`` is stored; the token itself is e-mailed once. It is single use
+    (``accepted_at``), expires (``expires_at``, 7 days) and can be withdrawn (``revoked_at``).
+    """
+
+    __tablename__ = "invitations"
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    role: Mapped[Role] = mapped_column(
+        Enum(Role, name="role", values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    invited_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    accepted_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_invitations_tenant_id_created_at", "tenant_id", "created_at"),)

@@ -24,6 +24,9 @@ and mark the old one superseded.
 | 0016 | API keys: prefix + SHA-256 of a high-entropy secret (passwords use Argon2id) | Accepted |
 | 0017 | Training data = TravisTorrent **5_3_2016** release (Java); 2017 re-publication's change columns are broken | Accepted (supersedes part of 0004) |
 | 0018 | Regression engine: definitions and conservative refinements beyond spec §12 | Accepted (see QUESTIONS_FOR_OWNER) |
+| 0019 | Browser sessions: opaque DB-backed tokens, rotating refresh tokens, HMAC double-submit CSRF | Accepted |
+| 0020 | Rate limiting without Redis: Postgres token buckets | Accepted |
+| 0021 | Integration secrets (Slack webhooks) encrypted at rest with AES-256-GCM, row-bound | Accepted |
 
 ---
 
@@ -450,3 +453,56 @@ and mark the old one superseded.
   recorded in each result's evidence (gate names, `exact_p_value`). Lowering false alarms further
   would need a correction for testing several services at once, which is a spec change: see
   QUESTIONS_FOR_OWNER.
+
+## ADR-0019 — Browser sessions: opaque, DB-backed tokens with rotating refresh tokens
+
+- **Context.** Logins must be revocable immediately (logout, password reset, response to a
+  stolen token) and resistant to XSS theft and CSRF. The API already does one indexed DB lookup
+  per API-key request.
+- **Decision.**
+  - **Access token:** opaque 256-bit, prefixed `rla_`. Cookie `HttpOnly; Secure; SameSite=Lax`,
+    valid 15 min, looked up by hash on every request.
+  - **Refresh token:** prefixed `rlr_`, valid 14 days, cookie path `/api/v1/auth`. Rotated on
+    every use, with a 30-day absolute session limit.
+  - **Reuse detection:** the session row is the token family, so reusing an already-rotated
+    refresh token revokes the whole session.
+  - **CSRF:** double-submit token, the HMAC of the session id with a key derived from
+    `RL_SECRET_KEY`.
+  - API keys stay the machine credential and are exempt from CSRF. JWTs were rejected: revoking
+    them needs a deny-list lookup anyway, plus signing-key management.
+- **Consequences.**
+  - Revocation is instant and there are no signing keys to rotate.
+  - Two concurrent refreshes look like theft, so the web app serialises refreshes.
+  - Details: `docs/security/AUTH.md`.
+
+## ADR-0020 — Rate limiting without Redis: Postgres token buckets
+
+- **Context.** Limits must hold across several API processes, and ADR-0011 keeps Redis out.
+- **Decision.**
+  - One row per bucket in `rate_limit_buckets`, updated with a single
+    `INSERT … ON CONFLICT DO UPDATE … RETURNING` that refills continuously up to the burst
+    size. A refused request consumes nothing, and the database clock is the only clock.
+  - Bucket keys are hashed. Idle buckets are purged by worker housekeeping.
+  - Applied per IP and per account+IP on auth endpoints, and per API key on deployment ingest.
+    Refusals get 429 with `Retry-After`. The client IP is resolved only through trusted proxies.
+- **Consequences.** Each limited request costs one small write (benchmarked in M12), and a hot key
+  serialises on one row. Revisit if ingest outgrows it.
+
+## ADR-0021 — Integration secrets encrypted at rest
+
+- **Decision.**
+  - Slack webhook URLs are encrypted with AES-256-GCM using a 96-bit random nonce.
+  - The key comes from HKDF-SHA256 over `RL_SECRET_KEY` with a purpose label, which keeps it
+    independent of the CSRF key.
+  - The associated data is `alert_rules.slack_webhook_url:<tenant>:<rule>`, so a copied
+    ciphertext fails in any other row.
+  - Ciphertexts are versioned (`v1.<kid>.<b64>`), so keys can rotate through
+    `RL_SECRET_KEY_PREVIOUS`.
+  - Only a short hint is stored in clear and returned by the API.
+  - Sending is restricted to `https://hooks.slack.com/services/…` outside dev/test, with
+    timeouts and no redirects.
+- **Consequences.**
+  - The API and the worker share `RL_SECRET_KEY`.
+  - If the key is lost, the affected rules' notifications go `dead` with a clear error until an
+    admin re-enters the URL.
+  - A KMS-backed key is the upgrade path.

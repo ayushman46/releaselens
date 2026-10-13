@@ -14,6 +14,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 log = logging.getLogger("rl_api.errors")
 
 
+# Stable codes where the HTTP reason phrase changed across Python versions.
+_STATUS_CODES = {413: "payload_too_large"}
+
+
 class ApiError(Exception):
     """Raise from handlers for expected, client-visible failures."""
 
@@ -55,7 +59,9 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-        code = HTTPStatus(exc.status_code).phrase.lower().replace(" ", "_")
+        code = _STATUS_CODES.get(exc.status_code) or HTTPStatus(
+            exc.status_code
+        ).phrase.lower().replace(" ", "_")
         return JSONResponse(
             _body(request, code, str(exc.detail)),
             status_code=exc.status_code,

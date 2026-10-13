@@ -7,27 +7,68 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from rl_api import __version__
+from rl_api.billing import BillingGateway, StripeGateway
 from rl_api.errors import install_error_handlers
 from rl_api.health import kafka_check, postgres_check
 from rl_api.health import router as health_router
 from rl_api.kafka import EventProducer
-from rl_api.middleware import RequestContextMiddleware
+from rl_api.mail import Mailer, SmtpMailer
+from rl_api.middleware import (
+    BodySizeLimitMiddleware,
+    RequestContextMiddleware,
+    SecurityHeadersMiddleware,
+)
+from rl_api.passwords import PasswordHasher
+from rl_api.routers.alerts import router as alerts_router
 from rl_api.routers.analysis import router as analysis_router
+from rl_api.routers.apikeys import router as apikeys_router
+from rl_api.routers.audit import router as audit_router
+from rl_api.routers.auth import me_router
+from rl_api.routers.auth import router as auth_router
+from rl_api.routers.billing import router as billing_router
 from rl_api.routers.deployments import router as deployments_router
+from rl_api.routers.orgs import router as orgs_router
 from rl_api.routers.otlp import router as otlp_router
+from rl_api.routers.projects import router as projects_router
 from rl_api.settings import Settings, get_settings
 from rl_api.telemetry import setup_tracing, shutdown_tracing
 from rl_core.obs import configure_logging
 from rl_db import create_engine, create_session_factory
+from rl_db.secretbox import SecretBox, derive_key
 
 log = logging.getLogger("rl_api")
 
+# Outgoing calls (GitHub OAuth) must neither hang a request nor follow redirects to
+# wherever a response points.
+HTTP_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+
+def _default_mailer(settings: Settings) -> Mailer:
+    return SmtpMailer(
+        host=settings.smtp_host,
+        port=settings.smtp_port,
+        sender=settings.mail_from,
+        username=settings.smtp_username,
+        password=settings.smtp_password.get_secret_value() if settings.smtp_password else None,
+        starttls=settings.smtp_starttls,
+        timeout_s=settings.smtp_timeout_s,
+    )
+
+
+def create_app(
+    settings: Settings | None = None,
+    *,
+    mailer: Mailer | None = None,
+    http_transport: httpx.AsyncBaseTransport | None = None,
+    billing_gateway: BillingGateway | None = None,
+) -> FastAPI:
+    """Build the app. The keyword arguments replace external services in tests: a
+    recording mailer, an ``httpx.MockTransport`` for GitHub, a fake Stripe gateway."""
     settings = settings or get_settings()
     configure_logging(settings.service_name, settings.log_level, settings.log_format)
 
@@ -43,6 +84,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         producer.start()
         app.state.event_producer = producer
+        app.state.http_client = httpx.AsyncClient(
+            transport=http_transport, timeout=HTTP_TIMEOUT, follow_redirects=False
+        )
         app.state.readiness_checks = {
             "postgres": postgres_check(app.state),
             "kafka": kafka_check(settings.kafka_bootstrap, settings.readiness_timeout_s, producer),
@@ -54,6 +98,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # Flush acknowledged-pending events before the process exits; requests still
             # waiting on them get their answer during the flush.
             await asyncio.to_thread(producer.close, settings.kafka_delivery_timeout_s)
+            await app.state.http_client.aclose()
             await engine.dispose()
             shutdown_tracing()
             log.info("api stopped")
@@ -66,21 +111,55 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redoc_url=None,
     )
     app.state.settings = settings
+    app.state.trusted_proxies = settings.trusted_proxy_networks()
+    master = settings.master_secret()
+    app.state.secret_box = SecretBox(master, settings.previous_secrets())
+    app.state.csrf_key = derive_key(master, "releaselens/csrf/v1")
+    app.state.password_hasher = PasswordHasher(
+        time_cost=settings.argon2_time_cost,
+        memory_kib=settings.argon2_memory_kib,
+        parallelism=settings.argon2_parallelism,
+        concurrency=settings.password_hash_concurrency,
+    )
+    app.state.mailer = mailer or _default_mailer(settings)
+    if billing_gateway is not None:
+        app.state.billing_gateway = billing_gateway
+    elif settings.stripe_secret_key is not None:
+        app.state.billing_gateway = StripeGateway(settings.stripe_secret_key.get_secret_value())
+    else:
+        app.state.billing_gateway = None
 
+    # Middleware order (outermost last): request id → security headers → CORS → body limit.
+    # OTLP ingest has its own, larger compressed-body cap (and a decompression cap) — the
+    # global 1 MiB limit would reject ordinary collector batches with 413.
+    app.add_middleware(
+        BodySizeLimitMiddleware,
+        max_bytes=settings.max_body_bytes,
+        overrides=[("/v1/traces", settings.otlp_max_body_bytes)],
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-CSRF-Token"],
-        expose_headers=["X-Request-ID"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-CSRF-Token", "X-RL-Org"],
+        expose_headers=["X-Request-ID", "Retry-After"],
     )
+    app.add_middleware(SecurityHeadersMiddleware, hsts=settings.env != "dev")
     app.add_middleware(RequestContextMiddleware)
     install_error_handlers(app)
     app.include_router(health_router)
     app.include_router(deployments_router)
     app.include_router(analysis_router)
     app.include_router(otlp_router)
+    app.include_router(auth_router)
+    app.include_router(me_router)
+    app.include_router(orgs_router)
+    app.include_router(projects_router)
+    app.include_router(apikeys_router)
+    app.include_router(audit_router)
+    app.include_router(alerts_router)
+    app.include_router(billing_router)
 
     if settings.otel_enabled:
         setup_tracing(app, settings.service_name, settings.env)
