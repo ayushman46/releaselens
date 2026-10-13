@@ -382,11 +382,16 @@ services:
       - 0.0.0.0
       - --port
       - "5000"
+      - --workers
+      - "1"
       - --allowed-hosts
       - mlflow:5000,localhost:25000,127.0.0.1:25000
     environment:
       <<: [*python-env, *s3-env]
       MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      # MLflow 3 starts a huey job runner + several consumers by default (each ~270 MiB);
+      # ReleaseLens uses only tracking + registry, so the job runner is off.
+      MLFLOW_SERVER_ENABLE_JOB_EXECUTION: "false"
       AWS_ACCESS_KEY_ID: ${RL_S3_ACCESS_KEY:-rlens}
       AWS_SECRET_ACCESS_KEY: ${RL_S3_SECRET_KEY:-rlens-dev-secret}
       AWS_DEFAULT_REGION: ${RL_S3_REGION:-us-east-1}
@@ -394,7 +399,8 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       minio: { condition: service_healthy }
-    mem_limit: 512m
+    # one worker: several uvicorn workers exceeded 512 MiB and were OOM-killed in a restart loop
+    mem_limit: 768m
 
   # ------------------------------------------------------------------ demo (M7, spec §11.1)
   #   k6 ─► gateway ─► orders ─┬─► inventory
