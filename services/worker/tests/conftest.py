@@ -11,8 +11,10 @@ Isolation inside the shared containers:
 from __future__ import annotations
 
 import asyncio
+import sys
 import uuid
 from collections.abc import AsyncIterator, Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -20,6 +22,25 @@ from confluent_kafka.admin import AdminClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from rl_core.events import dlq
+
+# The deterministic trace generator of the regression-engine tests (tests only, not packaged).
+_TRACEGEN_DIR = str(Path(__file__).resolve().parents[3] / "packages" / "rl_core" / "tests")
+if _TRACEGEN_DIR not in sys.path:
+    sys.path.append(_TRACEGEN_DIR)
+
+
+@pytest.fixture
+def span_topic(kafka_bootstrap: str) -> str:
+    """A fresh ``telemetry.spans``-like topic (12 partitions, as in ADR-0007) plus its DLQ."""
+    from rl_worker.kafka_admin import TopicSpec, bootstrap
+
+    name = f"telemetry.spans.t{uuid.uuid4().hex[:10]}"
+    day_ms = 24 * 3600 * 1000
+    bootstrap(
+        AdminClient({"bootstrap.servers": kafka_bootstrap}),
+        topics=(TopicSpec(name, 12, day_ms), TopicSpec(dlq(name), 1, day_ms)),
+    )
+    return name
 
 
 @pytest.fixture(scope="package")

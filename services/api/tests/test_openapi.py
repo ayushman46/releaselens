@@ -34,3 +34,31 @@ def test_openapi_describes_the_deployment_endpoints() -> None:
         "deployed_at",
     }
     assert body["additionalProperties"] is False
+
+
+def test_openapi_describes_ingest_and_read_endpoints() -> None:
+    app = create_app(
+        Settings(
+            env="test",
+            database_url="postgresql+asyncpg://nobody:nothing@127.0.0.1:1/none",
+            kafka_bootstrap="127.0.0.1:1",
+            otel_enabled=False,
+        )
+    )
+    with TestClient(app) as client:
+        spec = client.get("/openapi.json").json()
+    paths = spec["paths"]
+    traces = paths["/v1/traces"]["post"]
+    assert set(traces["requestBody"]["content"]) == {"application/x-protobuf", "application/json"}
+    assert set(traces["responses"]) >= {"200", "400", "401", "403", "413", "415", "503"}
+    for path in (
+        "/api/v1/deployments/{deployment_id}/analysis",
+        "/api/v1/regressions",
+        "/api/v1/services",
+        "/api/v1/service-map",
+    ):
+        assert "get" in paths[path], path
+    schemas = spec["components"]["schemas"]
+    assert "probable_origin" in schemas["AnalysisOut"]["properties"]
+    assert "latency_p95_ms_approx" in schemas["ServiceHealth"]["properties"]
+    assert "root cause" not in str(spec).lower()  # wording rule

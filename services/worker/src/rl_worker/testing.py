@@ -8,7 +8,7 @@ import json
 import socket
 import time
 import uuid
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import Any
@@ -21,6 +21,7 @@ from rl_core.events import (
     encode_envelope,
     make_envelope,
 )
+from rl_core.telemetry.model import Span
 
 KAFKA_IMAGE = "apache/kafka-native:4.3.1"
 
@@ -276,3 +277,43 @@ def headers_of(msg: Message) -> dict[str, bytes]:
 
 def value_json(msg: Message) -> dict[str, Any]:
     return dict(json.loads(msg.value() or b"{}"))
+
+
+# ----------------------------------------------------------------------------- span helpers
+def span_messages(
+    tenant_id: uuid.UUID, spans: Iterable[Span], *, per_message: int = 500
+) -> list[tuple[str, bytes]]:
+    """``(key, value)`` pairs as the OTLP ingest would produce them: per service, in chunks of
+    at most ``per_message`` spans (a Collector batch of that size)."""
+    from rl_core.events.spans import encode_span, encode_span_batches, span_to_wire
+    from rl_core.events.topics import span_key
+
+    by_service: dict[str, list[Span]] = {}
+    for span in spans:
+        by_service.setdefault(span.service, []).append(span)
+    out: list[tuple[str, bytes]] = []
+    now = datetime.now(UTC)
+    for service, members in sorted(by_service.items()):
+        for i in range(0, len(members), per_message):
+            encoded = [encode_span(span_to_wire(s)) for s in members[i : i + per_message]]
+            for value in encode_span_batches(
+                tenant_id=tenant_id, service=service, spans=encoded, received_at=now
+            ):
+                out.append((span_key(tenant_id, service), value))
+    return out
+
+
+def produce_many(bootstrap: str, topic: str, messages: list[tuple[str, bytes]]) -> None:
+    """Produce (and wait for) many messages; larger buffers than :func:`produce_raw`."""
+    producer = Producer(
+        {"bootstrap.servers": bootstrap, "acks": "all", "linger.ms": 5, "compression.type": "lz4"}
+    )
+    for key, value in messages:
+        while True:
+            try:
+                producer.produce(topic, key=key, value=value)
+                break
+            except BufferError:
+                producer.poll(0.1)
+    if producer.flush(30) != 0:
+        raise AssertionError("test messages not delivered")

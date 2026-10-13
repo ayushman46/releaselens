@@ -9,6 +9,8 @@ from typing import Literal, Self
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from rl_core.regression.windows import WindowConfig
+
 
 def _default_worker_id() -> str:
     # Unique per process: job claims and Kafka client ids use it to tell workers apart.
@@ -42,7 +44,27 @@ class WorkerSettings(BaseSettings):
     # End of the post-deploy window: when the "final" analysis job runs.
     analysis_post_window_end_s: int = Field(default=900, ge=600, le=6 * 3600)
 
-    # Analysis job runner (started only when handlers are registered)
+    # telemetry.spans consumer (M7)
+    spans_group_id: str = "rl-spans"
+    spans_batch_messages: int = Field(default=100, ge=1, le=10_000)
+
+    # Telemetry maintenance: partitions ahead of time, retention
+    maintenance_interval_s: float = Field(default=3600.0, gt=0, le=86_400)
+    partition_days_ahead: int = Field(default=2, ge=0, le=30)
+    span_retention_days: int = Field(default=7, ge=1, le=365)
+    rollup_retention_days: int = Field(default=30, ge=1, le=3650)
+
+    # Regression analysis (M8). Per-environment window profiles, as JSON in
+    # RL_ANALYSIS_WINDOWS, e.g. {"demo": {"baseline_minutes": 10, "warmup_minutes": 1,
+    # "post_end_minutes": 8}}. Environments without a profile use the spec defaults.
+    analysis_max_spans: int = Field(default=200_000, ge=1_000, le=5_000_000)
+    analysis_windows: dict[str, dict[str, int]] = Field(
+        default_factory=lambda: {
+            "demo": {"baseline_minutes": 10, "warmup_minutes": 1, "post_end_minutes": 8}
+        }
+    )
+
+    # Analysis job runner
     job_batch_size: int = Field(default=10, ge=1, le=1000)
     job_poll_interval_s: float = Field(default=2.0, gt=0, le=60)
     job_lease_s: int = Field(default=600, ge=30)
@@ -57,6 +79,23 @@ class WorkerSettings(BaseSettings):
 
     health_host: str = "0.0.0.0"  # noqa: S104  # nosec B104 - container health port
     health_port: int = Field(default=8001, ge=1, le=65535)
+
+    def window_profiles(self) -> dict[str, WindowConfig]:
+        """``analysis_windows`` as validated WindowConfigs (spec defaults for other fields)."""
+        return {env: WindowConfig(**fields) for env, fields in self.analysis_windows.items()}
+
+    @model_validator(mode="after")
+    def _window_profiles_fit_the_schedule(self) -> Self:
+        # A profile whose post window outlasts the final job would make that job analyse a
+        # window that has not closed yet. Fail at startup, not on the first deploy.
+        for env, cfg in {"(default)": WindowConfig(), **self.window_profiles()}.items():
+            if cfg.post_end_minutes * 60 > self.analysis_post_window_end_s:
+                raise ValueError(
+                    f"analysis window profile {env!r} ends at T+{cfg.post_end_minutes} min, "
+                    f"after the final analysis (RL_ANALYSIS_POST_WINDOW_END_S="
+                    f"{self.analysis_post_window_end_s})"
+                )
+        return self
 
     @model_validator(mode="after")
     def _job_timeout_inside_lease(self) -> Self:

@@ -16,7 +16,9 @@ from rl_api.health import kafka_check, postgres_check
 from rl_api.health import router as health_router
 from rl_api.kafka import EventProducer
 from rl_api.middleware import RequestContextMiddleware
+from rl_api.routers.analysis import router as analysis_router
 from rl_api.routers.deployments import router as deployments_router
+from rl_api.routers.otlp import router as otlp_router
 from rl_api.settings import Settings, get_settings
 from rl_api.telemetry import setup_tracing, shutdown_tracing
 from rl_core.obs import configure_logging
@@ -77,6 +79,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_error_handlers(app)
     app.include_router(health_router)
     app.include_router(deployments_router)
+    app.include_router(analysis_router)
+    app.include_router(otlp_router)
 
     if settings.otel_enabled:
         setup_tracing(app, settings.service_name, settings.env)

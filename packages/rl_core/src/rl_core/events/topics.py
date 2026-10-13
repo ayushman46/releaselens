@@ -21,6 +21,7 @@ def dlq(topic: str) -> str:
 
 
 DEPLOYMENT_EVENTS_DLQ = dlq(DEPLOYMENT_EVENTS)
+TELEMETRY_SPANS_DLQ = dlq(TELEMETRY_SPANS)
 
 
 def deployment_key(tenant_id: uuid.UUID, service: str) -> str:
@@ -29,5 +30,14 @@ def deployment_key(tenant_id: uuid.UUID, service: str) -> str:
     Keying by tenant *and* service keeps every deployment of one service in one partition,
     so a consumer sees them in the order they were produced. The tenant id comes first and
     contains no ``:``, so the key splits unambiguously on the first ``:``.
+    """
+    return f"{tenant_id}:{service}"
+
+
+def span_key(tenant_id: uuid.UUID, service: str) -> str:
+    """Message key for ``telemetry.spans``: ``"<tenant_id>:<service.name>"`` (ADR-0007).
+
+    One service's spans stay in one partition, so a consumer sees each service's batches in
+    the order the API produced them.
     """
     return f"{tenant_id}:{service}"
