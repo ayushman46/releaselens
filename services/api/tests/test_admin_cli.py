@@ -77,3 +77,21 @@ def test_create_key_errors(api_db_url: str, capsys: pytest.CaptureFixture[str]) 
     err = capsys.readouterr()
     assert "unknown scope" in err.err
     assert err.out == ""
+
+
+def test_link_github_installation(api_db_url: str, capsys: pytest.CaptureFixture[str]) -> None:
+    slugs = [f"gh-{uuid.uuid4().hex[:8]}" for _ in range(2)]
+    for slug in slugs:
+        assert (
+            main(["--database-url", api_db_url, "create-org", "--name", "G", "--slug", slug]) == 0
+        )
+    capsys.readouterr()
+    inst = str(int(uuid.uuid4().int % 10**9) + 1)
+    link = ["--database-url", api_db_url, "link-github-installation", "--installation-id", inst]
+    assert main([*link, "--org", slugs[0], "--account", "Acme"]) == 0
+    assert "linked to" in capsys.readouterr().err
+    assert main([*link, "--org", slugs[0], "--account", "acme"]) == 0  # idempotent
+    capsys.readouterr()
+    assert main([*link, "--org", slugs[1], "--account", "acme"]) == 1  # owned by another org
+    assert "another organization" in capsys.readouterr().err
+    assert main([*link, "--org", "no-such-org", "--account", "acme"]) == 2

@@ -6,6 +6,7 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
 from fastapi import FastAPI
@@ -14,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from rl_api import __version__
 from rl_api.billing import BillingGateway, StripeGateway
 from rl_api.errors import install_error_handlers
+from rl_api.github_app import GitHubAppClient, load_private_key
 from rl_api.health import kafka_check, postgres_check
 from rl_api.health import router as health_router
 from rl_api.kafka import EventProducer
@@ -24,6 +26,7 @@ from rl_api.middleware import (
     SecurityHeadersMiddleware,
 )
 from rl_api.passwords import PasswordHasher
+from rl_api.risk.modelstore import ModelStore
 from rl_api.routers.alerts import router as alerts_router
 from rl_api.routers.analysis import router as analysis_router
 from rl_api.routers.apikeys import router as apikeys_router
@@ -31,10 +34,13 @@ from rl_api.routers.audit import router as audit_router
 from rl_api.routers.auth import me_router
 from rl_api.routers.auth import router as auth_router
 from rl_api.routers.billing import router as billing_router
+from rl_api.routers.ci_runs import router as ci_runs_router
 from rl_api.routers.deployments import router as deployments_router
+from rl_api.routers.github import router as github_router
 from rl_api.routers.orgs import router as orgs_router
 from rl_api.routers.otlp import router as otlp_router
 from rl_api.routers.projects import router as projects_router
+from rl_api.routers.risk import router as risk_router
 from rl_api.settings import Settings, get_settings
 from rl_api.telemetry import setup_tracing, shutdown_tracing
 from rl_core.obs import configure_logging
@@ -66,9 +72,11 @@ def create_app(
     mailer: Mailer | None = None,
     http_transport: httpx.AsyncBaseTransport | None = None,
     billing_gateway: BillingGateway | None = None,
+    model_store: ModelStore | None = None,
 ) -> FastAPI:
     """Build the app. The keyword arguments replace external services in tests: a
-    recording mailer, an ``httpx.MockTransport`` for GitHub, a fake Stripe gateway."""
+    recording mailer, an ``httpx.MockTransport`` for GitHub, a fake Stripe gateway, a
+    model store pointing at a test bundle."""
     settings = settings or get_settings()
     configure_logging(settings.service_name, settings.log_level, settings.log_format)
 
@@ -87,6 +95,17 @@ def create_app(
         app.state.http_client = httpx.AsyncClient(
             transport=http_transport, timeout=HTTP_TIMEOUT, follow_redirects=False
         )
+        app.state.github_app = (
+            GitHubAppClient(
+                app_id=str(settings.github_app_id),
+                private_key=github_key,
+                http=app.state.http_client,
+                api_url=settings.github_api_url,
+            )
+            if github_key is not None
+            else None
+        )
+        await app.state.model_store.start(wait_s=settings.model_startup_wait_s)
         app.state.readiness_checks = {
             "postgres": postgres_check(app.state),
             "kafka": kafka_check(settings.kafka_bootstrap, settings.readiness_timeout_s, producer),
@@ -97,6 +116,7 @@ def create_app(
         finally:
             # Flush acknowledged-pending events before the process exits; requests still
             # waiting on them get their answer during the flush.
+            await app.state.model_store.stop()
             await asyncio.to_thread(producer.close, settings.kafka_delivery_timeout_s)
             await app.state.http_client.aclose()
             await engine.dispose()
@@ -122,6 +142,20 @@ def create_app(
         concurrency=settings.password_hash_concurrency,
     )
     app.state.mailer = mailer or _default_mailer(settings)
+    app.state.model_store = model_store or ModelStore(
+        uris={"main": settings.model_uri, "cold": settings.cold_model_uri},
+        tracking_uri=settings.mlflow_tracking_uri,
+        cache_dir=Path(settings.model_cache_dir),
+        retry_interval_s=settings.model_retry_interval_s,
+    )
+    # Read once at startup: a missing or unreadable key file stops the process (fail fast)
+    # rather than failing every Check Run later.
+    github_key = (
+        load_private_key(settings.github_app_private_key_file)
+        if settings.github_app_configured and settings.github_app_private_key_file
+        else None
+    )
+    app.state.github_app = None
     if billing_gateway is not None:
         app.state.billing_gateway = billing_gateway
     elif settings.stripe_secret_key is not None:
@@ -135,7 +169,10 @@ def create_app(
     app.add_middleware(
         BodySizeLimitMiddleware,
         max_bytes=settings.max_body_bytes,
-        overrides=[("/v1/traces", settings.otlp_max_body_bytes)],
+        overrides=[
+            ("/v1/traces", settings.otlp_max_body_bytes),
+            ("/api/v1/integrations/github/webhook", settings.github_webhook_max_body_bytes),
+        ],
     )
     app.add_middleware(
         CORSMiddleware,
@@ -160,6 +197,9 @@ def create_app(
     app.include_router(audit_router)
     app.include_router(alerts_router)
     app.include_router(billing_router)
+    app.include_router(risk_router)
+    app.include_router(ci_runs_router)
+    app.include_router(github_router)
 
     if settings.otel_enabled:
         setup_tracing(app, settings.service_name, settings.env)

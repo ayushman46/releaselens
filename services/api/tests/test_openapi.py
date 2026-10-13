@@ -100,3 +100,50 @@ def test_openapi_describes_the_saas_endpoints_without_leaking_secrets() -> None:
     assert not set(schemas["ApiKeyOut"]["properties"]) & {"key", "secret_hash"}
     assert "key" in schemas["ApiKeyCreated"]["properties"]  # shown once, on create/rotate
     assert not set(schemas["SessionOut"]["properties"]) & {"access_token", "refresh_token"}
+
+
+def test_openapi_describes_the_risk_endpoints() -> None:
+    app = create_app(
+        Settings(
+            env="test",
+            database_url="postgresql+asyncpg://nobody:nothing@127.0.0.1:1/none",
+            kafka_bootstrap="127.0.0.1:1",
+            otel_enabled=False,
+            model_uri=None,
+            cold_model_uri=None,
+        )
+    )
+    spec = app.openapi()
+    paths = spec["paths"]
+    post = paths["/api/v1/risk/assessments"]["post"]
+    assert set(post["responses"]) >= {"200", "201", "401", "403", "422", "429", "503"}
+    assert "get" in paths["/api/v1/risk/assessments"]
+    assert "get" in paths["/api/v1/risk/assessments/{assessment_id}"]
+    assert "get" in paths["/api/v1/risk/model"]
+    assert set(paths["/api/v1/ci-runs"]) == {"get", "post"}
+    assert "post" in paths["/api/v1/integrations/github/webhook"]
+    schemas = spec["components"]["schemas"]
+    body = schemas["RiskAssessmentCreate"]
+    assert "tenant_id" not in body["properties"]  # the tenant comes from the API key only
+    assert body["additionalProperties"] is False
+    assert set(body["required"]) == {
+        "repository",
+        "commit_sha",
+        "event",
+        "triggered_at",
+        "change_facts",
+    }
+    out = schemas["RiskAssessmentOut"]["properties"]
+    for field in (
+        "assessment_id",
+        "model_version",
+        "feature_schema_version",
+        "risk_score",
+        "risk_band",
+        "probability",
+        "top_increasing",
+        "top_reducing",
+        "history",
+        "details_url",
+    ):
+        assert field in out, field

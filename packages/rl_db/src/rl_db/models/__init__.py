@@ -13,6 +13,7 @@ from rl_db.models.audit import AuditLogEntry
 from rl_db.models.billing import RateLimitBucket, StripeEvent, Subscription, UsageCounter
 from rl_db.models.catalog import Environment, Project, Service
 from rl_db.models.deployments import Deployment
+from rl_db.models.github import GithubInstallation, GithubPullRequest, WebhookDelivery
 from rl_db.models.identity import (
     ApiKey,
     Invitation,
@@ -24,6 +25,7 @@ from rl_db.models.identity import (
 )
 from rl_db.models.jobs import AnalysisJob, JobKind, JobStatus
 from rl_db.models.outbox import OutboxEvent
+from rl_db.models.risk import CiRun, RiskAssessment
 from rl_db.models.telemetry import ServiceEdge, ServiceMinuteRollup, SpanRecord
 
 __all__ = [
@@ -32,8 +34,11 @@ __all__ = [
     "ApiKey",
     "AuditLogEntry",
     "AuthSession",
+    "CiRun",
     "Deployment",
     "Environment",
+    "GithubInstallation",
+    "GithubPullRequest",
     "Invitation",
     "JobKind",
     "JobStatus",
@@ -50,6 +55,7 @@ __all__ = [
     "RateLimitBucket",
     "RefreshToken",
     "RegressionAnalysisRecord",
+    "RiskAssessment",
     "Role",
     "Service",
     "ServiceEdge",
@@ -61,4 +67,5 @@ __all__ = [
     "UsageCounter",
     "User",
     "UserToken",
+    "WebhookDelivery",
 ]

@@ -122,6 +122,35 @@ class Settings(BaseSettings):
     stripe_webhook_secret: SecretStr | None = None
     stripe_price_team: str | None = None
 
+    # ------------------------------------------------------------------ risk model (M5)
+    # Loaded ONCE at startup (and retried in the background until it loads). A ``models:/``
+    # URI is resolved in the MLflow registry and its ``risk_bundle`` cached under
+    # RL_MODEL_CACHE_DIR with SHA-256 checksums; a local directory is loaded as is.
+    # Empty URI: no model, and POST /api/v1/risk/assessments answers 503 no_model_loaded.
+    model_uri: str | None = "models:/release_risk_ci@champion"
+    # Repositories with no finished builds are scored by a model trained without history.
+    cold_model_uri: str | None = "models:/release_risk_ci_cold@champion"
+    mlflow_tracking_uri: str | None = None
+    model_cache_dir: str = "~/.cache/releaselens/models"
+    model_retry_interval_s: float = Field(default=60.0, ge=0, le=86_400)
+    # How long startup waits for the first load attempt before serving (503 until loaded).
+    model_startup_wait_s: float = Field(default=30.0, ge=0, le=600)
+    # Finished runs loaded per assessment (the history features need the last 20; totals are
+    # counted exactly in SQL).
+    risk_history_limit: int = Field(default=200, ge=20, le=10_000)
+    # Same (repository, commit, event, PR) within this window returns the stored assessment.
+    risk_idempotency_window_s: int = Field(default=600, ge=0, le=86_400)
+
+    # ------------------------------------------------------------------ GitHub App (B1)
+    github_app_id: str | None = None
+    github_app_private_key_file: str | None = None
+    github_webhook_secret: SecretStr | None = None
+    github_api_url: str = "https://api.github.com"
+    github_check_run_name: str = "ReleaseLens risk"
+    github_webhook_max_body_bytes: int = Field(
+        default=5 * 1024 * 1024, ge=1024, le=25 * 1024 * 1024
+    )
+
     # ------------------------------------------------------------------ request hygiene
     # Proxies whose X-Forwarded-For is believed (CIDRs, comma-separated). Empty: none.
     trusted_proxies: Annotated[list[str], NoDecode] = Field(default_factory=list)
@@ -139,6 +168,9 @@ class Settings(BaseSettings):
     # Per API key on ingest endpoints (deployments, later /v1/traces).
     rate_limit_ingest_burst: int = Field(default=200, ge=1)
     rate_limit_ingest_per_minute: float = Field(default=3000.0, gt=0)
+    # Per API key on POST /api/v1/risk/assessments and /api/v1/ci-runs.
+    rate_limit_risk_burst: int = Field(default=60, ge=1)
+    rate_limit_risk_per_minute: float = Field(default=600.0, gt=0)
 
     @field_validator("cors_origins", "trusted_proxies", mode="before")
     @classmethod
@@ -175,6 +207,10 @@ class Settings(BaseSettings):
             # Test mode only (ADR-0014 pin; BLOCKERS.md B2): a live key is refused outright.
             if not sk.startswith(("sk_test_", "rk_test_")):
                 raise ValueError("RL_STRIPE_SECRET_KEY must be a Stripe test-mode key")
+        if self.github_app_id is not None and not self.github_app_id.isdigit():
+            raise ValueError("RL_GITHUB_APP_ID must be the numeric App id")
+        if self.env == "prod" and not self.github_api_url.startswith("https://"):
+            raise ValueError("RL_GITHUB_API_URL must use https in prod")
         if self.session_max_age_s < self.access_token_ttl_s:
             raise ValueError("RL_SESSION_MAX_AGE_S must be >= RL_ACCESS_TOKEN_TTL_S")
         return self
@@ -201,6 +237,11 @@ class Settings(BaseSettings):
         )
 
     @property
+    def github_app_configured(self) -> bool:
+        """Check Runs need the App id and its private key."""
+        return bool(self.github_app_id and self.github_app_private_key_file)
+
+    @property
     def stripe_configured(self) -> bool:
         return self.stripe_secret_key is not None
 
@@ -212,7 +253,7 @@ class Settings(BaseSettings):
     def web_url(self, path: str) -> str:
         return f"{self.web_base_url.rstrip('/')}/{path.lstrip('/')}"
 
-    def rate_policy(self, name: Literal["auth", "login_account", "ingest"]) -> RatePolicy:
+    def rate_policy(self, name: Literal["auth", "login_account", "ingest", "risk"]) -> RatePolicy:
         if name == "auth":
             return RatePolicy("auth", self.rate_limit_auth_burst, self.rate_limit_auth_per_minute)
         if name == "login_account":
@@ -221,6 +262,8 @@ class Settings(BaseSettings):
                 self.rate_limit_login_account_burst,
                 self.rate_limit_login_account_per_minute,
             )
+        if name == "risk":
+            return RatePolicy("risk", self.rate_limit_risk_burst, self.rate_limit_risk_per_minute)
         return RatePolicy("ingest", self.rate_limit_ingest_burst, self.rate_limit_ingest_per_minute)
 
 

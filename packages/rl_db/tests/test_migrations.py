@@ -36,6 +36,14 @@ M10_TABLES = {
     "rate_limit_buckets",
 }
 
+M5_TABLES = {
+    "ci_runs",
+    "risk_assessments",
+    "github_installations",
+    "webhook_deliveries",
+    "github_pull_requests",
+}
+
 
 def _diff(conn: Connection) -> list[object]:
     ctx = MigrationContext.configure(conn, opts={"compare_type": True})
@@ -69,6 +77,7 @@ def test_upgrade_matches_models_and_downgrade_reverses(pg_url: str) -> None:
         "analysis_jobs",
         "outbox",
         *M10_TABLES,
+        *M5_TABLES,
     } <= tables
 
     diff = asyncio.run(_run(pg_url, _diff))
@@ -192,3 +201,87 @@ def test_0003_steps_down_to_0002_with_data_present_and_back_up(pg_url: str) -> N
     assert asyncio.run(_run(pg_url, _tables)) >= M10_TABLES
     diff = asyncio.run(_run(pg_url, _diff))
     assert diff == [], f"models and migrations disagree after a step down/up: {diff}"
+
+
+def _seed_m5_rows(conn: Connection) -> None:
+    """A CI run, an assessment, an installation and a delivery (what 0005 adds)."""
+    org = "00000000-0000-7000-8000-000000000021"
+    conn.exec_driver_sql(
+        f"INSERT INTO organizations (id, name, slug) VALUES ('{org}', 'G', 'gamma')"
+    )
+    conn.exec_driver_sql(
+        "INSERT INTO ci_runs (id, tenant_id, repository, commit_sha, started_at, finished_at, "
+        f"status, source, external_id) VALUES ('00000000-0000-7000-8000-000000000022', '{org}', "
+        "'acme/app', 'abc', now() - interval '5 minutes', now(), 'passed', 'api', 'r1')"
+    )
+    conn.exec_driver_sql(
+        "INSERT INTO risk_assessments (id, tenant_id, repository, commit_sha, event, "
+        "triggered_at, features, change_facts, model_name, model_version, "
+        "feature_schema_version, raw_score, risk_score, risk_band, shap, history_used, "
+        f"cold_start) VALUES ('00000000-0000-7000-8000-000000000023', '{org}', 'acme/app', "
+        "'abc', 'push', now(), '{}'::jsonb, '{}'::jsonb, 'm', 'm/1', '1.0.0', 0.5, 50, "
+        "'MEDIUM', '{}'::jsonb, 1, false)"
+    )
+    conn.exec_driver_sql(
+        "INSERT INTO github_installations (installation_id, tenant_id, account_login) "
+        f"VALUES (42, '{org}', 'acme')"
+    )
+    conn.exec_driver_sql(
+        "INSERT INTO webhook_deliveries (delivery_id, event) VALUES ('d-1', 'workflow_run')"
+    )
+    conn.commit()
+
+
+def test_0005_steps_down_to_0004_with_data_present_and_back_up(pg_url: str) -> None:
+    """Downgrading only the M5 revision drops exactly its tables and keeps the rest."""
+    cfg = make_config(pg_url)
+    command.upgrade(cfg, "head")
+    asyncio.run(_run(pg_url, _seed_m5_rows))
+    command.downgrade(cfg, "0004_saas")
+
+    tables = asyncio.run(_run(pg_url, _tables))
+    assert not tables & M5_TABLES
+    assert tables >= M10_TABLES
+
+    def org_count(conn: Connection) -> int:
+        return int(conn.exec_driver_sql("SELECT count(*) FROM organizations").scalar_one())
+
+    assert asyncio.run(_run(pg_url, org_count)) == 1
+
+    command.upgrade(cfg, "head")
+    assert asyncio.run(_run(pg_url, _tables)) >= M5_TABLES
+    diff = asyncio.run(_run(pg_url, _diff))
+    assert diff == [], f"models and migrations disagree after a step down/up: {diff}"
+
+
+def _seed_bad_ci_run(conn: Connection, status: str, finished: str) -> None:
+    conn.exec_driver_sql(
+        "INSERT INTO organizations (id, name, slug) VALUES "
+        "('00000000-0000-7000-8000-000000000031', 'D', 'delta') ON CONFLICT DO NOTHING"
+    )
+    conn.exec_driver_sql(
+        "INSERT INTO ci_runs (id, tenant_id, repository, commit_sha, started_at, finished_at, "
+        "status, source, external_id) VALUES (gen_random_uuid(), "
+        f"'00000000-0000-7000-8000-000000000031', 'a/b', 'abc', now(), {finished}, "
+        f"'{status}', 'api', gen_random_uuid()::text)"
+    )
+    conn.commit()
+
+
+@pytest.mark.parametrize(
+    ("status", "finished"),
+    [
+        ("passed", "NULL"),
+        ("running", "now()"),
+        ("green", "now()"),
+        ("passed", "now() - interval '1 day'"),
+    ],
+)
+def test_ci_runs_constraints_reject_inconsistent_rows(
+    pg_url: str, status: str, finished: str
+) -> None:
+    from sqlalchemy.exc import IntegrityError
+
+    command.upgrade(make_config(pg_url), "head")
+    with pytest.raises(IntegrityError):
+        asyncio.run(_run(pg_url, lambda c: _seed_bad_ci_run(c, status, finished)))

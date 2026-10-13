@@ -2369,6 +2369,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "rl-core" },
     { name = "rl-db" },
+    { name = "rl-ml" },
     { name = "stripe" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -2388,6 +2389,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.6" },
     { name = "rl-core", editable = "packages/rl_core" },
     { name = "rl-db", editable = "packages/rl_db" },
+    { name = "rl-ml", editable = "ml" },
     { name = "stripe", specifier = "==15.6.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
 ]

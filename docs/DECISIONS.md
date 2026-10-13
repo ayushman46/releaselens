@@ -27,6 +27,7 @@ and mark the old one superseded.
 | 0019 | Browser sessions: opaque DB-backed tokens, rotating refresh tokens, HMAC double-submit CSRF | Accepted |
 | 0020 | Rate limiting without Redis: Postgres token buckets | Accepted |
 | 0021 | Integration secrets (Slack webhooks) encrypted at rest with AES-256-GCM, row-bound | Accepted |
+| 0022 | Risk serving: load-once model store, no-history cold-start model, bounded history with exact totals, advisory Check Runs | Accepted |
 
 ---
 
@@ -506,3 +507,35 @@ and mark the old one superseded.
   - If the key is lost, the affected rules' notifications go `dead` with a clear error until an
     admin re-enters the URL.
   - A KMS-backed key is the upgrade path.
+
+## ADR-0022 — Risk serving (M5)
+
+- **Context.** `POST /api/v1/risk/assessments` must be fast, reproduce the training features
+  exactly, never invent a score, and be honest on day one, when a tenant has no build history.
+  M4 measured that masking history on the champion inflates scores (RESULTS.md §9).
+- **Decision.**
+  - **Load once.** The API loads `models:/release_risk_ci@champion` and
+    `models:/release_risk_ci_cold@champion` at startup (MLflow registry, `risk_bundle` artifact
+    cached with a SHA-256 manifest; the last cached version serves when the registry is down;
+    background retry otherwise). No MLflow call per request. A missing model is
+    `503 no_model_loaded`, never a fallback score.
+  - **Cold start = a separate model.** A repository with no finished run is scored by
+    `release_risk_ci_cold`: the champion's family and hyper-parameters trained without the
+    history features (`python -m rl_ml.cold`), with its own validation-only score scale, bands
+    and calibration gate (it failed the gate: no probability). It is promoted only if it beats
+    the test base rate and any previous cold champion.
+  - **Bounded history, exact features.** Requests load the 200 most recent eligible runs, the
+    latest start, and two SQL totals (`HistoryTotals`: all eligible runs, runs since the last
+    failure). `compute_online(..., totals=)` is identical to the full-history computation;
+    tested on the real mart and against the SQL.
+  - **Idempotency** per `(tenant, repository, commit, event, PR)` within 10 minutes, serialised
+    by a transaction-scoped advisory lock (no unique index can express "within 10 minutes").
+  - **CI runs** come from GitHub App webhooks or `POST /api/v1/ci-runs` (scope `risk:write`:
+    the Action's key, ADR-0016's one-narrow-key rule), deduplicated on
+    `(tenant, source, external_id)` and across sources on the same `external_id`.
+  - **Check Runs are advisory** (`conclusion: neutral`); installation → tenant links are
+    created by an operator CLI, never from a webhook.
+- **Consequences.** A new champion needs an API restart. Day-one scores are moderate
+  (ROC-AUC 0.712) and say so (`cold_start: true`). Workflow-level CI runs differ from
+  TravisTorrent's per-push builds; the feature-fidelity measurement is still open.
+

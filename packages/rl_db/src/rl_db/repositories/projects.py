@@ -66,6 +66,24 @@ async def get_project(
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
+async def find_project_by_repository(
+    session: AsyncSession, ctx: TenantContext, repository: str
+) -> Project | None:
+    """The project linked to ``owner/repo`` (case-insensitive), or None."""
+    owner, _, repo = repository.partition("/")
+    stmt = (
+        select(Project)
+        .where(
+            Project.tenant_id == ctx.tenant_id,
+            func.lower(Project.github_owner) == owner.lower(),
+            func.lower(Project.github_repo) == repo.lower(),
+        )
+        .order_by(Project.created_at, Project.id)
+        .limit(1)
+    )
+    return (await session.execute(stmt)).scalar_one_or_none()
+
+
 async def update_project(
     session: AsyncSession, ctx: TenantContext, project_id: uuid.UUID, values: dict[str, Any]
 ) -> Project | None:

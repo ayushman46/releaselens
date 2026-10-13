@@ -157,6 +157,11 @@ def saas_settings(database_url: str, **overrides: Any) -> Settings:
         "rate_limit_login_account_per_minute": 100_000.0,
         "rate_limit_ingest_burst": 100_000,
         "rate_limit_ingest_per_minute": 100_000.0,
+        "rate_limit_risk_burst": 100_000,
+        "rate_limit_risk_per_minute": 100_000.0,
+        # No model registry in these tests; risk tests point these at a local bundle.
+        "model_uri": None,
+        "cold_model_uri": None,
         "web_base_url": "https://app.releaselens.test",
     }
     values.update(overrides)
@@ -193,6 +198,9 @@ class FakeGitHub:
     )
     token_error: str | None = None
     requests: list[httpx.Request] = field(default_factory=list)
+    token_status: int = 201
+    check_run_status: int = 201
+    check_runs: list[dict[str, Any]] = field(default_factory=list)
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
@@ -206,6 +214,20 @@ class FakeGitHub:
             )
         if request.url.host == "api.github.com" and request.url.path == "/user/emails":
             return httpx.Response(200, json=self.emails)
+        # GitHub App (M5): installation tokens and Check Runs.
+        path = request.url.path
+        if (
+            request.method == "POST"
+            and path.startswith("/app/installations/")
+            and path.endswith("/access_tokens")
+        ):
+            return httpx.Response(
+                self.token_status,
+                json={"token": "ghs_installation_test", "expires_at": "2099-01-01T00:00:00Z"},
+            )
+        if request.method == "POST" and path.endswith("/check-runs"):
+            self.check_runs.append(json.loads(request.content))
+            return httpx.Response(self.check_run_status, json={"id": len(self.check_runs)})
         return httpx.Response(404, json={"message": "Not Found"})
 
     def transport(self) -> httpx.MockTransport:
@@ -336,3 +358,69 @@ def stripe_event(
             "data": {"object": obj},
         }
     ).encode()
+
+
+# ----------------------------------------------------------------------------- risk (M5)
+def make_test_bundle(
+    directory: Any,
+    *,
+    cold: bool = False,
+    cuts: tuple[float, float, float] | None = None,
+    probability: bool = False,
+    version: str | None = None,
+    seed: int = 0,
+) -> Any:
+    """SYNTHETIC: a tiny XGBoost risk bundle for API tests. Never a real model, never a result.
+
+    ``cold`` drops every history feature (the cold-start role). ``cuts`` overrides the
+    (MEDIUM, HIGH, CRITICAL) raw-score cut-points, e.g. ``(0, 0, 2)`` makes every score HIGH.
+    ``probability`` marks the calibration gate as passed (a Platt calibrator is stored).
+    """
+    from pathlib import Path
+
+    from rl_core.features.schema import FEATURE_NAMES, HISTORY_FEATURES
+    from rl_ml.bands import BandCuts, ScoreScale
+    from rl_ml.calibrate import fit_platt
+    from rl_ml.data import prepare_mart
+    from rl_ml.explain import BackgroundStats
+    from rl_ml.models import XGBModel, _xgb
+    from rl_ml.monitoring import training_bins
+    from rl_ml.predictor import RiskModelBundle
+    from rl_ml.synthetic import SYNTHETIC_SOURCE, make_synthetic_mart
+
+    mart = prepare_mart(
+        make_synthetic_mart(n_projects=6, builds_per_project=(40, 80), seed=seed),
+        run_id="synthetic-api-test",
+        source=SYNTHETIC_SOURCE,
+        dataset_md5=None,
+    )
+    train, val = mart.split("train"), mart.split("validation")
+    feats = tuple(
+        f
+        for f in FEATURE_NAMES
+        if not bool(train.frame[f].isna().all()) and not (cold and f in HISTORY_FEATURES)
+    )
+    est = _xgb(
+        {"max_depth": 3, "learning_rate": 0.2}, spw=1.0, seed=seed, n_estimators=25, early=None
+    )
+    est.fit(train.X(feats), train.y)
+    model = XGBModel(est)
+    vs = model.score(val.X(feats))
+    bundle = RiskModelBundle(
+        model=model,
+        features=feats,
+        scale=ScoreScale.fit(vs),
+        cuts=BandCuts(*cuts) if cuts else BandCuts.fit(val.y, vs),
+        calibrator=fit_platt(vs, val.y) if probability else None,
+        calibration={"method": "platt", "passed": probability},
+        stats=BackgroundStats.fit(train.X(feats)),
+        psi_bins=training_bins(train.X(feats)),
+        meta={
+            "synthetic": True,
+            "registered_version": version
+            or ("synthetic_cold_test/1" if cold else "synthetic_main_test/1"),
+        },
+    )
+    path = Path(directory)
+    bundle.save(path)
+    return path

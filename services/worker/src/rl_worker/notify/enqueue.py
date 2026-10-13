@@ -3,8 +3,9 @@
 * :func:`enqueue_for_analysis`: one ``analysis.results`` envelope (the contract in
   ``rl_core.events.analysis``; docs/events/ANALYSIS_RESULTS.md). It notifies when
   ``payload.severity_band`` is HIGH or CRITICAL and reaches the rule's minimum.
-* :func:`notify_risk`: the pre-deploy hook for the risk-assessment path (M5) to call when an
-  assessment's band is HIGH or CRITICAL.
+* :func:`notify_risk`: the pre-deploy hook the risk-assessment path (M5) calls when an
+  assessment's band is HIGH or CRITICAL. It lives in :mod:`rl_db.repositories.alerts` (the API
+  calls it in the assessment's transaction) and is re-exported here.
 
 The deployed ``service`` is mapped to its project through the ``services`` table (names
 are unique per tenant); an unregistered service has no project and therefore no rules.
@@ -18,7 +19,6 @@ redeliveries) are no-ops. A later escalation from HIGH to CRITICAL does not re-a
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +26,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from rl_core.events.analysis import AnalysisEnvelope
 from rl_core.tenancy import Principal, TenantContext
 from rl_db.models import NotificationKind
-from rl_db.repositories.alerts import EnqueueResult, band_meets, enqueue_notifications
+from rl_db.repositories.alerts import (
+    EnqueueResult,
+    band_meets,
+    enqueue_notifications,
+    notify_risk,
+)
 from rl_db.repositories.projects import find_service_by_name
 
 ALERT_BANDS = ("HIGH", "CRITICAL")
@@ -54,42 +59,4 @@ async def enqueue_for_analysis(session: AsyncSession, envelope: AnalysisEnvelope
     )
 
 
-async def notify_risk(
-    session: AsyncSession,
-    ctx: TenantContext,
-    *,
-    risk_assessment_id: uuid.UUID,
-    band: str,
-    service: str | None = None,
-    project_id: uuid.UUID | None = None,
-    risk_score: int | float | None = None,
-    repository: str | None = None,
-    commit_sha: str | None = None,
-) -> EnqueueResult:
-    """Queue pre-deploy risk alerts for a HIGH/CRITICAL assessment, in the caller's
-    transaction (so they exist if and only if the assessment was stored). Give the
-    ``project_id`` or the ``service`` it belongs to."""
-    if not band_meets(band, "HIGH"):
-        return NOTHING
-    if project_id is None and service is not None:
-        found = await find_service_by_name(session, ctx, service)
-        project_id = found.project_id if found else None
-    if project_id is None:
-        return NOTHING
-    payload = {
-        "risk_assessment_id": str(risk_assessment_id),
-        "band": band.upper(),
-        "risk_score": risk_score,
-        "service": service,
-        "repository": repository,
-        "commit_sha": commit_sha,
-    }
-    return await enqueue_notifications(
-        session,
-        ctx,
-        project_id=project_id,
-        kind=NotificationKind.RISK,
-        subject_id=risk_assessment_id,
-        band=band,
-        payload=payload,
-    )
+__all__ = ["ALERT_BANDS", "NOTHING", "enqueue_for_analysis", "notify_risk"]

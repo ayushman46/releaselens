@@ -180,6 +180,14 @@ services:
       # Dev only: uvicorn trusts X-Forwarded-For from anyone. Production sets this and
       # RL_TRUSTED_PROXIES to the load balancer's range (docs/security/AUTH.md §6).
       RL_FORWARDED_ALLOW_IPS: "*"
+      # Risk model (M5): champion + cold-start model from the MLflow registry (data profile),
+      # loaded once at startup and cached with checksums; 503 no_model_loaded until available.
+      RL_MLFLOW_TRACKING_URI: ${RL_MLFLOW_TRACKING_URI:-http://mlflow:5000}
+      RL_MODEL_CACHE_DIR: /tmp/releaselens-models
+      # GitHub App (BLOCKERS.md B1): empty = not configured (webhook answers 503).
+      RL_GITHUB_APP_ID: ${RL_GITHUB_APP_ID:-}
+      RL_GITHUB_APP_PRIVATE_KEY_FILE: ${RL_GITHUB_APP_PRIVATE_KEY_FILE:-}
+      RL_GITHUB_WEBHOOK_SECRET: ${RL_GITHUB_WEBHOOK_SECRET:-}
     ports: ["${RL_API_HOST_PORT:-28000}:8000"]
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -190,7 +198,8 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
-    mem_limit: 384m
+    # The risk models (XGBoost + pandas + MLflow client) take ~200 MiB on top of the API.
+    mem_limit: 640m
 
   worker:
     <<: *python-service

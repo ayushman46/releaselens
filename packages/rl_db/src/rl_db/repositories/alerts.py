@@ -21,6 +21,7 @@ from rl_db.models.alerts import (
     NotificationLog,
     NotificationStatus,
 )
+from rl_db.repositories.projects import find_project_by_repository, find_service_by_name
 
 # Order of the severity / risk bands that can trigger an alert.
 _BAND_RANK = {"HEALTHY": 0, "LOW": 0, "WARNING": 1, "MEDIUM": 1, "HIGH": 2, "CRITICAL": 3}
@@ -214,3 +215,55 @@ __all__ = [
     "list_notifications",
     "update_alert_rule",
 ]
+
+
+async def notify_risk(
+    session: AsyncSession,
+    ctx: TenantContext,
+    *,
+    risk_assessment_id: uuid.UUID,
+    band: str,
+    service: str | None = None,
+    project_id: uuid.UUID | None = None,
+    repository: str | None = None,
+    risk_score: int | float | None = None,
+    commit_sha: str | None = None,
+    details_url: str | None = None,
+) -> EnqueueResult:
+    """Queue pre-deploy risk alerts for a HIGH/CRITICAL assessment, in the caller's
+    transaction (so they exist if and only if the assessment was stored).
+
+    The project is ``project_id``, else the project of ``service``, else the project linked to
+    ``repository`` (``owner/repo``). Without a project there are no rules and nothing is queued.
+    Rules opt in with ``on_risk`` and ``risk_min_band``.
+    """
+    nothing = EnqueueResult(matched_rules=0, created=0)
+    if not band_meets(band, "HIGH"):
+        return nothing
+    if project_id is None and service is not None:
+        found = await find_service_by_name(session, ctx, service)
+        project_id = found.project_id if found else None
+    if project_id is None and repository is not None:
+        project = await find_project_by_repository(session, ctx, repository)
+        project_id = project.id if project else None
+    if project_id is None:
+        return nothing
+    payload: dict[str, Any] = {
+        "risk_assessment_id": str(risk_assessment_id),
+        "band": band.upper(),
+        "risk_score": risk_score,
+        "service": service,
+        "repository": repository,
+        "commit_sha": commit_sha,
+    }
+    if details_url is not None:
+        payload["details_url"] = details_url
+    return await enqueue_notifications(
+        session,
+        ctx,
+        project_id=project_id,
+        kind=NotificationKind.RISK,
+        subject_id=risk_assessment_id,
+        band=band,
+        payload=payload,
+    )

@@ -48,7 +48,12 @@ class RiskModelBundle:
 
     # ------------------------------------------------------------ inference
     def frame(self, rows: list[dict[str, Any]] | pd.DataFrame) -> pd.DataFrame:
-        df = rows if isinstance(rows, pd.DataFrame) else pd.DataFrame(list(rows))
+        if not isinstance(rows, pd.DataFrame):
+            # Serving path (one row per request): build the matrix directly; the generic pandas
+            # path below costs ~10 ms per call. Same semantics: missing or non-numeric → NaN.
+            arr = np.array([[_number(r.get(f)) for f in self.features] for r in rows], dtype=float)
+            return pd.DataFrame(arr.reshape(len(rows), len(self.features)), columns=self.features)
+        df = rows.copy()
         missing = [f for f in self.features if f not in df.columns]
         for f in missing:  # unknown → NaN, never 0 (docs/api/RISK_ASSESSMENTS.md)
             df[f] = np.nan
@@ -56,25 +61,58 @@ class RiskModelBundle:
             df.loc[:, list(self.features)].apply(pd.to_numeric, errors="coerce").astype(np.float64)
         )
 
+    def _raw_and_contributions(
+        self, X: pd.DataFrame, explain: bool
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray | None]:
+        """Raw scores (+ SHAP contributions and base values). XGBoost goes straight to the
+        booster on a NumPy matrix: identical numbers to ``model.score`` / ``contributions``
+        (a test asserts it) without the sklearn wrapper's per-call validation."""
+        from rl_ml.models import XGBModel
+
+        if isinstance(self.model, XGBModel):
+            import xgboost as xgb
+
+            booster = self.model.booster
+            dm = xgb.DMatrix(
+                X.to_numpy(dtype=np.float64), feature_names=list(self.features), nthread=1
+            )
+            raw = np.asarray(booster.predict(dm), dtype=np.float64)
+            if not explain:
+                return raw, None, None
+            c = booster.predict(dm, pred_contribs=True)
+            return raw, np.asarray(c[:, :-1], np.float64), np.asarray(c[:, -1], np.float64)
+        raw = np.asarray(self.model.score(X), dtype=np.float64)
+        if not explain:
+            return raw, None, None
+        try:
+            contrib, base = contributions(self.model, X)
+        except TypeError:  # baselines have no attribution
+            return raw, None, None
+        return raw, contrib, base
+
     def assess(
-        self, rows: list[dict[str, Any]] | pd.DataFrame, *, explain: bool = True, top_k: int = 3
+        self,
+        rows: list[dict[str, Any]] | pd.DataFrame,
+        *,
+        explain: bool = True,
+        top_k: int = 3,
+        full_contributions: bool = False,
     ) -> list[dict[str, Any]]:
+        """Score rows. ``full_contributions`` adds the whole SHAP vector (``contributions``:
+        feature → log-odds contribution) and ``base_value`` to each result."""
         X = self.frame(rows)
-        raw = self.model.score(X)
+        raw, contrib, base = self._raw_and_contributions(X, explain)
         scores = self.scale.risk_score(raw)
         bands = self.cuts.band(raw)
         prob = (
             self.calibrator.predict(raw) if self.probability_exposed and self.calibrator else None
         )
         expl: list[dict[str, Any]] = [{"top_increasing": [], "top_reducing": []}] * len(X)
-        if explain:
-            try:
-                contrib, _ = contributions(self.model, X)
-                expl = explain_rows(contrib, X, self.stats, top_k)
-            except TypeError:  # baselines have no attribution
-                pass
-        return [
-            {
+        if contrib is not None:
+            expl = explain_rows(contrib, X, self.stats, top_k)
+        out = []
+        for i in range(len(X)):
+            item: dict[str, Any] = {
                 "raw_score": float(raw[i]),
                 "risk_score": int(scores[i]),
                 "risk_band": str(bands[i]),
@@ -83,8 +121,15 @@ class RiskModelBundle:
                 "top_reducing": expl[i]["top_reducing"],
                 "explanation_note": DISCLAIMER,
             }
-            for i in range(len(X))
-        ]
+            if full_contributions:
+                item["contributions"] = (
+                    {f: float(contrib[i, j]) for j, f in enumerate(self.features)}
+                    if contrib is not None
+                    else None
+                )
+                item["base_value"] = float(base[i]) if base is not None else None
+            out.append(item)
+        return out
 
     # ------------------------------------------------------------ persistence
     def save(self, directory: str | Path) -> list[Path]:
@@ -163,6 +208,17 @@ class RiskModelBundle:
             },
             meta=meta.get("meta", {}),
         )
+
+
+def _number(value: Any) -> float:
+    """``pd.to_numeric(value, errors="coerce")`` for one scalar: numbers, booleans and numeric
+    strings convert; ``None`` and anything else is NaN."""
+    if value is None:
+        return float("nan")
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("nan")
 
 
 def _json_default(o: Any) -> Any:

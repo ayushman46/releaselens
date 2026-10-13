@@ -27,7 +27,7 @@ from rl_api.settings import RatePolicy, Settings
 from rl_core.tenancy import TenantContext
 from rl_db.admin.ratelimit import take_token
 
-PolicyName = Literal["auth", "login_account", "ingest"]
+PolicyName = Literal["auth", "login_account", "ingest", "risk"]
 
 
 def _settings(request: Request) -> Settings:

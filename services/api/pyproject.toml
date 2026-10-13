@@ -6,6 +6,8 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "rl-core",
     "rl-db",
+    # Risk serving (M5): the model bundle, scoring and SHAP explanations, MLflow registry access.
+    "rl-ml",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "pydantic-settings>=2.6",
