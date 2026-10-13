@@ -17,6 +17,7 @@ members = [
     "data/pipeline",
     "data/analysis",
     "demo/services",
+    "ml",
 ]
 
 [tool.uv.sources]
@@ -27,6 +28,7 @@ rl-worker = { workspace = true }
 rl-pipeline = { workspace = true }
 rl-analysis = { workspace = true }
 rl-demo = { workspace = true }
+rl-ml = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -46,6 +48,7 @@ dev = [
     "rl-pipeline",
     "rl-analysis",
     "rl-demo",
+    "rl-ml",
 ]
 
 # ---------------------------------------------------------------- ruff
@@ -63,6 +66,10 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S", "PT011", "N802"]
+# scikit-learn convention: feature matrices are `X`, `Xtr`, `Xva`
+"ml/**" = ["N803", "N806"]
+# Markdown generator: typographic characters (×, –, ≥) and long template lines
+"ml/src/rl_ml/card.py" = ["RUF001", "E501"]
 "**/alembic/versions/*.py" = ["N999"]
 
 [tool.ruff.lint.isort]
@@ -87,6 +94,7 @@ mypy_path = [
     "data/pipeline/src",
     "data/analysis/src",
     "demo/services/src",
+    "ml/src",
 ]
 
 [[tool.mypy.overrides]]
@@ -106,7 +114,7 @@ filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
 
 [tool.coverage.run]
 branch = true
-source = ["rl_core", "rl_db", "rl_api", "rl_worker", "rl_pipeline", "rl_analysis", "rl_demo"]
+source = ["rl_core", "rl_db", "rl_api", "rl_worker", "rl_pipeline", "rl_analysis", "rl_demo", "rl_ml"]
 
 [[tool.mypy.overrides]]
 # confluent-kafka ships py.typed but re-exports admin classes without __all__.

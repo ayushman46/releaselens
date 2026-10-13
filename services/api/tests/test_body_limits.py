@@ -1,4 +1,5 @@
-"""The global 1 MiB body limit (M10) must not cut off OTLP ingest, which has its own larger cap (M7).
+"""The global 1 MiB body limit (M10) must not cut off OTLP ingest (M7), which has its own
+larger cap.
 
 Both limits were written on separate branches; this pins the merged behaviour.
 """
