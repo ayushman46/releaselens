@@ -119,7 +119,8 @@ async def test_signup_for_existing_address_is_indistinguishable_and_harmless(h: 
     await h.signup(email)
     client = h.client()
     resp = await client.post(
-        "/api/v1/auth/signup", json={"email": email, "password": "Another-Strong-Pass-88"}
+        "/api/v1/auth/signup",
+        json={"email": email, "password": "Another-Strong-Pass-88"},  # gitleaks:allow
     )
     fresh = await client.post(
         "/api/v1/auth/signup", json={"email": unique_email(), "password": TEST_PASSWORD}
@@ -130,7 +131,8 @@ async def test_signup_for_existing_address_is_indistinguishable_and_harmless(h: 
     # The existing password was not replaced.
     await h.login(email)
     bad = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "Another-Strong-Pass-88"}
+        "/api/v1/auth/login",
+        json={"email": email, "password": "Another-Strong-Pass-88"},  # gitleaks:allow
     )
     assert bad.status_code == 401
 
@@ -141,7 +143,8 @@ async def test_login_failures_do_not_enumerate_accounts_and_are_audited(h: Harne
     await h.signup(email)
     client = h.client()
     wrong_password = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "Not-The-Password-77"}
+        "/api/v1/auth/login",
+        json={"email": email, "password": "Not-The-Password-77"},  # gitleaks:allow
     )
     no_account = await client.post(
         "/api/v1/auth/login", json={"email": unique_email("ghost"), "password": TEST_PASSWORD}
@@ -301,7 +304,7 @@ async def test_password_reset_flow(h: Harness) -> None:
         "/api/v1/auth/password-reset/confirm", json={"token": token, "new_password": "password1"}
     )
     assert weak.status_code == 422  # and the token survives the failed attempt
-    new_password = "Velvet-Harbor-Quartz-19"
+    new_password = "Velvet-Harbor-Quartz-19"  # gitleaks:allow
     ok = await client.post(
         "/api/v1/auth/password-reset/confirm", json={"token": token, "new_password": new_password}
     )
@@ -333,7 +336,7 @@ async def test_reset_tokens_expire(h: Harness) -> None:
         )
     resp = await client.post(
         "/api/v1/auth/password-reset/confirm",
-        json={"token": token, "new_password": "Velvet-Harbor-Quartz-19"},
+        json={"token": token, "new_password": "Velvet-Harbor-Quartz-19"},  # gitleaks:allow
     )
     assert resp.status_code == 400
 

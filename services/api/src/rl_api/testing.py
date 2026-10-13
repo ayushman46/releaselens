@@ -27,7 +27,7 @@ from rl_api.mail import RecordingMailer
 from rl_api.settings import Settings
 
 # Satisfies the password policy; used by every test user.
-TEST_PASSWORD = "Granite-Lantern-Orbit-47"  # noqa: S105 - a test fixture value
+TEST_PASSWORD = "Granite-Lantern-Orbit-47"  # noqa: S105 - a test fixture value gitleaks:allow
 TEST_BASE_URL = "https://testserver"
 
 

@@ -17,7 +17,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # Used only when RL_ENV is dev or test and RL_SECRET_KEY is unset. Public by design: it
 # protects nothing but local throwaway data.
-DEV_SECRET_KEY = "releaselens-dev-only-secret-key-not-for-production"  # noqa: S105
+DEV_SECRET_KEY = "releaselens-dev-only-secret-key-not-for-production"  # noqa: S105 gitleaks:allow
 
 IPNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
 

@@ -29,7 +29,7 @@ def _settings(db_url: str, **kw: object) -> object:
     return saas_settings(
         db_url,
         github_oauth_client_id="Iv1.testclient",
-        github_oauth_client_secret="test-client-secret",
+        github_oauth_client_secret="test-client-secret",  # gitleaks:allow
         **kw,
     )
 
@@ -97,7 +97,7 @@ async def test_callback_creates_a_verified_account_and_signs_in(h: Harness) -> N
     verifier = form["code_verifier"][0]
     digest = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=")
     assert digest.decode() == query["code_challenge"][0]
-    assert form["client_secret"] == ["test-client-secret"]
+    assert form["client_secret"] == ["test-client-secret"]  # gitleaks:allow
 
     # The state is single use.
     replay = await browser.get(f"/api/v1/auth/github/callback?code=abc&state={state}")

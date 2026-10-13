@@ -6,8 +6,8 @@ import pytest
 
 from rl_db.secretbox import SecretBox, SecretBoxError, derive_key, slack_webhook_context
 
-KEY = "k" * 40
-OLD_KEY = "o" * 40
+KEY = "k" * 40  # gitleaks:allow
+OLD_KEY = "o" * 40  # gitleaks:allow
 URL = "https://hooks.slack.com/services/T000/B000/XXXXXXXXXXXXXXXX"
 
 
