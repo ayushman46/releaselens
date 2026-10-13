@@ -1,7 +1,8 @@
 """OTLP/HTTP trace ingest: ``POST /v1/traces`` (spec §11.2, ADR-0008).
 
-Flow: authenticate (scope ``telemetry:write``) → check content type and encoding → read the body
-under a size cap → gunzip under a decompressed-size cap → decode → validate and map each span
+Flow: authenticate (scope ``telemetry:write``) → per-key rate limit (``429`` + ``Retry-After``) →
+check content type and encoding → read the body under a size cap → gunzip under a
+decompressed-size cap → decode → validate and map each span
 (:mod:`rl_api.otlp`) → produce one ``telemetry.spans`` message per service (more when a service's
 spans exceed one message's size) keyed ``tenant_id:service.name`` → answer **after** the broker
 acknowledged every message.
@@ -39,6 +40,7 @@ from rl_api.otlp import (
     encode_response,
     gunzip_bounded,
 )
+from rl_api.ratelimit import limit_api_key
 from rl_core.events import TELEMETRY_SPANS
 from rl_core.events.spans import (
     EVENT_TYPE_SPAN_BATCH,
@@ -138,6 +140,9 @@ async def _produce(producer: EventProducer, ctx: TenantContext, converted: Conve
     return len(sends)
 
 
+_write = limit_api_key(require_scope("telemetry:write"), "telemetry")
+
+
 @router.post(
     "/v1/traces",
     summary="OTLP/HTTP trace export",
@@ -153,12 +158,13 @@ async def _produce(producer: EventProducer, ctx: TenantContext, converted: Conve
         403: {"description": "The API key lacks the telemetry:write scope"},
         413: {"description": "Body (compressed or decompressed) exceeds the limit"},
         415: {"description": "Unsupported Content-Type or Content-Encoding"},
+        429: {"description": "Per-key telemetry rate limit; retry after Retry-After seconds"},
         503: {"description": "Kafka did not acknowledge the spans; retry (see Retry-After)"},
     },
 )
 async def export_traces(
     request: Request,
-    ctx: Annotated[TenantContext, Depends(require_scope("telemetry:write"))],
+    ctx: Annotated[TenantContext, Depends(_write)],
     producer: Annotated[EventProducer, Depends(get_producer)],
 ) -> Response:
     settings = request.app.state.settings

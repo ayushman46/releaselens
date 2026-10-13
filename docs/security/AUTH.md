@@ -149,7 +149,9 @@ Refused requests get `429 rate_limited` with `Retry-After` (seconds).
 |---|---|---|---|
 | `auth` | client IP | burst 20, 10/min | `RL_RATE_LIMIT_AUTH_BURST`, `…_AUTH_PER_MINUTE` — signup, verify, resend, login, reset request/confirm, GitHub authorize/callback |
 | `login_account` | sha256(e-mail) + IP | burst 5, 1/min | `RL_RATE_LIMIT_LOGIN_ACCOUNT_*` |
-| `ingest` | API key id | burst 200, 3000/min | `RL_RATE_LIMIT_INGEST_*` — `POST /api/v1/deployments`; reuse `limit_api_key(scope_dep)` for `/v1/traces` |
+| `ingest` | API key id | burst 200, 3000/min | `RL_RATE_LIMIT_INGEST_*` — `POST /api/v1/deployments` |
+| `telemetry` | API key id | burst 500, 6000/min | `RL_RATE_LIMIT_TELEMETRY_*` — OTLP `POST /v1/traces` (a separate bucket, so span traffic never uses up the deployment-event budget; OTLP exporters honour `429` + `Retry-After`) |
+| `risk` | API key id | burst 60, 600/min | `RL_RATE_LIMIT_RISK_*` — `POST /api/v1/risk/assessments`, `POST /api/v1/ci-runs` |
 
 * **Client IP** (`rl_api.clientip`): the TCP peer, unless it is in `RL_TRUSTED_PROXIES`
   (CIDRs); then `X-Forwarded-For` is walked from the right to the first untrusted hop. The

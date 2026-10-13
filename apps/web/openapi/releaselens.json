@@ -10391,6 +10391,9 @@
           "415": {
             "description": "Unsupported Content-Type or Content-Encoding"
           },
+          "429": {
+            "description": "Per-key telemetry rate limit; retry after Retry-After seconds"
+          },
           "503": {
             "description": "Kafka did not acknowledge the spans; retry (see Retry-After)"
           }

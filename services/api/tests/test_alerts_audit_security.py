@@ -287,6 +287,50 @@ async def test_ingest_is_rate_limited_per_api_key(db_url: str) -> None:
         assert statuses == [503, 503, 429]
 
 
+async def test_otlp_ingest_has_its_own_per_key_limit(db_url: str) -> None:
+    harness = Harness(
+        saas_settings(
+            db_url,
+            rate_limit_telemetry_burst=2,
+            rate_limit_telemetry_per_minute=0.5,
+            rate_limit_ingest_burst=1,
+            rate_limit_ingest_per_minute=0.5,
+        )
+    )
+    async with harness.running():
+        owner = await harness.signup(unique_email("otlp-limit"))
+        org_id = await harness.create_org(owner)
+        key = (
+            await owner.post(
+                f"/api/v1/orgs/{org_id}/api-keys",
+                json={"name": "collector", "scopes": ["telemetry:write", "deployments:write"]},
+            )
+        ).json()["key"]
+        client = harness.client()
+        headers = {"x-releaselens-key": key, "content-type": "application/json"}
+        statuses = [
+            (
+                await client.post("/v1/traces", content=b'{"resourceSpans": []}', headers=headers)
+            ).status_code
+            for _ in range(3)
+        ]
+        assert statuses[:2] != [429, 429]
+        assert statuses[2] == 429
+        # A separate bucket: telemetry traffic does not use up the deployment-event budget.
+        deploy = await client.post(
+            "/api/v1/deployments",
+            json={
+                "service": "payment",
+                "environment": "production",
+                "version": "v2",
+                "commit_sha": "abcdef1",
+                "deployed_at": "2026-10-13T00:00:00Z",
+            },
+            headers={"x-releaselens-key": key},
+        )
+        assert deploy.status_code != 429
+
+
 # ----------------------------------------------------------------------------- headers & limits
 async def test_security_headers_on_every_response(h: Harness) -> None:
     for path in ("/healthz", "/api/v1/plans", "/api/v1/does-not-exist"):

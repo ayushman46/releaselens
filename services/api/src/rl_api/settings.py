@@ -168,9 +168,14 @@ class Settings(BaseSettings):
     # letting a third party lock the owner out from their own address.
     rate_limit_login_account_burst: int = Field(default=5, ge=1)
     rate_limit_login_account_per_minute: float = Field(default=1.0, gt=0)
-    # Per API key on ingest endpoints (deployments, later /v1/traces).
+    # Per API key on POST /api/v1/deployments.
     rate_limit_ingest_burst: int = Field(default=200, ge=1)
     rate_limit_ingest_per_minute: float = Field(default=3000.0, gt=0)
+    # Per API key on OTLP /v1/traces. A collector exports a batch every second or so; this is
+    # far above that and exists to stop one key flooding the span pipeline. OTLP exporters
+    # honour 429 + Retry-After and retry.
+    rate_limit_telemetry_burst: int = Field(default=500, ge=1)
+    rate_limit_telemetry_per_minute: float = Field(default=6000.0, gt=0)
     # Per API key on POST /api/v1/risk/assessments and /api/v1/ci-runs.
     rate_limit_risk_burst: int = Field(default=60, ge=1)
     rate_limit_risk_per_minute: float = Field(default=600.0, gt=0)
@@ -256,7 +261,9 @@ class Settings(BaseSettings):
     def web_url(self, path: str) -> str:
         return f"{self.web_base_url.rstrip('/')}/{path.lstrip('/')}"
 
-    def rate_policy(self, name: Literal["auth", "login_account", "ingest", "risk"]) -> RatePolicy:
+    def rate_policy(
+        self, name: Literal["auth", "login_account", "ingest", "risk", "telemetry"]
+    ) -> RatePolicy:
         if name == "auth":
             return RatePolicy("auth", self.rate_limit_auth_burst, self.rate_limit_auth_per_minute)
         if name == "login_account":
@@ -267,6 +274,10 @@ class Settings(BaseSettings):
             )
         if name == "risk":
             return RatePolicy("risk", self.rate_limit_risk_burst, self.rate_limit_risk_per_minute)
+        if name == "telemetry":
+            return RatePolicy(
+                "telemetry", self.rate_limit_telemetry_burst, self.rate_limit_telemetry_per_minute
+            )
         return RatePolicy("ingest", self.rate_limit_ingest_burst, self.rate_limit_ingest_per_minute)
 
 

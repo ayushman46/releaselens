@@ -6270,6 +6270,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Per-key telemetry rate limit; retry after Retry-After seconds */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Kafka did not acknowledge the spans; retry (see Retry-After) */
             503: {
                 headers: {
